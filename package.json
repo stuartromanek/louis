@@ -1,0 +1,25 @@
+{
+  "name": "yoto-cards",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "private": false,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "start": "node .output/server/index.mjs",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@dnd-kit/vue": "^0.5.0",
+    "@tailwindcss/vite": "^4.3.2",
+    "nuxt": "^4.4.8",
+    "pkce-challenge": "^6.0.0",
+    "tailwindcss": "^4.3.2",
+    "vue": "^3.5.39",
+    "vue-router": "^5.1.0"
+  }
+}

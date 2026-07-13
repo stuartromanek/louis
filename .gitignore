@@ -1,0 +1,40 @@
+# Nuxt dev/build outputs
+.output
+.data
+.nuxt
+.nitro
+.cache
+dist
+
+# Node dependencies
+node_modules
+
+# Logs
+logs
+*.log
+
+# Misc
+.DS_Store
+.fleet
+.idea
+
+# Local env files
+.env
+.env.*
+!.env.example
+!.env.demo.example
+
+# Optional local assets (see THIRD_PARTY_NOTICES.md)
+public/sound/*.wav
+
+# Local notes (machine-specific quirks, not for the repo)
+NOTES
+NOTES.md
+
+# Demo / self-host data
+data/
+
+# Editor / agent tooling
+.cursor/
+.agents/
+skills-lock.json

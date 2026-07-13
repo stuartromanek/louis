@@ -1,0 +1,17 @@
+node_modules
+.nuxt
+.output
+.data
+.cache
+dist
+.env
+.env.*
+!.env.example
+!.env.demo.example
+.git
+.cursor
+.agents
+skills-lock.json
+data
+*.log
+.DS_Store
