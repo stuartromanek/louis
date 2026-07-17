@@ -33,8 +33,6 @@ COPY --from=build /app/package.json ./package.json
 
 RUN mkdir -p /data/audio
 
-VOLUME ["/data/audio"]
-
 EXPOSE 4000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
