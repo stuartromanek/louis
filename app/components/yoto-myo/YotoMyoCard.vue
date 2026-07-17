@@ -131,12 +131,6 @@ const cardMotionStyle = computed(() => {
           >
             {{ card.author }}
           </p>
-          <p
-            v-if="loading && selected"
-            class="font-maru-mono text-[9px] text-maru-gray leading-tight mt-0.5"
-          >
-            Loading...
-          </p>
         </div>
       </div>
     </button>

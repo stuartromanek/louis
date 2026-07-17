@@ -74,3 +74,78 @@ export function pickThumbnail(thumbnails: Record<string, { url: string } | undef
     ?? ''
   )
 }
+
+interface YoutubeVideosListResponse {
+  items?: Array<{
+    id?: string
+    status?: {
+      uploadStatus?: string
+      privacyStatus?: string
+      embeddable?: boolean
+    }
+  }>
+}
+
+/**
+ * Soft Data API check before yt-dlp.
+ * Returns null when the key is missing or the API call fails (caller should continue to yt-dlp).
+ */
+export async function checkYoutubeVideoAvailability(
+  event: H3Event,
+  youtubeId: string,
+): Promise<{ ok: true } | { ok: false, message: string } | null> {
+  let key: string
+  try {
+    key = getYoutubeApiKey(event)
+  }
+  catch {
+    return null
+  }
+
+  try {
+    const url = new URL('https://www.googleapis.com/youtube/v3/videos')
+    url.searchParams.set('part', 'status')
+    url.searchParams.set('id', youtubeId)
+    url.searchParams.set('key', key)
+
+    const data = await fetchYoutubeApiCached<YoutubeVideosListResponse>(
+      `videos.status:${youtubeId}`,
+      url.toString(),
+    )
+
+    const item = data.items?.[0]
+    if (!item) {
+      return {
+        ok: false,
+        message: `YouTube video ${youtubeId} was not found or has been removed.`,
+      }
+    }
+
+    const uploadStatus = item.status?.uploadStatus?.toLowerCase()
+    const privacyStatus = item.status?.privacyStatus?.toLowerCase()
+
+    if (uploadStatus && uploadStatus !== 'processed' && uploadStatus !== 'uploaded') {
+      return {
+        ok: false,
+        message: `YouTube video ${youtubeId} is not available for download (${uploadStatus}).`,
+      }
+    }
+
+    if (privacyStatus === 'private') {
+      return {
+        ok: false,
+        message: `YouTube video ${youtubeId} is private and cannot be downloaded.`,
+      }
+    }
+
+    return { ok: true }
+  }
+  catch (err: unknown) {
+    const e = err as { statusMessage?: string; message?: string }
+    console.warn(
+      `[yt-dlp] Data API preflight skipped for ${youtubeId}:`,
+      e.statusMessage ?? e.message ?? err,
+    )
+    return null
+  }
+}

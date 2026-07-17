@@ -175,6 +175,13 @@ watch(query, (value) => {
   }
 })
 
+watch(() => props.placeholders, () => {
+  if (suggestionsStopped.value || query.value.trim()) return
+  typewriter?.stop()
+  typewriter = null
+  startSuggestions()
+}, { deep: true })
+
 onMounted(() => {
   const container = containerRef.value
   if (container) {

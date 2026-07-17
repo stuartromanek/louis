@@ -5,7 +5,6 @@ import YoutubeResultCard from './YoutubeResultCard.vue'
 withDefaults(defineProps<{
   results: YoutubeVideoSummary[]
   focusedIndex: number
-  confirmedId?: string | null
   layout?: ResultsLayout
   fill?: boolean
   bare?: boolean
@@ -17,6 +16,7 @@ withDefaults(defineProps<{
 
 const emit = defineEmits<{
   select: [id: string]
+  enableLongTracks: []
 }>()
 </script>
 
@@ -44,8 +44,8 @@ const emit = defineEmits<{
           :video="video"
           :layout="layout"
           :focused="index === focusedIndex"
-          :confirmed="confirmedId === video.id"
           @select="emit('select', $event)"
+          @enable-long-tracks="emit('enableLongTracks')"
         />
       </li>
     </ul>

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { YOTO_MYO_KEY } from '~/components/yoto-myo/keys'
+import { useUserPreferences } from '~/composables/useUserPreferences'
 
 const route = useRoute()
 const yoto = inject(YOTO_MYO_KEY, null)
-
-const showDevStrip = import.meta.dev
+const { showDebugPanel } = useUserPreferences()
 
 const testSaveProgressActive = computed(
   () => route.query.testSaveProgress !== undefined,
@@ -31,9 +31,11 @@ type HealthChecks = {
 }
 
 const cacheStatsLabel = ref('')
+let healthFetched = false
 
-onMounted(async () => {
-  if (!showDevStrip) return
+async function fetchHealthIfNeeded() {
+  if (!showDebugPanel.value || healthFetched) return
+  healthFetched = true
 
   try {
     const health = await $fetch<{ checks: HealthChecks }>('/api/health')
@@ -46,6 +48,14 @@ onMounted(async () => {
   catch {
     cacheStatsLabel.value = 'Audio cache: unavailable'
   }
+}
+
+watch(showDebugPanel, (visible) => {
+  if (visible) void fetchHealthIfNeeded()
+}, { immediate: true })
+
+onMounted(() => {
+  void fetchHealthIfNeeded()
 })
 
 function onRefreshCards() {
@@ -55,7 +65,7 @@ function onRefreshCards() {
 
 <template>
   <details
-    v-if="showDevStrip"
+    v-if="showDebugPanel"
     class="dev-tools-strip border-maru rounded-maru bg-maru-gray-light px-3 py-1.5 sm:px-4"
   >
     <summary class="dev-tools-strip__text text-maru-gray cursor-pointer select-none">

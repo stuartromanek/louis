@@ -6,7 +6,7 @@ withDefaults(defineProps<{
   text: string
   emoji?: EmojiId
   as?: 'h1' | 'h2' | 'h3'
-  tone?: 'blue' | 'white' | 'black' | 'red' | 'green-lighter' | 'blue-lighter' | 'yellow-light'
+  tone?: 'blue' | 'white' | 'black' | 'red' | 'green-lighter' | 'blue-lighter' | 'yellow-light' | 'magenta-light'
   size?: 'sm' | 'md' | 'lg'
   align?: 'left' | 'center'
 }>(), {

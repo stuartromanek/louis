@@ -6,7 +6,9 @@ export type YoutubeAudioPlayerApi = {
   isLoading: Ref<boolean>
   currentTime: Ref<number>
   duration: Ref<number>
+  durationById: Readonly<Record<string, number>>
   ready: Ref<boolean>
+  error: Ref<string | null>
   play: (id: string) => Promise<void>
   pause: () => void
   toggle: (id: string) => Promise<void>
@@ -31,16 +33,58 @@ function ensureAudio(): HTMLAudioElement {
   return sharedAudio
 }
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError'
+}
+
+function waitForCanPlay(audio: HTMLAudioElement, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) {
+    return Promise.reject(new DOMException('The play() request was interrupted.', 'AbortError'))
+  }
+  if (audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+    return Promise.resolve()
+  }
+
+  return new Promise((resolve, reject) => {
+    const onReady = () => {
+      cleanup()
+      resolve()
+    }
+    const onFail = () => {
+      cleanup()
+      reject(new Error('Preview unavailable'))
+    }
+    const onAbort = () => {
+      cleanup()
+      reject(new DOMException('The play() request was interrupted.', 'AbortError'))
+    }
+    const cleanup = () => {
+      audio.removeEventListener('canplay', onReady)
+      audio.removeEventListener('error', onFail)
+      audio.removeEventListener('abort', onAbort)
+      signal.removeEventListener('abort', onAbort)
+    }
+    audio.addEventListener('canplay', onReady)
+    audio.addEventListener('error', onFail)
+    audio.addEventListener('abort', onAbort)
+    signal.addEventListener('abort', onAbort)
+  })
+}
+
 export function useYoutubeAudioPlayer(): YoutubeAudioPlayerApi {
   const activeId = ref<string | null>(null)
   const isPlaying = ref(false)
   const isLoading = ref(false)
   const currentTime = ref(0)
   const duration = ref(0)
+  const durationById = reactive<Record<string, number>>({})
   const ready = ref(false)
+  const error = ref<string | null>(null)
 
   let pollId: ReturnType<typeof setInterval> | null = null
   let boundAudio: HTMLAudioElement | null = null
+  let playAbort: AbortController | null = null
+  let playGeneration = 0
 
   function clearPoll() {
     if (pollId !== null) {
@@ -49,10 +93,16 @@ export function useYoutubeAudioPlayer(): YoutubeAudioPlayerApi {
     }
   }
 
+  function rememberDuration(id: string | null, seconds: number) {
+    if (!id || !(seconds > 0) || !Number.isFinite(seconds)) return
+    durationById[id] = seconds
+  }
+
   function syncTimes(audio: HTMLAudioElement) {
     currentTime.value = audio.currentTime || 0
     if (Number.isFinite(audio.duration) && audio.duration > 0) {
       duration.value = audio.duration
+      rememberDuration(activeId.value, audio.duration)
     }
   }
 
@@ -120,9 +170,17 @@ export function useYoutubeAudioPlayer(): YoutubeAudioPlayerApi {
     isLoading.value = true
   }
 
+  function clearBrokenSource(audio: HTMLAudioElement) {
+    audio.removeAttribute('src')
+    audio.load()
+  }
+
   function onError() {
     isLoading.value = false
     isPlaying.value = false
+    if (activeId.value) {
+      error.value = 'Preview unavailable'
+    }
   }
 
   function onTimeUpdate() {
@@ -132,26 +190,37 @@ export function useYoutubeAudioPlayer(): YoutubeAudioPlayerApi {
   async function play(id: string) {
     const audio = ensureAudio()
     bindAudio(audio)
+    playAbort?.abort()
+    playAbort = new AbortController()
+    const { signal } = playAbort
+    const generation = ++playGeneration
     const url = previewUrl(id)
     const sameSource = audio.src === new URL(url, window.location.origin).href
+    const isStale = () => generation !== playGeneration
 
     activeId.value = id
     ready.value = false
     isLoading.value = true
-
-    if (!sameSource) {
-      currentTime.value = 0
-      duration.value = 0
-      audio.src = url
-      audio.load()
-    }
+    error.value = null
 
     try {
+      if (!sameSource) {
+        currentTime.value = 0
+        duration.value = durationById[id] ?? 0
+        audio.src = url
+        audio.load()
+        await waitForCanPlay(audio, signal)
+        if (isStale()) return
+      }
+
       await audio.play()
     }
-    catch (error) {
+    catch (err) {
+      if (isStale() || isAbortError(err)) return
       isLoading.value = false
-      throw error
+      isPlaying.value = false
+      error.value = 'Preview unavailable'
+      clearBrokenSource(audio)
     }
   }
 
@@ -176,6 +245,9 @@ export function useYoutubeAudioPlayer(): YoutubeAudioPlayerApi {
 
   function destroy() {
     clearPoll()
+    playAbort?.abort()
+    playAbort = null
+    playGeneration += 1
     if (boundAudio) {
       boundAudio.pause()
       boundAudio.removeAttribute('src')
@@ -195,8 +267,12 @@ export function useYoutubeAudioPlayer(): YoutubeAudioPlayerApi {
     activeId.value = null
     isPlaying.value = false
     isLoading.value = false
+    error.value = null
     currentTime.value = 0
     duration.value = 0
+    for (const key of Object.keys(durationById)) {
+      delete durationById[key]
+    }
   }
 
   return {
@@ -205,7 +281,9 @@ export function useYoutubeAudioPlayer(): YoutubeAudioPlayerApi {
     isLoading,
     currentTime,
     duration,
+    durationById,
     ready,
+    error,
     play,
     pause,
     toggle,

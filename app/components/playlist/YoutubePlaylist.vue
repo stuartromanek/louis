@@ -257,7 +257,12 @@ const { isDropTarget } = useDroppable({
   element,
   accept: ['result'],
   type: 'playlist-dropzone',
-  disabled: computed(() => isDropzoneLocked.value || isCardLoadingActive.value || isYotoPlaylistBlocked.value),
+  disabled: computed(
+    () => isDropzoneLocked.value
+      || isCardLoadingActive.value
+      || isYotoPlaylistBlocked.value
+      || !selectedCardId.value,
+  ),
 })
 
 function removeTrack(id: string) {
@@ -301,14 +306,16 @@ watch(() => props.scrollToVideoId, async (id) => {
     ref="element"
     class="playlist-dropzone relative flex flex-col flex-1 min-h-0 h-full w-full overflow-hidden transition-[background-color,box-shadow]"
     :class="[
-      isDropTarget && !isDropzoneLocked && !isCardLoadingActive && !isYotoPlaylistBlocked ? 'bg-maru-green-light ring-2 ring-inset ring-maru-blue' : '',
+      isDropTarget && !isDropzoneLocked && !isCardLoadingActive && !isYotoPlaylistBlocked && selectedCardId
+        ? 'bg-maru-green-light ring-2 ring-inset ring-maru-blue'
+        : '',
       isDropzoneLocked ? 'playlist-dropzone--locked' : '',
       isCardLoadingActive ? 'playlist-dropzone--loading' : '',
     ]"
   >
     <div
       class="playlist-dropzone__scroll flex flex-col flex-1 min-h-0 overflow-y-auto p-3 sm:p-4"
-      :class="isDropzoneLocked || isCardLoadingActive || isYotoPlaylistBlocked ? 'pointer-events-none select-none' : ''"
+      :class="isDropzoneLocked || isCardLoadingActive || isYotoPlaylistBlocked || !selectedCardId ? 'pointer-events-none select-none' : ''"
     >
       <TransitionGroup
         v-if="showPlaylistItems"

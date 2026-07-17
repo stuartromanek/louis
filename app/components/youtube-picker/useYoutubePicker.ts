@@ -7,8 +7,7 @@ export function useYoutubePicker(maxResults = 12) {
   const query = ref('')
   const submittedQuery = ref('')
   const results = ref<YoutubeVideoSummary[]>([])
-  const preview = ref<YoutubeVideo | null>(null)
-  const confirmed = ref<YoutubeVideo | null>(null)
+  const pendingEnableLongTracks = ref(false)
   const focusedIndex = ref(-1)
   const status = ref<PickerStatus>('idle')
   const errorMessage = ref('')
@@ -31,7 +30,7 @@ export function useYoutubePicker(maxResults = 12) {
     query.value = ''
     submittedQuery.value = ''
     results.value = []
-    preview.value = null
+    pendingEnableLongTracks.value = false
     focusedIndex.value = -1
     status.value = 'idle'
     errorMessage.value = ''
@@ -67,7 +66,7 @@ export function useYoutubePicker(maxResults = 12) {
       const loadingStartedAt = Date.now()
       status.value = 'loading'
       errorMessage.value = ''
-      preview.value = null
+      pendingEnableLongTracks.value = false
       focusedIndex.value = -1
       results.value = []
       nextPageToken.value = undefined
@@ -128,11 +127,9 @@ export function useYoutubePicker(maxResults = 12) {
     const summary = results.value.find(v => v.id === id)
     if (!summary) return
 
-    const cached = videoCache.get(id)
-    preview.value = cached ?? { ...summary }
     focusedIndex.value = results.value.findIndex(v => v.id === id)
 
-    if (cached) return
+    if (videoCache.has(id)) return
 
     try {
       const data = await $fetch<{ items: YoutubeVideo[] }>('/api/youtube/videos', {
@@ -141,28 +138,19 @@ export function useYoutubePicker(maxResults = 12) {
       const enriched = data.items[0]
       if (enriched) {
         videoCache.set(id, enriched)
-        preview.value = enriched
       }
     }
     catch {
-      // Keep summary-level preview on enrichment failure
+      // Enrichment is optional for focus/selection
     }
   }
 
-  function clearPreview() {
-    preview.value = null
+  function requestEnableLongTracks() {
+    pendingEnableLongTracks.value = true
   }
 
-  function confirmSelection() {
-    if (!preview.value) return null
-    confirmed.value = preview.value
-    return preview.value
-  }
-
-  function clearSelection() {
-    confirmed.value = null
-    preview.value = null
-    focusedIndex.value = -1
+  function cancelEnableLongTracks() {
+    pendingEnableLongTracks.value = false
   }
 
   function moveFocus(delta: number) {
@@ -183,8 +171,7 @@ export function useYoutubePicker(maxResults = 12) {
     query,
     submittedQuery,
     results,
-    preview,
-    confirmed,
+    pendingEnableLongTracks,
     focusedIndex,
     status,
     errorMessage,
@@ -194,9 +181,8 @@ export function useYoutubePicker(maxResults = 12) {
     resetSearch,
     loadMore,
     selectVideo,
-    clearPreview,
-    confirmSelection,
-    clearSelection,
+    requestEnableLongTracks,
+    cancelEnableLongTracks,
     moveFocus,
   }
 }

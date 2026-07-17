@@ -16,13 +16,25 @@ if (!player) {
 const isActive = computed(() => player.activeId.value === props.videoId)
 const isPlayingHere = computed(() => isActive.value && player.isPlaying.value)
 const playButtonLoading = computed(() => isActive.value && player.isLoading.value)
+const previewError = computed(() => (isActive.value ? player.error.value : null))
+const playLabel = computed(() => {
+  if (previewError.value) return previewError.value
+  if (playButtonLoading.value) return 'Loading preview'
+  if (isPlayingHere.value) return 'Pause'
+  return 'Play'
+})
 
 const scrubbing = ref(false)
 const scrubValue = ref(0)
 
+const knownDuration = computed(() => {
+  if (isActive.value && player.duration.value > 0) return player.duration.value
+  return player.durationById[props.videoId] ?? 0
+})
+
 const progressPercent = computed(() => {
   if (!isActive.value) return 0
-  const d = player.duration.value
+  const d = knownDuration.value
   if (!d) return 0
   const t = scrubbing.value ? scrubValue.value : player.currentTime.value
   return Math.min(100, Math.max(0, (t / d) * 100))
@@ -34,10 +46,7 @@ const displayTime = computed(() => {
   return player.currentTime.value
 })
 
-const formattedDuration = computed(() => {
-  if (!isActive.value) return '0:00'
-  return formatTime(player.duration.value)
-})
+const formattedDuration = computed(() => formatTime(knownDuration.value))
 
 function formatTime(totalSeconds: number): string {
   if (!totalSeconds || !Number.isFinite(totalSeconds)) return '0:00'
@@ -62,7 +71,12 @@ watch(
 
 async function onToggle(event: Event) {
   event.stopPropagation()
-  await player.toggle(props.videoId)
+  try {
+    await player.toggle(props.videoId)
+  }
+  catch {
+    // Player handles preview failures; keep the click handler from surfacing uncaught rejections.
+  }
 }
 
 function onScrubStart(event: Event) {
@@ -96,8 +110,13 @@ function onScrubCommit(event: Event) {
     <button
       type="button"
       class="yt-audio-play"
-      :class="isPlayingHere ? 'yt-audio-play--playing' : 'yt-audio-play--idle'"
-      :aria-label="playButtonLoading ? 'Loading preview' : isPlayingHere ? 'Pause' : 'Play'"
+      :class="{
+        'yt-audio-play--playing': isPlayingHere,
+        'yt-audio-play--idle': !isPlayingHere && !previewError,
+        'yt-audio-play--error': Boolean(previewError),
+      }"
+      :aria-label="playLabel"
+      :title="previewError ?? undefined"
       :disabled="playButtonLoading"
       @click="onToggle"
     >
@@ -113,10 +132,10 @@ function onScrubCommit(event: Event) {
         class="yt-audio-range"
         type="range"
         min="0"
-        :max="isActive ? (player.duration.value || 0) : 0"
+        :max="isActive ? (knownDuration || 0) : 0"
         step="0.1"
         :value="displayTime"
-        :disabled="!isActive || !(player.duration.value > 0)"
+        :disabled="!isActive || !(knownDuration > 0)"
         :style="{ '--yt-progress': `${progressPercent}%` }"
         @pointerdown="onScrubStart"
         @input="onScrubInput"

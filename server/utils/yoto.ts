@@ -9,6 +9,7 @@ import {
   YOTO_API_BASE_URL,
   type YotoConfig,
 } from './yoto-auth'
+import { withMappedYotoLimitError } from '#shared/myo-editor/yotoMyoLimits'
 
 export function getYotoRedirectUri(event: H3Event): string {
   const config = useRuntimeConfig(event)
@@ -121,9 +122,10 @@ export async function fetchYotoApi<T>(
         statusMessage: 'Yoto API access denied. Check your app scopes.',
       })
     }
+    const rawMessage = e.statusMessage ?? e.message ?? 'Yoto API error'
     throw createError({
       statusCode: e.statusCode ?? 502,
-      statusMessage: e.statusMessage ?? e.message ?? 'Yoto API error',
+      statusMessage: withMappedYotoLimitError(rawMessage),
     })
   }
 }

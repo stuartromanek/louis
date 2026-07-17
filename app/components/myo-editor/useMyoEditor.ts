@@ -10,6 +10,7 @@ import {
   removePersistedSave,
 } from './saveJobPersistence'
 import type { SaveJobState, YotoCardDetail } from './types'
+import { getPlaylistPreflightLimitError } from '#shared/myo-editor/yotoMyoLimits'
 
 export interface SaveProgress {
   phase: SaveJobState['status']
@@ -53,7 +54,7 @@ export interface MyoEditorContext {
   selectCard: (card: YotoMyoCard) => Promise<void>
   clearSelection: (force?: boolean) => boolean
   resetChanges: () => void
-  updateCard: () => Promise<void>
+  updateCard: (options?: { acknowledgeCapacityRisk?: boolean }) => Promise<void>
 }
 
 export const MYO_EDITOR_KEY: InjectionKey<MyoEditorContext> = Symbol('myoEditor')
@@ -327,7 +328,11 @@ export function useMyoEditor() {
     }
   }
 
-  async function startSaveJob(cardId: string, snapshot: CardSaveSnapshot) {
+  async function startSaveJob(
+    cardId: string,
+    snapshot: CardSaveSnapshot,
+    options?: { acknowledgeCapacityRisk?: boolean },
+  ) {
     const { jobId } = await $fetch<{ jobId: string }>(
       `/api/yoto/content/${cardId}/save`,
       {
@@ -336,6 +341,7 @@ export function useMyoEditor() {
           playlist: snapshot.playlist,
           baselinePlaylist: snapshot.baseline,
           cardTitle: snapshot.cardTitle,
+          acknowledgeCapacityRisk: options?.acknowledgeCapacityRisk === true,
         },
       },
     )
@@ -494,13 +500,22 @@ export function useMyoEditor() {
     errorMessage.value = ''
   }
 
-  async function updateCard() {
+  async function updateCard(options?: { acknowledgeCapacityRisk?: boolean }) {
     const cardId = selectedCardId.value
     if (!cardId || !isDirty.value || loading.value || isPlaylistLocked.value) return
 
     if (isPodcast.value) {
       errorMessage.value = 'Podcast cards cannot be edited yet.'
       return
+    }
+
+    if (!options?.acknowledgeCapacityRisk) {
+      const limitError = getPlaylistPreflightLimitError(playlist.value)
+      if (limitError) {
+        errorMessage.value = limitError
+        playEvent('saveError')
+        return
+      }
     }
 
     errorMessage.value = ''
@@ -512,7 +527,9 @@ export function useMyoEditor() {
     }
 
     try {
-      await startSaveJob(cardId, snapshot)
+      await startSaveJob(cardId, snapshot, {
+        acknowledgeCapacityRisk: options?.acknowledgeCapacityRisk === true,
+      })
     }
     catch (err: unknown) {
       const e = err as { statusMessage?: string; message?: string }

@@ -71,7 +71,7 @@ const footerTextClass = computed(() => props.footerTextClass ?? props.headerText
         <slot />
       </div>
       <footer
-        class="panel-footer-lip panel-footer-lip--short border-maru-top shrink-0 flex items-center px-3 sm:px-4"
+        class="panel-footer-lip border-maru-top shrink-0 relative flex items-center w-full overflow-hidden p-0"
         :class="[footerBgClass, footerTextClass]"
       >
         <slot name="footer" />

@@ -7,6 +7,8 @@ interface SaveRequestBody {
   playlist: PlaylistTrack[]
   baselinePlaylist: PlaylistTrack[]
   cardTitle: string
+  /** When true, skip our MYO capacity gates and let Yoto decide. */
+  acknowledgeCapacityRisk?: boolean
 }
 
 export default defineEventHandler(async (event) => {
@@ -36,6 +38,7 @@ export default defineEventHandler(async (event) => {
     body.playlist,
     body.cardTitle?.trim() || 'My Card',
     Array.isArray(body.baselinePlaylist) ? body.baselinePlaylist : [],
+    { acknowledgeCapacityRisk: body.acknowledgeCapacityRisk === true },
   )
 
   return { jobId: job.id, status: job.status }

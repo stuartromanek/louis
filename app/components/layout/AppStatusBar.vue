@@ -1,14 +1,19 @@
 <script setup lang="ts">
 import { YOTO_MYO_KEY } from '~/components/yoto-myo/keys'
+import HowToModal from '~/components/layout/HowToModal.vue'
+import UserPreferencesModal from '~/components/layout/UserPreferencesModal.vue'
 
 const yoto = inject(YOTO_MYO_KEY)
 if (!yoto) {
   throw new Error('AppStatusBar requires YOTO_MYO_KEY provider')
 }
 
-const { play, playEvent, muted, setMuted } = useUiSound()
+const { playEvent } = useUiSound()
 
 const { connected, status, refresh, disconnect, hasWriteScope, connect, errorMessage } = yoto
+
+const prefsOpen = ref(false)
+const howToOpen = ref(false)
 
 const needsReconnect = computed(
   () => connected.value && !hasWriteScope.value,
@@ -32,14 +37,14 @@ const statusDotClass = computed(() => {
   return 'status-dot--warn'
 })
 
-function toggleSounds() {
-  if (muted.value) {
-    setMuted(false)
-    playEvent('toggleOn')
-    return
-  }
-  play('toggle_off')
-  setMuted(true)
+function openHowTo() {
+  playEvent('buttonClick')
+  howToOpen.value = true
+}
+
+function openPreferences() {
+  playEvent('buttonClick')
+  prefsOpen.value = true
 }
 
 function onConnect() {
@@ -85,10 +90,26 @@ function onRetry() {
       <button
         type="button"
         class="status-bar__action"
-        :class="{ 'status-bar__action--muted': muted }"
-        @click="toggleSounds"
+        @click="openHowTo"
       >
-        {{ muted ? 'Sounds off' : 'Sounds on' }}
+        How To
+      </button>
+
+      <a
+        class="status-bar__action"
+        href="https://docs.google.com/forms/d/e/1FAIpQLSccwkdCpYaJjODtpxSrtBIaye045nobwudH1L0VX8S6NzFtjA/viewform?usp=publish-editor"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Issue / Feedback
+      </a>
+
+      <button
+        type="button"
+        class="status-bar__action"
+        @click="openPreferences"
+      >
+        Preferences
       </button>
 
       <button
@@ -127,5 +148,8 @@ function onRetry() {
         Retry
       </button>
     </div>
+
+    <HowToModal v-model:open="howToOpen" />
+    <UserPreferencesModal v-model:open="prefsOpen" />
   </div>
 </template>

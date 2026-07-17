@@ -11,6 +11,12 @@ import { buildSavePlan } from '#shared/myo-editor/buildSavePlan'
 import { playlistToYotoContent } from '#shared/myo-editor/playlistToYotoContent'
 import { flattenCardTracks } from '#shared/myo-editor/trackLookup'
 import { resolveDisplayIcon, toYotoTrackPayload } from '#shared/myo-editor/yotoTrackPayload'
+import {
+  getCardTotalsLimitError,
+  getTrackCountLimitError,
+  getTrackMediaLimitError,
+  withMappedYotoLimitError,
+} from '#shared/myo-editor/yotoMyoLimits'
 import { downloadYoutubeAudio } from './youtube-download'
 import { uploadAudioFile } from './yoto-media'
 import { createOrUpdateContent } from './yoto-content'
@@ -47,6 +53,34 @@ function updateJob(jobId: string, patch: Partial<SaveJobState>) {
   Object.assign(job, patch)
 }
 
+/** Title of the track currently being extracted/uploaded, if any. */
+function activeSaveTrackTitle(job: SaveJobState): string | undefined {
+  const active = job.tracks.find(track => (
+    track.status === 'extracting'
+    || track.status === 'uploading'
+    || track.status === 'transcoding'
+  ))
+  return active?.title
+}
+
+/** Best-effort title when posting fails after extracts (no in-flight track). */
+function firstOverLimitTrackTitle(
+  playlist: PlaylistTrack[],
+  uploadedByIndex: Map<number, TranscodedAudioResult>,
+): string | undefined {
+  for (let i = 0; i < playlist.length; i++) {
+    const track = playlist[i]!
+    const uploaded = uploadedByIndex.get(i)
+    const mediaError = getTrackMediaLimitError({
+      title: track.title,
+      duration: uploaded?.transcodedInfo.duration ?? track.duration ?? track.yotoReuse?.duration,
+      fileSize: uploaded?.transcodedInfo.fileSize ?? track.yotoReuse?.fileSize,
+    })
+    if (mediaError) return track.title
+  }
+  return undefined
+}
+
 export function getSaveJob(jobId: string): SaveJobState | undefined {
   return jobs.get(jobId)
 }
@@ -57,8 +91,10 @@ export function startSaveJob(
   playlist: PlaylistTrack[],
   cardTitle: string,
   baselinePlaylist: PlaylistTrack[],
+  options?: { acknowledgeCapacityRisk?: boolean },
 ): SaveJobState {
   const jobId = crypto.randomUUID()
+  const acknowledgeCapacityRisk = options?.acknowledgeCapacityRisk === true
   const job: SaveJobState = {
     id: jobId,
     cardId,
@@ -73,13 +109,22 @@ export function startSaveJob(
   void (async () => {
     try {
       const accessToken = await getYotoAccessToken(event)
-      await runSaveJob(event, accessToken, jobId, cardId, playlist, cardTitle, baselinePlaylist)
+      await runSaveJob(
+        event,
+        accessToken,
+        jobId,
+        cardId,
+        playlist,
+        cardTitle,
+        baselinePlaylist,
+        acknowledgeCapacityRisk,
+      )
     }
     catch (err: unknown) {
       const e = err as { statusMessage?: string; message?: string }
       updateJob(jobId, {
         status: 'failed',
-        error: e.statusMessage ?? e.message ?? 'Save failed',
+        error: withMappedYotoLimitError(e.statusMessage ?? e.message ?? 'Save failed'),
         progress: 100,
       })
     }
@@ -96,9 +141,12 @@ async function runSaveJob(
   playlist: PlaylistTrack[],
   cardTitle: string,
   baselinePlaylist: PlaylistTrack[],
+  acknowledgeCapacityRisk: boolean,
 ) {
   const job = jobs.get(jobId)
   if (!job) return
+
+  const uploadedByIndex = new Map<number, TranscodedAudioResult>()
 
   try {
     const detail = await fetchYotoCardDetail(cardId, accessToken)
@@ -131,17 +179,32 @@ async function runSaveJob(
 
     setJobProgress({ status: 'planning', progress: OVERALL_START, operationProgress: 5 })
 
+    if (!acknowledgeCapacityRisk) {
+      const trackCountError = getTrackCountLimitError(playlist.length)
+      if (trackCountError) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: trackCountError,
+        })
+      }
+    }
+
     const extractCount = extractActions.length
     const trackSpan = extractCount > 0
       ? (OVERALL_TRACKS_END - OVERALL_START) / extractCount
       : 0
 
-    const uploadedByIndex = new Map<number, TranscodedAudioResult>()
+    let pauseBeforeNextExtract = false
 
     for (let trackIndex = 0; trackIndex < extractActions.length; trackIndex++) {
       const action = extractActions[trackIndex]!
       const index = action.playlistIndex
       const trackBase = OVERALL_START + trackIndex * trackSpan
+
+      if (pauseBeforeNextExtract) {
+        await new Promise(resolve => setTimeout(resolve, 5_000))
+        pauseBeforeNextExtract = false
+      }
 
       updateTrack(job, index, 'extracting')
       setJobProgress({
@@ -150,7 +213,10 @@ async function runSaveJob(
         operationProgress: 8,
       })
 
-      const downloaded = await downloadYoutubeAudio(action.youtubeId, event)
+      const downloaded = await downloadYoutubeAudio(action.youtubeId, event, {
+        enforceMyoSizeLimit: !acknowledgeCapacityRisk,
+      })
+      pauseBeforeNextExtract = Boolean(downloaded.recoveredFromRetryableFailure)
       updateTrack(job, index, 'uploading')
       setJobProgress({
         status: 'uploading',
@@ -176,6 +242,19 @@ async function runSaveJob(
         },
       )
       uploadedByIndex.set(index, transcoded)
+      if (!acknowledgeCapacityRisk) {
+        const mediaError = getTrackMediaLimitError({
+          title: playlist[index]?.title ?? `Track ${index + 1}`,
+          duration: transcoded.transcodedInfo.duration,
+          fileSize: transcoded.transcodedInfo.fileSize,
+        })
+        if (mediaError) {
+          throw createError({
+            statusCode: 413,
+            statusMessage: mediaError,
+          })
+        }
+      }
       updateTrack(job, index, 'ready')
 
       setJobProgress({
@@ -226,6 +305,35 @@ async function runSaveJob(
       })
     }
 
+    if (!acknowledgeCapacityRisk) {
+      for (const chapter of built.chapters) {
+        for (const track of chapter.tracks) {
+          const mediaError = getTrackMediaLimitError({
+            title: track.title || chapter.title,
+            duration: track.duration,
+            fileSize: track.fileSize,
+          })
+          if (mediaError) {
+            throw createError({
+              statusCode: 413,
+              statusMessage: mediaError,
+            })
+          }
+        }
+      }
+
+      const totalsError = getCardTotalsLimitError({
+        totalDuration: built.totalDuration,
+        totalFileSize: built.totalFileSize,
+      })
+      if (totalsError) {
+        throw createError({
+          statusCode: 413,
+          statusMessage: totalsError,
+        })
+      }
+    }
+
     await createOrUpdateContent(accessToken, {
       cardId,
       title: cardTitle,
@@ -248,10 +356,15 @@ async function runSaveJob(
   }
   catch (err: unknown) {
     const e = err as { statusMessage?: string; message?: string }
-    const message = e.statusMessage ?? e.message ?? 'Save failed'
+    const trackTitle = activeSaveTrackTitle(job)
+      ?? firstOverLimitTrackTitle(playlist, uploadedByIndex)
+    const message = withMappedYotoLimitError(
+      e.statusMessage ?? e.message ?? 'Save failed',
+      trackTitle,
+    )
 
     for (const track of job.tracks) {
-      if (track.status === 'pending' || track.status === 'extracting' || track.status === 'uploading') {
+      if (track.status === 'pending' || track.status === 'extracting' || track.status === 'uploading' || track.status === 'transcoding') {
         track.status = 'failed'
         track.error = message
       }

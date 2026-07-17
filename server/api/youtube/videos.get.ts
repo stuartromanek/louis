@@ -1,4 +1,5 @@
 import { decodeHtmlEntities, fetchYoutubeApiCached, getYoutubeApiKey, pickThumbnail } from '../../utils/youtube'
+import { parseYoutubeDurationIso } from '#shared/myo-editor/youtubeDuration'
 
 interface YoutubeVideoItem {
   id: string
@@ -48,14 +49,19 @@ export default defineEventHandler(async (event) => {
   )
 
   return {
-    items: (data.items ?? []).map(item => ({
-      id: item.id,
-      title: decodeHtmlEntities(item.snippet.title),
-      channelTitle: decodeHtmlEntities(item.snippet.channelTitle),
-      thumbnailUrl: pickThumbnail(item.snippet.thumbnails),
-      publishedAt: item.snippet.publishedAt,
-      description: decodeHtmlEntities(item.snippet.description),
-      duration: item.contentDetails.duration,
-    })),
+    items: (data.items ?? []).map((item) => {
+      const iso = item.contentDetails.duration
+      const durationSeconds = parseYoutubeDurationIso(iso) ?? undefined
+      return {
+        id: item.id,
+        title: decodeHtmlEntities(item.snippet.title),
+        channelTitle: decodeHtmlEntities(item.snippet.channelTitle),
+        thumbnailUrl: pickThumbnail(item.snippet.thumbnails),
+        publishedAt: item.snippet.publishedAt,
+        description: decodeHtmlEntities(item.snippet.description),
+        duration: iso,
+        durationSeconds,
+      }
+    }),
   }
 })

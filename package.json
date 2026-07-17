@@ -11,6 +11,7 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "start": "node .output/server/index.mjs",
+    "test": "node --experimental-strip-types --test shared/**/*.test.ts",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {

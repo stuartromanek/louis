@@ -7,17 +7,15 @@ import type {
 import { buildProvenance } from './parseProvenance'
 import { resolveDisplayIcon, toYotoTrackPayload } from './yotoTrackPayload'
 import { YOTO_CARDS_CONTENT_VERSION } from './types'
+import {
+  normalizeYotoAudioFormat,
+  yotoChannelsOrStereo,
+} from './transcodedTrackDefaults'
 
 const TRACK_KEY = '01'
 
 function padKey(index: number): string {
   return String(index + 1).padStart(2, '0')
-}
-
-function mapChannels(channels: number | string | undefined): 'stereo' | 'mono' | undefined {
-  if (channels === 'stereo' || channels === 2 || channels === '2') return 'stereo'
-  if (channels === 'mono' || channels === 1 || channels === '1') return 'mono'
-  return undefined
 }
 
 function trackFromTranscoded(
@@ -32,11 +30,11 @@ function trackFromTranscoded(
     title,
     trackUrl: `yoto:#${transcoded.transcodedSha256}`,
     type: 'audio',
-    format: info.format ?? 'mp3',
+    format: normalizeYotoAudioFormat(info.format),
     duration: info.duration ?? 0,
     fileSize: info.fileSize ?? 0,
     overlayLabel,
-    channels: mapChannels(info.channels),
+    channels: yotoChannelsOrStereo(info.channels),
     display: resolveDisplayIcon(display),
   }
 }

@@ -107,8 +107,8 @@ Dev server runs on port **4000**.
 
 Prerequisites:
 
-- Node.js 22+
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) on `PATH`
+- Node.js 22+ (also used as yt-dlp’s JS runtime for YouTube signing / anti-bot; Docker already includes Node)
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) on `PATH` (keep it current — YouTube breaks outdated extractors; downloads also retry with alternate `player_client`s)
 - [ffmpeg](https://ffmpeg.org/) on `PATH` (required for save)
 
 Production:

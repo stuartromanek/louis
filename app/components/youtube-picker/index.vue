@@ -6,7 +6,6 @@
   - Server proxy routes at /api/youtube/search and /api/youtube/videos
 -->
 <script setup lang="ts">
-import type { YoutubeVideo } from './types'
 import { useYoutubePicker } from './useYoutubePicker'
 import YoutubePickerPreview from './YoutubePickerPreview.vue'
 import YoutubePickerResultsPane from './YoutubePickerResultsPane.vue'
@@ -33,15 +32,14 @@ const DEFAULT_SEARCH_PLACEHOLDERS = [
 ]
 
 const appConfig = useAppConfig()
+const { searchPlaceholders: preferredPlaceholders, setAllowLongTracks } = useUserPreferences()
+const { playEvent } = useUiSound()
 const searchPlaceholders = computed(
-  () => props.placeholders
+  () => preferredPlaceholders.value
+    ?? props.placeholders
     ?? appConfig.youtubePicker?.searchPlaceholders
     ?? DEFAULT_SEARCH_PLACEHOLDERS,
 )
-
-const emit = defineEmits<{
-  select: [video: YoutubeVideo]
-}>()
 
 const containerRef = ref<HTMLElement | null>(null)
 const audioPlayer = useYoutubeAudioPlayer()
@@ -51,8 +49,7 @@ const {
   query,
   submittedQuery,
   results,
-  preview,
-  confirmed,
+  pendingEnableLongTracks,
   focusedIndex,
   status,
   errorMessage,
@@ -62,9 +59,8 @@ const {
   resetSearch,
   loadMore,
   selectVideo,
-  clearPreview,
-  confirmSelection,
-  clearSelection,
+  requestEnableLongTracks,
+  cancelEnableLongTracks,
   moveFocus,
 } = useYoutubePicker(props.maxResults)
 
@@ -92,11 +88,15 @@ async function onSelect(id: string) {
   await selectVideo(id)
 }
 
-function onConfirm() {
-  const video = confirmSelection()
-  if (video) {
-    emit('select', video)
-  }
+function onConfirmEnableLongTracks() {
+  playEvent('buttonPrimary')
+  setAllowLongTracks(true)
+  cancelEnableLongTracks()
+}
+
+function onCancelEnableLongTracks() {
+  playEvent('buttonClick')
+  cancelEnableLongTracks()
 }
 
 function onKeydown(event: KeyboardEvent) {
@@ -121,9 +121,9 @@ function onKeydown(event: KeyboardEvent) {
       }
       break
     case 'Escape':
-      if (preview.value && !confirmed.value) {
+      if (pendingEnableLongTracks.value) {
         event.preventDefault()
-        clearPreview()
+        onCancelEnableLongTracks()
       }
       break
   }
@@ -170,35 +170,24 @@ onUnmounted(() => {
         :placeholders="searchPlaceholders"
         :results="results"
         :focused-index="focusedIndex"
-        :confirmed-id="confirmed?.id"
         :next-page-token="nextPageToken"
         :loading-more="loadingMore"
         :fill="embedded"
         @search="onPlaceholderSearch"
         @select="onSelect"
+        @enable-long-tracks="requestEnableLongTracks"
         @load-more="loadMore"
       />
     </div>
 
     <div
-      v-if="preview"
+      v-if="pendingEnableLongTracks"
       :class="embedded ? 'shrink-0 border-maru-top pt-3 mt-3' : 'mt-4'"
     >
       <YoutubePickerPreview
-        :video="preview"
-        :locked="!!confirmed"
-        @confirm="onConfirm"
-        @cancel="clearPreview"
+        @confirm="onConfirmEnableLongTracks"
+        @cancel="onCancelEnableLongTracks"
       />
     </div>
-
-    <button
-      v-if="confirmed"
-      type="button"
-      class="shrink-0 mt-3 font-maru-mono font-maru-regular text-xs text-maru-gray underline"
-      @click="clearSelection"
-    >
-      Clear selection
-    </button>
   </div>
 </template>

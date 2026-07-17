@@ -27,6 +27,7 @@ export const EMOJI_IDS = [
   'BouleBread',
   'Butterfly',
   'Cactus',
+  'CallMeHand',
   'Candy',
   'Chicken',
   'ClownFace',

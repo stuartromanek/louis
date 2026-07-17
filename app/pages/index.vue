@@ -10,7 +10,6 @@
       @drag-end="onDragEnd"
     >
       <AppMainLayout
-        :playlist-count="playlistCountLabel"
         :playlist-title="playlistTitle"
         :myo-count="myoCountLabel"
       >
@@ -82,14 +81,9 @@ const authGateBlocksApp = ref(false)
 const scrollToVideoId = ref<string | null>(null)
 let lastReorderIndex: number | null = null
 
-const playlistCountLabel = computed(() => {
-  const n = playlist.value.length
-  return `${n} ${n === 1 ? 'track' : 'tracks'}`
-})
-
 const playlistTitle = computed(() => {
   if (!selectedCardId.value || !cardTitle.value.trim()) return 'Playlist'
-  return `Playlist - ${cardTitle.value.trim()}`
+  return cardTitle.value.trim()
 })
 
 function getItemData(entity: { data?: unknown } | null | undefined): DndItemData | null {
@@ -170,6 +164,11 @@ function onDragEnd(event: DragEndEvent) {
   }
 
   if (sourceData?.type === 'result') {
+    if (!selectedCardId.value) {
+      playEvent('disabled')
+      return
+    }
+
     const track = pickerVideoToPlaylistTrack(sourceData.video)
     if (!target) return
 

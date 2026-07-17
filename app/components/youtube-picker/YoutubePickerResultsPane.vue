@@ -12,7 +12,6 @@ defineProps<{
   placeholders?: string[]
   results?: YoutubeVideoSummary[]
   focusedIndex?: number
-  confirmedId?: string | null
   nextPageToken?: string | null
   loadingMore?: boolean
   fill?: boolean
@@ -21,6 +20,7 @@ defineProps<{
 const emit = defineEmits<{
   search: [query: string]
   select: [id: string]
+  enableLongTracks: []
   loadMore: []
 }>()
 </script>
@@ -78,10 +78,10 @@ const emit = defineEmits<{
       v-else
       :results="results ?? []"
       :focused-index="focusedIndex ?? -1"
-      :confirmed-id="confirmedId"
       bare
       :fill="fill"
       @select="emit('select', $event)"
+      @enable-long-tracks="emit('enableLongTracks')"
     >
       <YoutubePickerLoadMore
         v-if="nextPageToken"

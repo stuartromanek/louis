@@ -2,7 +2,6 @@
 import AppPanel from '~/components/layout/AppPanel.vue'
 
 defineProps<{
-  playlistCount?: string
   playlistTitle?: string
   myoCount?: string
 }>()
@@ -53,9 +52,14 @@ defineProps<{
           body-bg="bg-maru-green-lighter"
           header-text-class="text-maru-black"
           class="flex-[3] min-h-0"
-          :count="playlistCount"
           fill-body
         >
+          <template
+            v-if="$slots['playlist-header']"
+            #header-actions
+          >
+            <slot name="playlist-header" />
+          </template>
           <slot name="playlist" />
           <template v-if="$slots['playlist-footer']" #footer>
             <slot name="playlist-footer" />
