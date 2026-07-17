@@ -8,6 +8,21 @@ export default defineNuxtConfig({
   // SOURCEMAP_BROKEN warnings from @tailwindcss/vite and nuxt internals.
   sourcemap: false,
   css: ['./app/assets/css/main.css'],
+  app: {
+    head: {
+      title: 'yoto-cards',
+      link: [
+        { rel: 'icon', href: '/favicons/favicon.ico', sizes: 'any' },
+        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicons/favicon-32x32.png' },
+        { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicons/favicon-16x16.png' },
+        { rel: 'apple-touch-icon', sizes: '180x180', href: '/favicons/apple-touch-icon.png' },
+        { rel: 'manifest', href: '/favicons/manifest.json' },
+      ],
+      meta: [
+        { name: 'theme-color', content: '#ffffff' },
+      ],
+    },
+  },
   components: [
     {
       path: '~/components/ui',
