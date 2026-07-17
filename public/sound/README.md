@@ -1,16 +1,23 @@
 # UI sounds
 
-Sound files are optional. The UI sound system fails silently when files are missing.
+Bundled UI sound effects from **[SND](https://snd.dev/)** (SND01 “sine” kit by Yasuhiro Tsuchiya).
 
-## Expected files
+Filenames match the ids in `app/utils/uiSoundCatalog.ts`.
 
-Place `.wav` files here matching the ids in `app/utils/uiSoundCatalog.ts`:
+## Attribution
 
-`button`, `caution`, `celebration`, `disabled`, `notification`, `progress_loop`,
-`ringtone_loop`, `select`, `swipe_01`–`swipe_05`, `tap_01`–`tap_05`, `toggle_off`,
-`toggle_on`, `transition_down`, `transition_up`, `type_01`–`type_05`.
+Sounds designed by **Yasuhiro Tsuchiya** for [SND](https://snd.dev/), operated by Dentsu Inc.
 
-## Licensing
+Credit / link to https://snd.dev/ is appreciated (not required).
 
-Do not commit sound files unless you have redistribution rights. Add your own royalty-free
-UI pack or disable sounds via the mute control in the app toolbar.
+## Terms of use (summary)
+
+From the [SND Terms of Service](https://snd.dev/):
+
+- Free for personal, business, commercial, and non-commercial use
+- No permission or notification required to use
+- **Do not** redistribute or sell the materials alone in unprocessed form
+- **Do not** use the materials unprocessed as a sound logo / trademark
+- Do not use for purposes against public order and morals, or for political, religious, anti-social, or illegal activities
+
+Copyright and other IP remain with the credited sound designer and/or Dentsu Inc. See [TERMS.md](TERMS.md) for the full English terms copied from SND.

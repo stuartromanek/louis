@@ -15,7 +15,7 @@ Thanks for your interest in contributing to yoto-cards!
 - Keep changes focused and minimal
 - Match existing code style and naming
 - Test manually: search → preview → connect Yoto → save to a test MYO card
-- Do not commit secrets, licensed fonts, or unlicensed sound assets
+- Do not commit secrets or assets you lack rights to redistribute
 
 ## Reporting issues
 

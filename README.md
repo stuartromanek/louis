@@ -127,6 +127,6 @@ Self-hosters should **not** reuse demo credentials — register your own Yoto ap
 
 MIT — see [LICENSE](LICENSE).
 
-Fonts (Dongle) and OpenMoji icons are bundled; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Optional UI sounds: [public/sound/README.md](public/sound/README.md).
+Fonts (Dongle), OpenMoji icons, and [SND](https://snd.dev/) UI sounds are bundled; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 Security reports: [SECURITY.md](SECURITY.md).

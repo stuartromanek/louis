@@ -24,9 +24,6 @@ logs
 !.env.example
 !.env.demo.example
 
-# Optional local assets (see THIRD_PARTY_NOTICES.md)
-public/sound/*.wav
-
 # Local notes (machine-specific quirks, not for the repo)
 NOTES
 NOTES.md

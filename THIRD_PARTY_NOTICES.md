@@ -14,11 +14,12 @@ OpenMoji SVG icons in `public/emoji/` are from Streamline/OpenMoji, licensed und
 
 ## UI sounds
 
-UI sound effects in `public/sound/` are **gitignored** because their redistribution license has not been verified for open source.
+UI sound effects in `public/sound/` are from **[SND](https://snd.dev/)** (SND01 “sine”), designed by Yasuhiro Tsuchiya / Dentsu Inc.
 
-- The app works without them; sounds fail silently when files are missing.
-- To enable sounds locally, add `.wav` files listed in `app/utils/uiSoundCatalog.ts`.
-- See [public/sound/README.md](public/sound/README.md) for the expected filenames.
+- Free for personal and commercial use under the [SND Terms of Service](https://snd.dev/)
+- Bundled terms: [public/sound/TERMS.md](public/sound/TERMS.md)
+- Do not redistribute the `.wav` files alone in unprocessed form (see SND terms)
+- Catalog / filenames: [public/sound/README.md](public/sound/README.md)
 
 ## External binaries (not bundled in npm)
 

@@ -27,4 +27,4 @@ Include:
 ## Out of scope
 
 - Abuse of maintainer-hosted demo YouTube API quota
-- User-provided unlicensed fonts or sound assets
+- User-provided fonts or sound assets without redistribution rights
