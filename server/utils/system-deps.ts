@@ -3,6 +3,10 @@ import { access, constants } from 'node:fs/promises'
 import { promisify } from 'node:util'
 import type { H3Event } from 'h3'
 import { getAudioWorkDirStats, resolveAudioWorkDirConfig } from './audio-work-dir'
+import {
+  getYtdlpCookiesStatus,
+  type YtdlpCookiesStatus,
+} from './ytdlp-cookies'
 
 const execFileAsync = promisify(execFile)
 
@@ -27,6 +31,8 @@ export interface SystemDepsStatus {
     cacheFileCount: number
     staleJobDirCount: number
   }
+  /** Booleans only — never includes the cookies file path. */
+  ytdlpCookies: YtdlpCookiesStatus
 }
 
 async function commandVersion(binary: string): Promise<{ path: string, version: string } | null> {
@@ -88,11 +94,12 @@ export async function getSystemDepsStatus(event?: H3Event): Promise<SystemDepsSt
 
   const ffmpegCandidates = ['ffmpeg', '/usr/bin/ffmpeg', '/usr/local/bin/ffmpeg']
 
-  const [ytdlp, ffmpeg, audioDir, audioCache] = await Promise.all([
+  const [ytdlp, ffmpeg, audioDir, audioCache, ytdlpCookies] = await Promise.all([
     resolveBinary(ytdlpCandidates),
     resolveBinary(ffmpegCandidates),
     checkWritableDir(audioWorkDir),
     getAudioWorkDirStats(audioWorkDir, audioConfig.audioJobMaxAgeMs),
+    getYtdlpCookiesStatus(event),
   ])
 
   return {
@@ -104,6 +111,7 @@ export async function getSystemDepsStatus(event?: H3Event): Promise<SystemDepsSt
       error: audioDir.error,
     },
     audioCache,
+    ytdlpCookies,
   }
 }
 

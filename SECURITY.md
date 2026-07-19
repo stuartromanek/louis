@@ -21,8 +21,9 @@ Include:
 
 - This app stores Yoto OAuth tokens in httpOnly cookies on the server
 - Self-hosters must use HTTPS in production
-- Do not commit `.env`, API keys, or refresh tokens
+- Do not commit `.env`, API keys, refresh tokens, or YouTube `cookies.txt`
 - The demo instance is a multi-tenant surface — treat connected Yoto accounts as sensitive
+- `NUXT_YTDLP_COOKIES_FILE` (when set on any deploy) is a server secret — never expose path or contents via debug routes or API responses; prefer a throwaway Google account
 
 ## Out of scope
 

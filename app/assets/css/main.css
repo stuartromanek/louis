@@ -2825,6 +2825,24 @@ body {
   padding: 0.35rem 1.1rem !important;
 }
 
+.prefs-projector__meta {
+  margin-top: 1.25rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-maru-black) 18%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.prefs-projector__meta-line {
+  margin: 0;
+  font-family: var(--font-maru-mono);
+  font-size: 0.95rem;
+  line-height: 1.15;
+  color: color-mix(in srgb, var(--color-maru-black) 55%, transparent);
+  text-wrap: pretty;
+}
+
 .prefs-projector__pull {
   position: absolute;
   left: 50%;

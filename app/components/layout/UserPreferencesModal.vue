@@ -13,6 +13,10 @@ const {
   setSearchPlaceholdersFromText,
 } = useUserPreferences()
 
+const runtimeConfig = useRuntimeConfig()
+const demoMode = computed(() => Boolean(runtimeConfig.public.demoMode))
+const appVersion = computed(() => String(runtimeConfig.public.appVersion || '0.0.0'))
+
 const phase = ref<Phase>('idle')
 const prefersReducedMotion = ref(false)
 const placeholdersDraft = ref('')
@@ -253,6 +257,18 @@ onUnmounted(() => {
             >
               <span class="maru-button__label">Done</span>
             </button>
+
+            <footer class="prefs-projector__meta">
+              <p class="prefs-projector__meta-line">
+                Louis v{{ appVersion }}
+              </p>
+              <p
+                v-if="demoMode"
+                class="prefs-projector__meta-line"
+              >
+                Demo instance — connect Yoto at your own risk. Downloads use a shared identity; self-host for production.
+              </p>
+            </footer>
           </div>
 
           <button

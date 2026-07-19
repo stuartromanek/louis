@@ -78,7 +78,8 @@ Copy [`.env.example`](.env.example). Use **`NUXT_*` names** so the same file wor
 | `NUXT_AUDIO_CACHE_MAX_AGE_MS` | No | Cache file TTL (default 14d) |
 | `NUXT_AUDIO_CACHE_MAX_BYTES` | No | Combined preview + save cache cap (default 5 GiB) |
 | `NUXT_YTDLP_PATH` | No | Docker ships `yt-dlp` on `PATH` |
-| `NUXT_PUBLIC_DEMO_MODE` | No | `true` shows the demo banner ([docs/DEMO.md](docs/DEMO.md)) |
+| `NUXT_YTDLP_COOKIES_FILE` | No | Netscape `cookies.txt` path; anon-first, then escalate on bot/403/age-gate (throwaway account recommended) |
+| `NUXT_PUBLIC_DEMO_MODE` | No | `true` shows a demo note in Preferences ([docs/DEMO.md](docs/DEMO.md)) |
 | `NUXT_ENABLE_DEBUG_ROUTES` | No | `true` enables debug API routes |
 
 **ffmpeg** is required for save. The Docker image installs it.
@@ -109,6 +110,7 @@ Prerequisites:
 - Node.js 22+ (also used as yt-dlp’s JS runtime for YouTube signing; Docker already includes Node)
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) — keep it current; YouTube breaks outdated extractors
 - [ffmpeg](https://ffmpeg.org/) — required for save
+- Optional: Netscape cookies via `NUXT_YTDLP_COOKIES_FILE` for bot/403/age-restricted cases (anon first; use a throwaway Google account)
 
 Production without Docker:
 

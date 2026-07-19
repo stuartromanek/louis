@@ -11,7 +11,9 @@ import {
   classifyYtdlpStderr,
   formatYtdlpError,
   playerClientForAttempt,
+  shouldEscalateToCookies,
   shouldRetryYtdlp,
+  YTDLP_COOKIE_FOLLOWUP_ATTEMPTS,
   YTDLP_MAX_ATTEMPTS,
 } from '#shared/myo-editor/ytdlpErrors'
 import {
@@ -21,6 +23,7 @@ import {
   runAudioCacheSweep,
   type AudioCacheMode,
 } from './audio-work-dir'
+import { resolveYtdlpCookiesArgs } from './ytdlp-cookies'
 import { checkYoutubeVideoAvailability } from './youtube'
 
 const execFileAsync = promisify(execFile)
@@ -149,6 +152,7 @@ function buildYtdlpArgs(options: {
   videoUrl: string
   transcode: boolean
   playerClient: string | null
+  cookiesArgs?: string[]
 }): string[] {
   const args = [
     '-f', 'ba/b',
@@ -160,6 +164,9 @@ function buildYtdlpArgs(options: {
   }
   // YouTube player JS for nsig / anti-bot; Node is on PATH (app + Docker base image).
   args.push('--js-runtimes', 'node')
+  if (options.cookiesArgs?.length) {
+    args.push(...options.cookiesArgs)
+  }
   if (options.playerClient) {
     args.push('--extractor-args', `youtube:player_client=${options.playerClient}`)
   }
@@ -234,12 +241,19 @@ async function downloadYoutubeAudioInternal(
   await mkdir(jobDir, { recursive: true })
   const outputTemplate = path.join(jobDir, `${youtubeId}.%(ext)s`)
   const videoUrl = `https://www.youtube.com/watch?v=${youtubeId}`
+  // Anon-first: escalate to --cookies only on bot / hard 403 / age-restricted.
+  const cookiesArgs = await resolveYtdlpCookiesArgs(event)
+  const hasCookies = cookiesArgs.length > 0
+  let useCookies = false
+  const maxAttempts = hasCookies
+    ? YTDLP_MAX_ATTEMPTS + YTDLP_COOKIE_FOLLOWUP_ATTEMPTS
+    : YTDLP_MAX_ATTEMPTS
 
   let lastStderr = ''
   let recoveredFromRetryableFailure = false
 
   try {
-    for (let attempt = 0; attempt < YTDLP_MAX_ATTEMPTS; attempt++) {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const playerClient = playerClientForAttempt(attempt)
       const waitMs = backoffMsBeforeAttempt(attempt)
       if (waitMs > 0) await sleep(waitMs)
@@ -251,6 +265,7 @@ async function downloadYoutubeAudioInternal(
         videoUrl,
         transcode: options.transcode,
         playerClient,
+        cookiesArgs: useCookies ? cookiesArgs : undefined,
       })
 
       try {
@@ -270,13 +285,25 @@ async function downloadYoutubeAudioInternal(
         lastStderr = stderr
         const errorClass = classifyYtdlpStderr(stderr)
         const clientLabel = playerClient ?? 'default'
+        const authLabel = useCookies ? 'cookies' : 'anon'
 
-        if (shouldRetryYtdlp(errorClass, attempt)) {
+        if (!useCookies && hasCookies && shouldEscalateToCookies(errorClass, stderr)) {
+          useCookies = true
           if (errorClass === 'retryable') {
             recoveredFromRetryableFailure = true
           }
           console.warn(
-            `[yt-dlp] retry ${attempt + 1}/${YTDLP_MAX_ATTEMPTS} client=${clientLabel} videoId=${youtubeId} reason=${errorClass}`,
+            `[yt-dlp] escalate to cookies attempt=${attempt + 1}/${maxAttempts} client=${clientLabel} videoId=${youtubeId} reason=${errorClass}`,
+          )
+          continue
+        }
+
+        if (shouldRetryYtdlp(errorClass, attempt, { usingCookies: useCookies, maxAttempts })) {
+          if (errorClass === 'retryable') {
+            recoveredFromRetryableFailure = true
+          }
+          console.warn(
+            `[yt-dlp] retry ${attempt + 1}/${maxAttempts} auth=${authLabel} client=${clientLabel} videoId=${youtubeId} reason=${errorClass}`,
           )
           continue
         }
@@ -291,10 +318,10 @@ async function downloadYoutubeAudioInternal(
       const audioFile = files.find(name => name.startsWith(`${youtubeId}.`))
       if (!audioFile) {
         lastStderr = 'ERROR: YouTube download produced no file'
-        if (shouldRetryYtdlp('retryable', attempt)) {
+        if (shouldRetryYtdlp('retryable', attempt, { usingCookies: useCookies, maxAttempts })) {
           recoveredFromRetryableFailure = true
           console.warn(
-            `[yt-dlp] retry ${attempt + 1}/${YTDLP_MAX_ATTEMPTS} client=${playerClient ?? 'default'} videoId=${youtubeId} reason=no_file`,
+            `[yt-dlp] retry ${attempt + 1}/${maxAttempts} auth=${useCookies ? 'cookies' : 'anon'} client=${playerClient ?? 'default'} videoId=${youtubeId} reason=no_file`,
           )
           continue
         }

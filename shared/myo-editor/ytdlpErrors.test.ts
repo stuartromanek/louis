@@ -4,8 +4,11 @@ import {
   backoffMsBeforeAttempt,
   classifyYtdlpStderr,
   formatYtdlpError,
+  isHard403,
   playerClientForAttempt,
+  shouldEscalateToCookies,
   shouldRetryYtdlp,
+  YTDLP_COOKIE_FOLLOWUP_ATTEMPTS,
   YTDLP_MAX_ATTEMPTS,
 } from './ytdlpErrors.ts'
 
@@ -47,13 +50,17 @@ describe('classifyYtdlpStderr', () => {
     )
   })
 
-  it('classifies age-restricted videos', () => {
+  it('classifies age-restricted and members-only videos', () => {
     assert.equal(
       classifyYtdlpStderr('ERROR: Sign in to confirm your age'),
       'age_restricted',
     )
     assert.equal(
       classifyYtdlpStderr('ERROR: This video may be inappropriate for some users. Age-restricted video'),
+      'age_restricted',
+    )
+    assert.equal(
+      classifyYtdlpStderr('ERROR: This video is members-only'),
       'age_restricted',
     )
   })
@@ -85,6 +92,28 @@ describe('classifyYtdlpStderr', () => {
   })
 })
 
+describe('shouldEscalateToCookies / isHard403', () => {
+  it('detects hard 403', () => {
+    assert.equal(isHard403('ERROR: HTTP Error 403: Forbidden'), true)
+    assert.equal(isHard403('ERROR: HTTP Error 429: Too Many Requests'), false)
+  })
+
+  it('escalates bot, age, and hard 403 — not plain 429 or private', () => {
+    assert.equal(shouldEscalateToCookies('bot_signin', ''), true)
+    assert.equal(shouldEscalateToCookies('age_restricted', ''), true)
+    assert.equal(
+      shouldEscalateToCookies('retryable', 'ERROR: HTTP Error 403: Forbidden'),
+      true,
+    )
+    assert.equal(
+      shouldEscalateToCookies('retryable', 'ERROR: HTTP Error 429: Too Many Requests'),
+      false,
+    )
+    assert.equal(shouldEscalateToCookies('private', ''), false)
+    assert.equal(shouldEscalateToCookies('outdated', ''), false)
+  })
+})
+
 describe('shouldRetryYtdlp', () => {
   it('retries retryable until max attempts', () => {
     assert.equal(shouldRetryYtdlp('retryable', 0), true)
@@ -92,15 +121,33 @@ describe('shouldRetryYtdlp', () => {
     assert.equal(shouldRetryYtdlp('retryable', YTDLP_MAX_ATTEMPTS - 1), false)
   })
 
+  it('respects custom maxAttempts for cookie follow-ups', () => {
+    const max = YTDLP_MAX_ATTEMPTS + YTDLP_COOKIE_FOLLOWUP_ATTEMPTS
+    assert.equal(shouldRetryYtdlp('retryable', YTDLP_MAX_ATTEMPTS, { maxAttempts: max }), true)
+    assert.equal(shouldRetryYtdlp('retryable', max - 1, { maxAttempts: max }), false)
+  })
+
   it('allows only one alternate attempt for outdated', () => {
     assert.equal(shouldRetryYtdlp('outdated', 0), true)
     assert.equal(shouldRetryYtdlp('outdated', 1), false)
   })
 
-  it('does not retry bot_signin, availability, or other', () => {
+  it('does not retry bot_signin without cookies', () => {
     assert.equal(shouldRetryYtdlp('bot_signin', 0), false)
-    assert.equal(shouldRetryYtdlp('private', 0), false)
     assert.equal(shouldRetryYtdlp('age_restricted', 0), false)
+  })
+
+  it('retries bot_signin / age_restricted once using cookies', () => {
+    assert.equal(shouldRetryYtdlp('bot_signin', 0, { usingCookies: true }), true)
+    assert.equal(shouldRetryYtdlp('age_restricted', 1, { usingCookies: true }), true)
+    assert.equal(
+      shouldRetryYtdlp('bot_signin', YTDLP_MAX_ATTEMPTS - 1, { usingCookies: true }),
+      false,
+    )
+  })
+
+  it('does not retry availability or other', () => {
+    assert.equal(shouldRetryYtdlp('private', 0), false)
     assert.equal(shouldRetryYtdlp('region_locked', 0), false)
     assert.equal(shouldRetryYtdlp('unavailable', 0), false)
     assert.equal(shouldRetryYtdlp('other', 0), false)
@@ -108,11 +155,13 @@ describe('shouldRetryYtdlp', () => {
 })
 
 describe('playerClientForAttempt / backoff', () => {
-  it('starts with default client then android/ios/tv', () => {
+  it('starts with default client then android/ios/tv and reuses tv past schedule', () => {
     assert.equal(playerClientForAttempt(0), null)
     assert.equal(playerClientForAttempt(1), 'android')
     assert.equal(playerClientForAttempt(2), 'ios')
     assert.equal(playerClientForAttempt(3), 'tv')
+    assert.equal(playerClientForAttempt(4), 'tv')
+    assert.equal(playerClientForAttempt(5), 'tv')
   })
 
   it('returns backoff before retries only', () => {
@@ -120,6 +169,7 @@ describe('playerClientForAttempt / backoff', () => {
     assert.equal(backoffMsBeforeAttempt(1), 1000)
     assert.equal(backoffMsBeforeAttempt(2), 3000)
     assert.equal(backoffMsBeforeAttempt(3), 8000)
+    assert.equal(backoffMsBeforeAttempt(5), 8000)
   })
 })
 

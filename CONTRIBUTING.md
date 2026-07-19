@@ -23,7 +23,7 @@ Open a GitHub issue with:
 
 - Steps to reproduce
 - Expected vs actual behavior
-- Environment (Docker vs native, OS, yt-dlp/ffmpeg versions from `/api/health`)
+- Environment (Docker vs native, OS, yt-dlp/ffmpeg versions and `ytdlpCookies` from `/api/health`)
 
 ## Security
 

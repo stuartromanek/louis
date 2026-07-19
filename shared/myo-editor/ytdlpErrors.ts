@@ -10,7 +10,10 @@ export type YtdlpErrorClass =
 
 export const YTDLP_MAX_ATTEMPTS = 4
 
-/** Backoff between attempts 1→2, 2→3, 3→4. */
+/** Extra attempts with --cookies after anon escalate (bot/403/age). */
+export const YTDLP_COOKIE_FOLLOWUP_ATTEMPTS = 2
+
+/** Backoff between attempts 1→2, 2→3, 3→4 (+ cookie follow-ups reuse last). */
 export const YTDLP_RETRY_BACKOFF_MS = [1000, 3000, 8000] as const
 
 /**
@@ -25,7 +28,9 @@ export const YTDLP_PLAYER_CLIENT_SCHEDULE: ReadonlyArray<string | null> = [
 ]
 
 export function playerClientForAttempt(attemptIndex: number): string | null {
-  return YTDLP_PLAYER_CLIENT_SCHEDULE[attemptIndex] ?? null
+  const last = YTDLP_PLAYER_CLIENT_SCHEDULE.length - 1
+  const index = Math.min(Math.max(attemptIndex, 0), last)
+  return YTDLP_PLAYER_CLIENT_SCHEDULE[index] ?? null
 }
 
 export function backoffMsBeforeAttempt(attemptIndex: number): number {
@@ -49,6 +54,22 @@ export function isOutdatedYtdlpSignal(stderr: string, detail?: string): boolean 
   )
 }
 
+export function isHard403(stderr: string): boolean {
+  return /HTTP Error 403/i.test(stderr)
+}
+
+/**
+ * Guest extract is unlikely to succeed; escalate to --cookies when a jar is configured.
+ */
+export function shouldEscalateToCookies(
+  errorClass: YtdlpErrorClass,
+  stderr: string,
+): boolean {
+  if (errorClass === 'bot_signin' || errorClass === 'age_restricted') return true
+  if (errorClass === 'retryable' && isHard403(stderr)) return true
+  return false
+}
+
 export function classifyYtdlpStderr(stderr: string): YtdlpErrorClass {
   const detail = extractYtdlpErrorDetail(stderr)
   const text = `${detail ?? ''}\n${stderr}`
@@ -65,6 +86,8 @@ export function classifyYtdlpStderr(stderr: string): YtdlpErrorClass {
     /age.?restricted/i.test(text)
     || /sign in to confirm your age/i.test(text)
     || /confirm your age/i.test(text)
+    || /members.?only/i.test(text)
+    || /join this channel/i.test(text)
   ) {
     return 'age_restricted'
   }
@@ -114,16 +137,22 @@ export function classifyYtdlpStderr(stderr: string): YtdlpErrorClass {
 /**
  * Whether another yt-dlp attempt is warranted.
  * Outdated extractors get one alternate client only (2 attempts total).
+ * bot_signin / age_restricted only rotate once cookies are already in use.
  */
 export function shouldRetryYtdlp(
   errorClass: YtdlpErrorClass,
   attemptIndex: number,
+  options?: { usingCookies?: boolean, maxAttempts?: number },
 ): boolean {
+  const maxAttempts = options?.maxAttempts ?? YTDLP_MAX_ATTEMPTS
   const nextAttempt = attemptIndex + 1
-  if (nextAttempt >= YTDLP_MAX_ATTEMPTS) return false
+  if (nextAttempt >= maxAttempts) return false
 
   if (errorClass === 'retryable') return true
   if (errorClass === 'outdated') return attemptIndex === 0
+  if (options?.usingCookies && (errorClass === 'bot_signin' || errorClass === 'age_restricted')) {
+    return true
+  }
   return false
 }
 

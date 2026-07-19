@@ -1,4 +1,10 @@
 import tailwindcss from '@tailwindcss/vite'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
+const packageJson = JSON.parse(
+  readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf8'),
+) as { version?: string }
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -44,6 +50,8 @@ export default defineNuxtConfig({
     yotoClientSecret: '',
     yotoRedirectUri: 'http://localhost:4000/api/yoto/auth/callback',
     ytdlpPath: 'yt-dlp',
+    // Optional Netscape cookies.txt for yt-dlp (NUXT_YTDLP_COOKIES_FILE). Anon-first; used on escalate.
+    ytdlpCookiesFile: '',
     audioWorkDir: '',
     audioJobMaxAgeMs: 3_600_000,
     audioCacheMaxAgeMs: 1_209_600_000,
@@ -51,6 +59,7 @@ export default defineNuxtConfig({
     enableDebugRoutes: false,
     public: {
       demoMode: false,
+      appVersion: packageJson.version || '0.0.0',
     },
   },
   vite: {
