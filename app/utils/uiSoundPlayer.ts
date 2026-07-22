@@ -21,6 +21,8 @@ class UiSoundPlayer {
   private pools = new Map<UiSoundId, HTMLAudioElement[]>()
   private poolIndex = new Map<UiSoundId, number>()
   private loops = new Map<UiSoundId, HTMLAudioElement>()
+  /** True after a play() succeeded under a user gesture (browser autoplay policy). */
+  private unlocked = false
 
   setMuted(muted: boolean) {
     this.muted = muted
@@ -33,12 +35,54 @@ class UiSoundPlayer {
     return this.muted
   }
 
+  isUnlocked(): boolean {
+    return this.unlocked
+  }
+
   setVolume(volume: number) {
     this.volume = Math.max(0, Math.min(1, volume))
   }
 
   getVolume(): number {
     return this.volume
+  }
+
+  /** Warm decode buffers so the first real play is snappy after unlock. */
+  preload(id: UiSoundId): void {
+    if (typeof Audio === 'undefined') return
+    this.borrowAudio(id)
+  }
+
+  /**
+   * Attempt to satisfy the browser autoplay gesture requirement.
+   * Call from a pointer/key handler. Returns whether playback is allowed.
+   */
+  async unlock(id?: UiSoundId): Promise<boolean> {
+    if (this.unlocked) return true
+    if (typeof Audio === 'undefined') return false
+
+    const audio = id
+      ? this.borrowAudio(id)
+      : new Audio(
+          'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=',
+        )
+    const previousVolume = audio.volume
+    audio.muted = true
+    audio.volume = 0
+    try {
+      await audio.play()
+      audio.pause()
+      audio.currentTime = 0
+      this.unlocked = true
+      return true
+    }
+    catch {
+      return false
+    }
+    finally {
+      audio.muted = false
+      audio.volume = id ? this.effectiveVolume(id) : previousVolume
+    }
   }
 
   play(id: UiSoundId, options?: UiSoundPlayOptions): void {
@@ -48,17 +92,30 @@ class UiSoundPlayer {
       return
     }
 
-    this.playOneShot(id, options)
+    void this.tryPlayOneShot(id, options)
   }
 
   playOneShot(id: UiSoundId, options?: UiSoundPlayOptions): void {
-    if (this.muted || typeof Audio === 'undefined') return
+    void this.tryPlayOneShot(id, options)
+  }
+
+  /** Play once; resolves true if the browser allowed playback. */
+  async tryPlayOneShot(id: UiSoundId, options?: UiSoundPlayOptions): Promise<boolean> {
+    if (this.muted || typeof Audio === 'undefined') return false
 
     const audio = this.borrowAudio(id)
     audio.loop = false
+    audio.muted = false
     audio.currentTime = 0
     audio.volume = this.effectiveVolume(id, options?.gain)
-    void audio.play().catch(() => {})
+    try {
+      await audio.play()
+      this.unlocked = true
+      return true
+    }
+    catch {
+      return false
+    }
   }
 
   playRandom(prefix: UiSoundVariantPrefix, options?: UiSoundPlayOptions): void {

@@ -4,7 +4,7 @@ Search YouTube, arrange a playlist, and save it to your [Yoto](https://yotoplay.
 
 Self-hosted **Nuxt** server app — Yoto OAuth and YouTube audio download run on the server. A static export cannot power those flows.
 
-[Self-host](#self-host) · [Native development](#native-development) · [Contributing](CONTRIBUTING.md) · [Demo runbook](docs/DEMO.md)
+[Self-host](#self-host) · [Native development](#native-development) · [Contributing](CONTRIBUTING.md) · [Releases](docs/RELEASE.md) · [Demo runbook](docs/DEMO.md)
 
 ## Features
 

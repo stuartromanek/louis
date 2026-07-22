@@ -1,7 +1,7 @@
 <template>
   <div
     class="h-screen overflow-hidden min-h-0"
-    :inert="authGateBlocksApp || undefined"
+    :inert="authGateBlocksApp || welcomeBlocksApp || splashHoldsGate || undefined"
   >
     <DragDropProvider
       :plugins="configurePlaylistDndPlugins"
@@ -41,7 +41,27 @@
         </template>
       </AppMainLayout>
     </DragDropProvider>
-    <YotoAuthGate @update:blocking="authGateBlocksApp = $event" />
+    <!-- Same bg as splash; covers first paint until splash boots or is skipped. -->
+    <div
+      v-if="splashHoldsGate"
+      class="app-splash-cover"
+      aria-hidden="true"
+    />
+    <AppSplash
+      v-if="shouldShowSplash"
+      :debug="splashDebug"
+      @done="markSplashSeen"
+    />
+    <YotoAuthGate
+      :paused="splashHoldsGate || welcomeOpen"
+      @update:blocking="authGateBlocksApp = $event"
+    />
+    <YotoConnectedModal
+      :open="welcomeOpen"
+      :paused="splashHoldsGate"
+      @update:blocking="welcomeBlocksApp = $event"
+      @dismiss="onWelcomeDismiss"
+    />
   </div>
 </template>
 
@@ -65,6 +85,8 @@ import { YOTO_MYO_KEY } from '~/components/yoto-myo/keys'
 import AppStatusBar from '~/components/layout/AppStatusBar.vue'
 import AppDevToolsStrip from '~/components/dev/AppDevToolsStrip.vue'
 import YotoAuthGate from '~/components/yoto-myo/YotoAuthGate.vue'
+import YotoConnectedModal from '~/components/yoto-myo/YotoConnectedModal.vue'
+import AppSplash from '~/components/splash/AppSplash.vue'
 
 const yoto = useYotoMyo()
 provide(YOTO_MYO_KEY, yoto)
@@ -72,14 +94,55 @@ provide(YOTO_MYO_KEY, yoto)
 const editor = useMyoEditor()
 provide(MYO_EDITOR_KEY, editor)
 
+const route = useRoute()
+const router = useRouter()
+
 const { playEvent } = useUiSound()
+const { shouldShowSplash, splashHoldsGate, splashDebug, markSplashSeen } = useAppSplash()
 
 const { playlist, isPlaylistLocked, selectedCardId, cardTitle } = editor
+const { connected, status } = yoto
 
 const myoCountLabel = ref('')
 const authGateBlocksApp = ref(false)
+const welcomeBlocksApp = ref(false)
+const welcomeOpen = ref(false)
 const scrollToVideoId = ref<string | null>(null)
 let lastReorderIndex: number | null = null
+let welcomeHandled = false
+
+async function clearYotoConnectedQuery() {
+  if (route.query.yoto !== 'connected') return
+  const nextQuery = { ...route.query }
+  delete nextQuery.yoto
+  await router.replace({ query: nextQuery })
+}
+
+function onWelcomeDismiss() {
+  welcomeOpen.value = false
+  void clearYotoConnectedQuery()
+}
+
+watch(
+  [() => route.query.yoto, connected, status, splashHoldsGate],
+  ([yotoFlag]) => {
+    if (welcomeHandled) return
+    if (yotoFlag !== 'connected') return
+    if (splashHoldsGate.value) return
+    if (status.value === 'loading') return
+
+    if (!connected.value) {
+      welcomeHandled = true
+      void clearYotoConnectedQuery()
+      return
+    }
+
+    welcomeHandled = true
+    welcomeOpen.value = true
+    void clearYotoConnectedQuery()
+  },
+  { immediate: true },
+)
 
 const playlistTitle = computed(() => {
   if (!selectedCardId.value || !cardTitle.value.trim()) return 'Playlist'

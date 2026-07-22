@@ -25,7 +25,30 @@ export default defineNuxtConfig({
         { rel: 'manifest', href: '/favicons/manifest.json' },
       ],
       meta: [
-        { name: 'theme-color', content: '#ffffff' },
+        { name: 'theme-color', content: '#fff5f0' },
+      ],
+      // Paint splash ground before Vue boots so the app never flashes underneath.
+      style: [
+        {
+          key: 'app-splash-pending',
+          textContent:
+            'html.app-splash-pending{background:#fff5f0}'
+            + 'html.app-splash-pending body{background:#fff5f0}'
+            + 'html.app-splash-pending::before{content:"";position:fixed;inset:0;z-index:114;background:#fff5f0;pointer-events:none}',
+        },
+      ],
+      script: [
+        {
+          key: 'app-splash-pending',
+          // Runs before body parse; mirrors useAppSplash session/debug rules.
+          textContent:
+            '(function(){try{var d=document.documentElement;'
+            + 'var debug=new URLSearchParams(location.search).get("splash")==="debug";'
+            + 'var seen=sessionStorage.getItem("louis.splash.seen")==="1";'
+            + 'var reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;'
+            + 'if(debug||(!seen&&!reduced))d.classList.add("app-splash-pending");'
+            + '}catch(e){document.documentElement.classList.add("app-splash-pending")}})();',
+        },
       ],
     },
   },

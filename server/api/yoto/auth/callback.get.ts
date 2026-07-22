@@ -53,7 +53,7 @@ export default defineEventHandler(async (event) => {
       clearPkceVerifierCookie(event)
     }
 
-    return sendRedirect(event, '/')
+    return sendRedirect(event, '/?yoto=connected')
   }
   catch (err: unknown) {
     if (flow === 'public-pkce') {

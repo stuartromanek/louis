@@ -61,6 +61,24 @@ export function useUiSound() {
     player.play(resolved.id, { gain: resolved.gain })
   }
 
+  /** Like playEvent, but reports whether the browser allowed playback. */
+  async function tryPlayEvent(event: UiSoundEvent): Promise<boolean> {
+    const resolved = resolveUiSoundEvent(event)
+    if (isUiSoundLoopEvent(event)) {
+      player.startLoop(resolved.id, { gain: resolved.gain })
+      return player.isUnlocked()
+    }
+    return player.tryPlayOneShot(resolved.id, { gain: resolved.gain })
+  }
+
+  async function unlockAudio(id?: UiSoundId): Promise<boolean> {
+    return player.unlock(id)
+  }
+
+  function preload(id: UiSoundId) {
+    player.preload(id)
+  }
+
   function startLoopEvent(event: UiSoundEvent) {
     const resolved = resolveUiSoundEvent(event)
     player.startLoop(resolved.id, { gain: resolved.gain })
@@ -104,6 +122,9 @@ export function useUiSound() {
     playOneShot,
     playRandom,
     playEvent,
+    tryPlayEvent,
+    unlockAudio,
+    preload,
     startLoopEvent,
     stopLoopEvent,
     startLoop,

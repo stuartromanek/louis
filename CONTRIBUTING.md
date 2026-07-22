@@ -16,6 +16,11 @@ Thanks for your interest in contributing to yoto-cards!
 - Match existing code style and naming
 - Test manually: search → preview → connect Yoto → save to a test MYO card
 - Do not commit secrets or assets you lack rights to redistribute
+- For user-facing changes, add a bullet under `## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md)
+
+## Releases
+
+Maintainers: see [docs/RELEASE.md](docs/RELEASE.md). Short version: keep notes in `[Unreleased]`, then on `main` run `npm run release` (patch / minor / major). That bumps the version, updates the changelog, tags `vX.Y.Z`, and publishes the GHCR image via CI.
 
 ## Reporting issues
 

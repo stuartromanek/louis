@@ -8,6 +8,13 @@ const TV_BOOT_MS = 1100
 type BlockedReason = 'disconnected' | 'needsReconnect' | 'unconfigured' | 'error'
 type GatePhase = 'hidden' | 'waiting' | 'animating' | 'visible'
 
+const props = withDefaults(defineProps<{
+  /** Hold the connect gate until splash (or other boot UI) finishes. */
+  paused?: boolean
+}>(), {
+  paused: false,
+})
+
 const emit = defineEmits<{
   'update:blocking': [value: boolean]
 }>()
@@ -68,7 +75,7 @@ const copy = computed(() => {
     case 'disconnected':
     default:
       return {
-        heading: 'Connect Yoto',
+        heading: 'Connect Louis to Yoto',
         body: 'Link your account to load MYO cards and build playlists.',
         cta: 'Connect to Yoto',
         action: 'connect' as const,
@@ -155,7 +162,7 @@ function startGateSequence() {
 
 function onPrimaryAction() {
   if (copy.value.action === 'connect') {
-    playEvent('buttonPrimary')
+    playEvent('toggleOn')
     connect()
     return
   }
@@ -165,14 +172,28 @@ function onPrimaryAction() {
   }
 }
 
-watch(blockedReason, (reason) => {
-  if (reason) {
-    startGateSequence()
-  }
-  else {
-    hideGate()
-  }
-}, { immediate: true })
+watch(
+  [blockedReason, () => props.paused],
+  ([reason, paused]) => {
+    if (!reason) {
+      hideGate()
+      return
+    }
+    if (paused) {
+      clearTimers()
+      if (phase.value === 'animating' || phase.value === 'visible') {
+        return
+      }
+      phase.value = 'waiting'
+      setBlocking(false)
+      return
+    }
+    if (phase.value === 'hidden' || phase.value === 'waiting') {
+      startGateSequence()
+    }
+  },
+  { immediate: true },
+)
 
 onMounted(() => {
   prefersReducedMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -204,12 +225,21 @@ onUnmounted(() => {
           :aria-labelledby="headingId"
           @animationend="onScreenAnimationEnd"
         >
+          <img
+            class="yoto-auth-gate__frame"
+            src="/images/yoto-on.svg"
+            alt=""
+            aria-hidden="true"
+            draggable="false"
+          >
           <div class="yoto-auth-gate__content">
-            <MaruEmoji
-              name="Duck"
-              :size-rem="4"
-              class="yoto-auth-gate__emoji"
-            />
+            <img
+              src="/images/louis.svg"
+              alt=""
+              aria-hidden="true"
+              class="maru-emoji yoto-auth-gate__emoji"
+              style="width: 5.6rem; height: 5.6rem;"
+            >
             <div :id="headingId">
               <MaruHeading
                 :text="copy.heading"

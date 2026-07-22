@@ -1998,6 +1998,86 @@ body {
   background: var(--color-maru-blue-light);
 }
 
+/* ─── App splash (Lottie intro) ─── */
+
+.app-splash-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 115;
+  background: #fff5f0;
+  pointer-events: none;
+}
+
+.app-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff5f0;
+  opacity: 1;
+  transition: opacity 200ms ease-out;
+}
+
+.app-splash--debug {
+  cursor: pointer;
+}
+
+.app-splash--leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.app-splash__stage {
+  width: min(80vmin, 512px);
+  height: min(80vmin, 512px);
+  pointer-events: none;
+}
+
+.app-splash__stage svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.app-splash__debug {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  margin: 0;
+  color: color-mix(in srgb, var(--color-maru-black) 55%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+
+.app-splash__debug-toggle {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-maru-black);
+  font: inherit;
+  letter-spacing: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+.app-splash__debug-toggle:hover {
+  color: var(--color-maru-black);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-splash {
+    transition: none;
+  }
+}
+
 /* ─── Yoto auth gate (TV boot) ─── */
 
 .yoto-auth-gate {
@@ -2017,7 +2097,7 @@ body {
 }
 
 .yoto-auth-gate--visible .yoto-auth-gate__screen {
-  overflow: hidden;
+  overflow: visible;
 }
 
 .yoto-auth-gate--visible {
@@ -2044,49 +2124,50 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: min(100%, 36rem);
-  min-height: min(70vh, 24rem);
+  width: min(100%, 28rem);
 }
 
 .yoto-auth-gate__screen {
   position: relative;
   width: 100%;
-  min-height: min(70vh, 24rem);
-  border: 3px solid var(--color-maru-black);
-  border-radius: var(--radius-maru);
-  background: var(--color-maru-magenta-lighter);
-  box-shadow: 6px 6px 0 var(--color-maru-black);
-  overflow: hidden;
+  aspect-ratio: 640 / 620;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
   transform-origin: center center;
   animation: yoto-auth-tv-boot 1.1s cubic-bezier(0.2, 0, 0, 1) forwards;
 }
 
-.yoto-auth-gate__screen::after {
-  content: '';
+.yoto-auth-gate__frame {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
   pointer-events: none;
-  background: repeating-linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--color-maru-black) 6%, transparent) 0,
-    color-mix(in srgb, var(--color-maru-black) 6%, transparent) 1px,
-    transparent 1px,
-    transparent 3px
-  );
-  opacity: 0.35;
+  user-select: none;
+  z-index: 0;
 }
 
 .yoto-auth-gate__content {
-  position: relative;
+  position: absolute;
+  /* Screen well inset from public/images/yoto-on.svg (640×620). */
+  top: 12%;
+  right: 13.5%;
+  bottom: 11%;
+  left: 13.5%;
   z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  min-height: min(70vh, 24rem);
-  padding: 2rem 1.5rem;
+  gap: 0.35rem;
+  min-height: 0;
+  padding: 0.75rem 0.85rem;
   text-align: center;
+  overflow: hidden;
 }
 
 .yoto-auth-gate__emoji,
@@ -2100,6 +2181,8 @@ body {
 
 .yoto-auth-gate__emoji {
   animation-delay: 0.98s;
+  object-fit: contain;
+  margin-bottom: 0.5rem;
 }
 
 .yoto-auth-gate__heading {
@@ -2111,20 +2194,65 @@ body {
 
 .yoto-auth-gate__body {
   font-family: var(--font-maru);
-  font-size: clamp(1.25rem, 2.6vw, 1.625rem);
-  line-height: 1.35;
+  font-size: clamp(1.35rem, 2.8vw, 1.75rem);
+  line-height: 1.05;
   letter-spacing: 0.01em;
   color: var(--color-maru-black);
   max-width: none;
-  white-space: nowrap;
+  white-space: normal;
+  text-wrap: pretty;
   margin-top: -0.25rem;
+  margin-bottom: 0.85rem;
   animation-delay: 1.18s;
 }
 
 .yoto-auth-gate__body--wrap {
-  white-space: normal;
-  max-width: 28rem;
-  text-wrap: pretty;
+  max-width: 100%;
+}
+
+.yoto-auth-gate__features {
+  width: 100%;
+  margin: 0.15rem 0 0.5rem;
+  padding: 0 0 0 1.1rem;
+  list-style: disc;
+  text-align: left;
+  font-family: var(--font-maru);
+  font-size: clamp(1.15rem, 2.4vw, 1.375rem);
+  line-height: 1.05;
+  color: var(--color-maru-black);
+  opacity: 0;
+  scale: 0.88;
+  animation: yoto-auth-gate-content-in 0.4s cubic-bezier(0.2, 0, 0, 1) forwards;
+  animation-delay: 1.22s;
+}
+
+.yoto-auth-gate__features li {
+  margin: 0;
+  padding: 0;
+}
+
+.yoto-auth-gate--welcome .yoto-auth-gate__content {
+  gap: 0.25rem;
+  padding: 0.55rem 0.7rem;
+  justify-content: center;
+  padding-top: 0.55rem;
+}
+
+.yoto-auth-gate--welcome .yoto-auth-gate__heading {
+  font-size: clamp(1.5rem, 3.2vw, 2rem);
+  margin-bottom: 0.5rem;
+}
+
+.yoto-auth-gate--welcome .yoto-auth-gate__body {
+  font-size: clamp(1.2rem, 2.6vw, 1.5rem);
+  line-height: 0.95;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.yoto-auth-gate--welcome .yoto-auth-gate__cta {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
 }
 
 .yoto-auth-gate__cta {
@@ -2189,35 +2317,20 @@ body {
   0%,
   7% {
     scale: 0.07 0.07;
-    border-radius: 999px;
-    background: var(--color-maru-yellow-light);
-    box-shadow:
-      2px 2px 0 var(--color-maru-black),
-      0 0 18px 5px color-mix(in srgb, var(--color-maru-yellow-light) 85%, transparent);
+    opacity: 0.85;
   }
 
-  /* 80% through vertical grow (7% → 47%): width begins at 39% */
   39% {
     scale: 0.007 0.82;
-    border-radius: calc(var(--radius-maru) * 2);
-    background: var(--color-maru-magenta-lighter);
-    box-shadow:
-      3px 3px 0 var(--color-maru-black),
-      0 0 10px 2px color-mix(in srgb, var(--color-maru-magenta-light) 50%, transparent);
+    opacity: 1;
   }
 
   47% {
     scale: 0.007 1;
-    border-radius: var(--radius-maru);
-    background: var(--color-maru-magenta-lighter);
-    box-shadow: 4px 4px 0 var(--color-maru-black);
   }
 
   100% {
     scale: 1 1;
-    border-radius: var(--radius-maru);
-    background: var(--color-maru-magenta-lighter);
-    box-shadow: 6px 6px 0 var(--color-maru-black);
   }
 }
 
@@ -2234,14 +2347,18 @@ body {
 }
 
 @media (min-width: 600px) {
+  .yoto-auth-gate__stage {
+    width: min(100%, 32rem);
+  }
+
   .yoto-auth-gate__heading {
-    font-size: 2rem;
+    font-size: 1.75rem;
     letter-spacing: 0.06em;
     word-spacing: 0.03em;
   }
 
   .yoto-auth-gate__body {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
   }
 }
 
@@ -2254,6 +2371,7 @@ body {
   .yoto-auth-gate__emoji,
   .yoto-auth-gate__heading,
   .yoto-auth-gate__body,
+  .yoto-auth-gate__features,
   .yoto-auth-gate__cta {
     animation: yoto-auth-gate-content-in-reduced 0.35s ease-out forwards;
     animation-delay: 0s;
@@ -2265,6 +2383,10 @@ body {
 
   .yoto-auth-gate__body {
     animation-delay: 0.1s;
+  }
+
+  .yoto-auth-gate__features {
+    animation-delay: 0.12s;
   }
 
   .yoto-auth-gate__cta {
@@ -2280,6 +2402,7 @@ body {
 .yoto-auth-gate--reduced .yoto-auth-gate__emoji,
 .yoto-auth-gate--reduced .yoto-auth-gate__heading,
 .yoto-auth-gate--reduced .yoto-auth-gate__body,
+.yoto-auth-gate--reduced .yoto-auth-gate__features,
 .yoto-auth-gate--reduced .yoto-auth-gate__cta {
   animation: yoto-auth-gate-content-in-reduced 0.35s ease-out forwards;
   animation-delay: 0s;
@@ -2291,6 +2414,10 @@ body {
 
 .yoto-auth-gate--reduced .yoto-auth-gate__body {
   animation-delay: 0.1s;
+}
+
+.yoto-auth-gate--reduced .yoto-auth-gate__features {
+  animation-delay: 0.12s;
 }
 
 .yoto-auth-gate--reduced .yoto-auth-gate__cta {

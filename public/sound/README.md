@@ -1,10 +1,12 @@
 # UI sounds
 
-Bundled UI sound effects from **[SND](https://snd.dev/)** (SND01 “sine” kit by Yasuhiro Tsuchiya).
+Most bundled UI sound effects are from **[SND](https://snd.dev/)** (SND01 “sine” kit by Yasuhiro Tsuchiya).
 
 Filenames match the ids in `app/utils/uiSoundCatalog.ts`.
 
-## Attribution
+**First-party exception:** `louis.wav` is the Louis splash cue (not part of the SND kit). SND attribution and terms below do not apply to it.
+
+## Attribution (SND)
 
 Sounds designed by **Yasuhiro Tsuchiya** for [SND](https://snd.dev/), operated by Dentsu Inc.
 

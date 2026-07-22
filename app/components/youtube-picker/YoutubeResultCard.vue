@@ -126,7 +126,7 @@ function onEnableLongTracks(event: Event) {
           @click="emit('select', video.id)"
         >
           <p class="yt-result-card__title font-maru-medium text-3xl sm:text-[2rem] leading-[0.8] line-clamp-2 text-pretty">{{ video.title }}</p>
-          <p class="yt-result-card__meta font-maru-mono font-maru-regular text-[1.75rem] text-maru-black/75 mt-0">{{ video.channelTitle }}</p>
+          <p class="yt-result-card__meta font-maru-mono font-maru-regular text-[1.75rem] leading-[0.8] text-maru-black/75 mt-0">{{ video.channelTitle }}</p>
         </button>
 
         <div
@@ -216,7 +216,7 @@ function onEnableLongTracks(event: Event) {
           @click="emit('select', video.id)"
         >
           <p class="yt-result-card__title font-maru-medium text-3xl sm:text-[2rem] leading-[0.8] line-clamp-2 text-pretty">{{ video.title }}</p>
-          <p class="yt-result-card__meta font-maru-mono font-maru-regular text-[1.75rem] text-maru-black/75 mt-0">{{ video.channelTitle }}</p>
+          <p class="yt-result-card__meta font-maru-mono font-maru-regular text-[1.75rem] leading-[0.8] text-maru-black/75 mt-0">{{ video.channelTitle }}</p>
         </button>
         <div
           v-if="!restricted"

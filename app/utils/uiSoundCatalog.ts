@@ -3,6 +3,7 @@ export const UI_SOUND_IDS = [
   'caution',
   'celebration',
   'disabled',
+  'louis',
   'notification',
   'progress_loop',
   'ringtone_loop',

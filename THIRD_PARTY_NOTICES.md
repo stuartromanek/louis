@@ -14,12 +14,14 @@ OpenMoji SVG icons in `public/emoji/` are from Streamline/OpenMoji, licensed und
 
 ## UI sounds
 
-UI sound effects in `public/sound/` are from **[SND](https://snd.dev/)** (SND01 “sine”), designed by Yasuhiro Tsuchiya / Dentsu Inc.
+Most UI sound effects in `public/sound/` are from **[SND](https://snd.dev/)** (SND01 “sine”), designed by Yasuhiro Tsuchiya / Dentsu Inc.
 
 - Free for personal and commercial use under the [SND Terms of Service](https://snd.dev/)
 - Bundled terms: [public/sound/TERMS.md](public/sound/TERMS.md)
 - Do not redistribute the `.wav` files alone in unprocessed form (see SND terms)
 - Catalog / filenames: [public/sound/README.md](public/sound/README.md)
+
+**Exception:** `public/sound/louis.wav` is a first-party Louis splash cue and is not part of the SND kit.
 
 ## External binaries (not bundled in npm)
 
