@@ -17,7 +17,7 @@ Optionally, mount a Netscape `cookies.txt` from a **throwaway YouTube account** 
 
 ## 1. Yoto developer portal
 
-Create a **public** client (e.g. "yoto-cards demo"):
+Create a **public** client (e.g. "Louis demo"):
 
 | Setting | Value |
 |---------|-------|

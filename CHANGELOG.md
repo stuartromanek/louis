@@ -23,6 +23,7 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - Successful OAuth callback redirects to `/?yoto=connected` instead of bare `/`.
 - Auth gate copy updated to “Connect Louis to Yoto”; connect-gate and welcome typography/spacing tightened.
 - YouTube result card channel meta uses tighter line-height.
+- Docs and browser title brand the app as **Louis** (README banner, CONTRIBUTING, ROADMAP, DEMO, LICENSE).
 
 ### Removed
 - Marketing page (`/marketing`) and `public/marketing/` assets (Louis/Yoto art lives under `public/images/`).

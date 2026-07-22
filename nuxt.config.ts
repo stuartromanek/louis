@@ -16,7 +16,7 @@ export default defineNuxtConfig({
   css: ['./app/assets/css/main.css'],
   app: {
     head: {
-      title: 'yoto-cards',
+      title: 'Louis',
       link: [
         { rel: 'icon', href: '/favicons/favicon.ico', sizes: 'any' },
         { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicons/favicon-32x32.png' },

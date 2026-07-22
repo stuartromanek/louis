@@ -1,6 +1,6 @@
 # Roadmap
 
-Ideas and planned work for Louis / yoto-cards. Order is not a commitment; priorities may shift.
+Ideas and planned work for **Louis**. Order is not a commitment; priorities may shift.
 
 ## Planned
 

@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in contributing to yoto-cards!
+Thanks for your interest in contributing to **Louis**!
 
 ## Development setup
 

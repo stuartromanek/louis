@@ -1,4 +1,8 @@
-# yoto-cards
+<p align="center">
+  <img src="docs/images/louis-readme-banner.png" alt="Louis! Yoto, meet YouTube" width="720" />
+</p>
+
+# Louis
 
 Search YouTube, arrange a playlist, and save it to your [Yoto](https://yotoplay.com/) Make Your Own (MYO) cards.
 
@@ -13,29 +17,11 @@ Self-hosted **Nuxt** server app — Yoto OAuth and YouTube audio download run on
 - Drag-and-drop playlist editing
 - Save playlists to Yoto with download / transcode progress
 
-## Architecture
-
-```mermaid
-flowchart LR
-  Browser --> NuxtServer
-  NuxtServer --> YotoAPI
-  NuxtServer --> YouTubeAPI
-  NuxtServer --> YtdlpBinary
-  YtdlpBinary --> AudioCache
-```
-
-| Piece | Role |
-|-------|------|
-| Nuxt 4 | UI + API routes |
-| yt-dlp | YouTube audio for preview and save |
-| ffmpeg | Audio extraction on save (`yt-dlp -x`) |
-| Yoto OAuth | Public PKCE client; tokens in httpOnly cookies |
-
 ## Quick start (Docker)
 
 ```bash
-git clone https://github.com/stuartromanek/louis.git yoto-cards
-cd yoto-cards
+git clone https://github.com/stuartromanek/louis.git
+cd louis
 cp .env.example .env
 # Fill in NUXT_YOTO_CLIENT_ID and NUXT_YOUTUBE_API_KEY (see below)
 docker compose up -d --build
@@ -85,7 +71,7 @@ Copy [`.env.example`](.env.example). Use **`NUXT_*` names** so the same file wor
 **ffmpeg** is required for save. The Docker image installs it.
 
 ```bash
-docker run -p 4000:4000 --env-file .env yoto-cards:local
+docker run -p 4000:4000 --env-file .env louis:local
 ```
 
 ### 4. Deploy constraints

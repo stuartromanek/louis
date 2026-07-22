@@ -7,7 +7,7 @@
       Dongle
     </h1>
     <p class="font-maru-medium text-lg sm:text-2xl lg:text-[25px] max-w-2xl text-pretty tracking-wide">
-      Rounded display type throughout — warm, playful UI typography for yoto-cards.
+      Rounded display type throughout — warm, playful UI typography for Louis.
     </p>
   </section>
 </template>
