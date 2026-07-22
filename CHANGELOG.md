@@ -9,6 +9,8 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-07-22
+
 ### Added
 - Intro splash sequence (Lottie) on first visit per tab session, with a short delay before playback and a frame-synced Louis sound cue (`splashCue` / `louis.wav`).
 - Splash debug mode via `?splash=debug` (loop, pause, frame HUD).
@@ -25,3 +27,6 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 ### Removed
 - Marketing page (`/marketing`) and `public/marketing/` assets (Louis/Yoto art lives under `public/images/`).
 - Experimental muted `<video>` splash cue path (`louis.mp4`); splash audio uses the shared UI sound player only.
+
+[Unreleased]: https://github.com/stuartromanek/louis-/compare/v1.0.0...main
+[1.0.0]: https://github.com/stuartromanek/louis-/releases/tag/v1.0.0
