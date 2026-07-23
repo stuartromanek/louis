@@ -1,6 +1,6 @@
 # Louis!
 
-![Logo](./docs/images/louis-readme-banner.png)
+![Logo](./docs/images/louis-readme-banner.webp)
 
 Search YouTube, arrange a playlist, and save it to your [Yoto](https://yotoplay.com/) Make Your Own (MYO) cards.
 
