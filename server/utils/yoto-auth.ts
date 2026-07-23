@@ -131,7 +131,7 @@ async function postTokenRequest(body: Record<string, string>): Promise<YotoToken
     const errorData = e.data ?? e.response?._data
     throw createError({
       statusCode: e.statusCode === 401 ? 401 : 502,
-      statusMessage: errorData?.error_description ?? e.statusMessage ?? e.message ?? 'Yoto token exchange failed',
+      message: errorData?.error_description ?? e.statusMessage ?? e.message ?? 'Yoto token exchange failed',
     })
   }
 }

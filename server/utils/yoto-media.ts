@@ -105,7 +105,7 @@ export async function pollTranscoded(
     if (phase && TRANSCODE_FAILURE_PHASES.has(phase)) {
       throw createError({
         statusCode: 502,
-        statusMessage: `Yoto audio transcoding failed (${phase})`,
+        message: `Yoto audio transcoding failed (${phase})`,
       })
     }
 

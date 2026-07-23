@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
     const description = String(query.error_description ?? error)
     throw createError({
       statusCode: 401,
-      statusMessage: `Yoto authorization failed: ${description}`,
+      message: `Yoto authorization failed: ${description}`,
     })
   }
 

@@ -125,7 +125,7 @@ export async function fetchYotoApi<T>(
     const rawMessage = e.statusMessage ?? e.message ?? 'Yoto API error'
     throw createError({
       statusCode: e.statusCode ?? 502,
-      statusMessage: withMappedYotoLimitError(rawMessage),
+      message: withMappedYotoLimitError(rawMessage),
     })
   }
 }

@@ -24,6 +24,7 @@ import { mergeContentMetadata } from './yoto-metadata'
 import { fetchYotoCardDetail } from './yoto-card-detail'
 import { getYotoAccessToken } from './yoto'
 
+/** Process-local only — cleared on every container restart/redeploy. See docs/DEMO.md §4b. */
 const jobs = new Map<string, SaveJobState>()
 
 function createTrackProgress(playlist: PlaylistTrack[]): SaveJobTrackProgress[] {
@@ -155,7 +156,7 @@ async function runSaveJob(
     if (plan.errors.length > 0) {
       throw createError({
         statusCode: 400,
-        statusMessage: plan.errors[0],
+        message: plan.errors[0],
       })
     }
 
@@ -184,7 +185,7 @@ async function runSaveJob(
       if (trackCountError) {
         throw createError({
           statusCode: 400,
-          statusMessage: trackCountError,
+          message: trackCountError,
         })
       }
     }
@@ -251,7 +252,7 @@ async function runSaveJob(
         if (mediaError) {
           throw createError({
             statusCode: 413,
-            statusMessage: mediaError,
+            message: mediaError,
           })
         }
       }
@@ -301,7 +302,7 @@ async function runSaveJob(
     if (builtTrackCount !== playlist.length) {
       throw createError({
         statusCode: 500,
-        statusMessage: `Save built ${builtTrackCount} tracks but playlist has ${playlist.length}`,
+        message: `Save built ${builtTrackCount} tracks but playlist has ${playlist.length}`,
       })
     }
 
@@ -316,7 +317,7 @@ async function runSaveJob(
           if (mediaError) {
             throw createError({
               statusCode: 413,
-              statusMessage: mediaError,
+              message: mediaError,
             })
           }
         }
@@ -329,7 +330,7 @@ async function runSaveJob(
       if (totalsError) {
         throw createError({
           statusCode: 413,
-          statusMessage: totalsError,
+          message: totalsError,
         })
       }
     }

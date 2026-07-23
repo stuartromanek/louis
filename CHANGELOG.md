@@ -9,6 +9,15 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [Unreleased]
 
+### Added
+- yt-dlp download outcome logs (`ok` / `fail` / `escalate` / `coalesce`) so Railway logs show whether cookies recovered after bot checks.
+- In-process singleflight for concurrent downloads of the same YouTube id (preview stampede protection).
+
+### Changed
+- Expected anon→cookies escalate and retries log at info level (not warn/error).
+- Long API errors use h3 `message` instead of `statusMessage` (avoids future sanitization warnings).
+- Demo runbook: cookies required on cloud IPs, `YTDLP_CACHE_BUST`, restart/job-loss notes, how to read yt-dlp logs.
+
 ## [1.0.0] - 2026-07-22
 
 ### Added

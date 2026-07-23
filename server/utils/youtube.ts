@@ -15,7 +15,7 @@ export function getYoutubeApiKey(event: H3Event): string {
   if (!key) {
     throw createError({
       statusCode: 503,
-      statusMessage: 'YouTube API key not configured. Set NUXT_YOUTUBE_API_KEY in .env',
+      message: 'YouTube API key not configured. Set NUXT_YOUTUBE_API_KEY in .env',
     })
   }
   return key
@@ -30,12 +30,12 @@ export async function fetchYoutubeApi<T>(url: string): Promise<T> {
     if (e.statusCode === 403) {
       throw createError({
         statusCode: 403,
-        statusMessage: 'YouTube API quota exceeded or key invalid',
+        message: 'YouTube API quota exceeded or key invalid',
       })
     }
     throw createError({
       statusCode: e.statusCode ?? 502,
-      statusMessage: e.statusMessage ?? e.message ?? 'YouTube API error',
+      message: e.statusMessage ?? e.message ?? 'YouTube API error',
     })
   }
 }

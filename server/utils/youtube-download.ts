@@ -37,6 +37,9 @@ const YTDLP_FALLBACK_PATHS = [
   '/usr/local/bin/yt-dlp',
 ]
 
+/** Coalesce concurrent downloads of the same video (preview stampede / parallel saves). */
+const inFlightDownloads = new Map<string, Promise<DownloadedAudio>>()
+
 export interface DownloadedAudio {
   filePath: string
   filename: string
@@ -69,6 +72,10 @@ async function readYtdlpVersion(binaryPath: string): Promise<string | null> {
   }
 }
 
+function httpError(statusCode: number, message: string) {
+  return createError({ statusCode, message })
+}
+
 async function resolveYtdlpBinary(configuredPath: string): Promise<ResolvedYtdlp> {
   if (cachedYtdlp) return cachedYtdlp
 
@@ -87,10 +94,10 @@ async function resolveYtdlpBinary(configuredPath: string): Promise<ResolvedYtdlp
   }
 
   if (!best) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'yt-dlp not found. Install it (Docker image includes it; native: apt install yt-dlp, pip install yt-dlp, or set NUXT_YTDLP_PATH).',
-    })
+    throw httpError(
+      500,
+      'yt-dlp not found. Install it (Docker image includes it; native: apt install yt-dlp, pip install yt-dlp, or set NUXT_YTDLP_PATH).',
+    )
   }
 
   cachedYtdlp = best
@@ -206,8 +213,6 @@ async function downloadYoutubeAudioInternal(
   options: { transcode: boolean, enforceMyoSizeLimit: boolean },
 ): Promise<DownloadedAudio> {
   const { ytdlpPath: configuredPath, audioWorkDir } = resolveAudioWorkDirConfig(event)
-  const ytdlp = await resolveYtdlpBinary(configuredPath)
-
   const cacheMode = cacheModeForOptions(options.transcode)
   const cacheDir = getCacheDir(audioWorkDir, cacheMode)
   await mkdir(cacheDir, { recursive: true })
@@ -227,13 +232,61 @@ async function downloadYoutubeAudioInternal(
     await rm(cached, { force: true })
   }
 
+  const flightKey = `${cacheMode}:${youtubeId}`
+  const existing = inFlightDownloads.get(flightKey)
+  if (existing) {
+    console.info(`[yt-dlp] coalesce videoId=${youtubeId} mode=${cacheMode}`)
+    return existing
+  }
+
+  const promise = downloadYoutubeAudioUncached(youtubeId, event, options, {
+    configuredPath,
+    audioWorkDir,
+    cacheDir,
+    cacheMode,
+  }).finally(() => {
+    if (inFlightDownloads.get(flightKey) === promise) {
+      inFlightDownloads.delete(flightKey)
+    }
+  })
+  inFlightDownloads.set(flightKey, promise)
+  return promise
+}
+
+async function downloadYoutubeAudioUncached(
+  youtubeId: string,
+  event: H3Event | undefined,
+  options: { transcode: boolean, enforceMyoSizeLimit: boolean },
+  ctx: {
+    configuredPath: string
+    audioWorkDir: string
+    cacheDir: string
+    cacheMode: AudioCacheMode
+  },
+): Promise<DownloadedAudio> {
+  const { configuredPath, audioWorkDir, cacheDir, cacheMode } = ctx
+  const ytdlp = await resolveYtdlpBinary(configuredPath)
+
+  // Re-check cache after winning the singleflight race (coalesced waiters already returned).
+  const requiredExt = options.transcode ? '.m4a' : undefined
+  const cached = await findCachedFile(cacheDir, youtubeId, requiredExt)
+  if (cached) {
+    const fileStat = await stat(cached)
+    if (!options.enforceMyoSizeLimit || fileStat.size <= MAX_FILE_BYTES) {
+      return {
+        filePath: cached,
+        filename: path.basename(cached),
+        sha256: await hashFile(cached),
+        fromCache: true,
+      }
+    }
+    await rm(cached, { force: true })
+  }
+
   if (event) {
     const availability = await checkYoutubeVideoAvailability(event, youtubeId)
     if (availability && !availability.ok) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: availability.message,
-      })
+      throw httpError(404, availability.message)
     }
   }
 
@@ -245,6 +298,7 @@ async function downloadYoutubeAudioInternal(
   const cookiesArgs = await resolveYtdlpCookiesArgs(event)
   const hasCookies = cookiesArgs.length > 0
   let useCookies = false
+  let escalatedToCookies = false
   const maxAttempts = hasCookies
     ? YTDLP_MAX_ATTEMPTS + YTDLP_COOKIE_FOLLOWUP_ATTEMPTS
     : YTDLP_MAX_ATTEMPTS
@@ -289,11 +343,13 @@ async function downloadYoutubeAudioInternal(
 
         if (!useCookies && hasCookies && shouldEscalateToCookies(errorClass, stderr)) {
           useCookies = true
+          escalatedToCookies = true
           if (errorClass === 'retryable') {
             recoveredFromRetryableFailure = true
           }
-          console.warn(
-            `[yt-dlp] escalate to cookies attempt=${attempt + 1}/${maxAttempts} client=${clientLabel} videoId=${youtubeId} reason=${errorClass}`,
+          // Expected on datacenter IPs (demo/Railway) when cookies are configured — not an outage.
+          console.info(
+            `[yt-dlp] escalate videoId=${youtubeId} mode=${cacheMode} attempt=${attempt + 1}/${maxAttempts} client=${clientLabel} reason=${errorClass}`,
           )
           continue
         }
@@ -302,16 +358,16 @@ async function downloadYoutubeAudioInternal(
           if (errorClass === 'retryable') {
             recoveredFromRetryableFailure = true
           }
-          console.warn(
-            `[yt-dlp] retry ${attempt + 1}/${maxAttempts} auth=${authLabel} client=${clientLabel} videoId=${youtubeId} reason=${errorClass}`,
+          console.info(
+            `[yt-dlp] retry videoId=${youtubeId} mode=${cacheMode} attempt=${attempt + 1}/${maxAttempts} auth=${authLabel} client=${clientLabel} reason=${errorClass}`,
           )
           continue
         }
 
-        throw createError({
-          statusCode: 502,
-          statusMessage: formatYtdlpError(stderr, youtubeId),
-        })
+        console.error(
+          `[yt-dlp] fail videoId=${youtubeId} mode=${cacheMode} auth=${authLabel} class=${errorClass} escalated=${escalatedToCookies}`,
+        )
+        throw httpError(502, formatYtdlpError(stderr, youtubeId))
       }
 
       const files = await readdir(jobDir)
@@ -320,30 +376,34 @@ async function downloadYoutubeAudioInternal(
         lastStderr = 'ERROR: YouTube download produced no file'
         if (shouldRetryYtdlp('retryable', attempt, { usingCookies: useCookies, maxAttempts })) {
           recoveredFromRetryableFailure = true
-          console.warn(
-            `[yt-dlp] retry ${attempt + 1}/${maxAttempts} auth=${useCookies ? 'cookies' : 'anon'} client=${playerClient ?? 'default'} videoId=${youtubeId} reason=no_file`,
+          console.info(
+            `[yt-dlp] retry videoId=${youtubeId} mode=${cacheMode} attempt=${attempt + 1}/${maxAttempts} auth=${useCookies ? 'cookies' : 'anon'} client=${playerClient ?? 'default'} reason=no_file`,
           )
           continue
         }
-        throw createError({
-          statusCode: 502,
-          statusMessage: `YouTube download produced no file for ${youtubeId}`,
-        })
+        console.error(
+          `[yt-dlp] fail videoId=${youtubeId} mode=${cacheMode} auth=${useCookies ? 'cookies' : 'anon'} class=no_file escalated=${escalatedToCookies}`,
+        )
+        throw httpError(502, `YouTube download produced no file for ${youtubeId}`)
       }
 
       const filePath = path.join(jobDir, audioFile)
       const fileStat = await stat(filePath)
       if (options.enforceMyoSizeLimit && fileStat.size > MAX_FILE_BYTES) {
-        throw createError({
-          statusCode: 413,
-          statusMessage: `Downloaded audio for ${youtubeId} exceeds Yoto’s 100 MB per-track limit`,
-        })
+        throw httpError(
+          413,
+          `Downloaded audio for ${youtubeId} exceeds Yoto’s 100 MB per-track limit`,
+        )
       }
 
       const cachePath = path.join(cacheDir, audioFile)
       await readFile(filePath)
       await copyFile(filePath, cachePath)
       await runAudioCacheSweep(event)
+
+      console.info(
+        `[yt-dlp] ok videoId=${youtubeId} mode=${cacheMode} auth=${useCookies ? 'cookies' : 'anon'} escalated=${escalatedToCookies} recovered=${Boolean(recoveredFromRetryableFailure)}`,
+      )
 
       return {
         filePath: cachePath,
@@ -354,10 +414,10 @@ async function downloadYoutubeAudioInternal(
       }
     }
 
-    throw createError({
-      statusCode: 502,
-      statusMessage: formatYtdlpError(lastStderr || 'ERROR: retries exhausted', youtubeId),
-    })
+    console.error(
+      `[yt-dlp] fail videoId=${youtubeId} mode=${cacheMode} auth=${useCookies ? 'cookies' : 'anon'} class=${lastStderr ? classifyYtdlpStderr(lastStderr) : 'exhausted'} escalated=${escalatedToCookies}`,
+    )
+    throw httpError(502, formatYtdlpError(lastStderr || 'ERROR: retries exhausted', youtubeId))
   }
   finally {
     await cleanupJobTempDir(jobDir)
