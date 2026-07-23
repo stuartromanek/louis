@@ -1,12 +1,12 @@
-Louis! Yoto, meet YouTube
-
 # Louis!
+
+![Logo](./docs/images/louis-readme-banner.png)
 
 Search YouTube, arrange a playlist, and save it to your [Yoto](https://yotoplay.com/) Make Your Own (MYO) cards.
 
 Self-hosted **Nuxt** server app — Yoto OAuth and YouTube audio download run on the server. A static export cannot power those flows.
 
-<video src="docs/images/louis-demo.mp4" controls playsinline width="100%"></video>
+https://github.com/user-attachments/assets/6083e578-a0ba-4047-8d44-d2c4efad511d
 
 [Self-host](#self-host) · [Native development](#native-development) · [Contributing](CONTRIBUTING.md) · [Releases](docs/RELEASE.md) · [Demo runbook](docs/DEMO.md)
 
