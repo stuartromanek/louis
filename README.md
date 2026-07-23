@@ -1,4 +1,4 @@
-# Louis!
+# Louis! A Yoto MYO client backed by YouTube
 
 ![Logo](./docs/images/louis-readme-banner.webp)
 
