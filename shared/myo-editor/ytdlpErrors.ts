@@ -162,7 +162,7 @@ export function formatYtdlpError(stderr: string, youtubeId: string): string {
   const errorClass = classifyYtdlpStderr(stderr)
 
   if (errorClass === 'outdated') {
-    return `YouTube download failed for ${youtubeId}. yt-dlp is likely outdated — update yt-dlp (Docker: rebuild image; native: pip install -U "yt-dlp[default]" or brew upgrade yt-dlp)`
+    return `YouTube download failed for ${youtubeId}. yt-dlp is likely outdated — update yt-dlp (Docker: rebuild image with a fresh YTDLP_CACHE_BUST; native: pip install -U --pre "yt-dlp[default]" or yt-dlp --update-to nightly)`
   }
 
   if (errorClass === 'bot_signin') {

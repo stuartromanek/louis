@@ -1,6 +1,10 @@
 services:
   yoto-cards:
-    build: .
+    build:
+      context: .
+      args:
+        # Change on rebuild to pull latest yt-dlp nightly (CI sets this automatically).
+        YTDLP_CACHE_BUST: ${YTDLP_CACHE_BUST:-}
     ports:
       - "4000:4000"
     env_file:

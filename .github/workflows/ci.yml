@@ -32,5 +32,7 @@ jobs:
           context: .
           push: false
           tags: yoto-cards:ci
+          build-args: |
+            YTDLP_CACHE_BUST=${{ github.run_id }}-${{ github.run_attempt }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

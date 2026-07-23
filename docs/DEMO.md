@@ -80,7 +80,7 @@ After deploy:
 | Task | Action |
 |------|--------|
 | YouTube quota exhausted | Rotate `NUXT_YOUTUBE_API_KEY` or wait for quota reset; consider search-on-submit (future) |
-| yt-dlp outdated | Redeploy (rebuilds Docker image with latest apt packages) |
+| yt-dlp outdated | Rebuild/redeploy the image (nightly via pip `--pre`; pass a fresh `YTDLP_CACHE_BUST` so the layer is not cached) |
 | Bot / 403 on download | Rotate `cookies.txt` (see §2b); confirm `ytdlpCookies.readable` |
 | OAuth redirect mismatch | Ensure Railway URL and Yoto portal URI match `NUXT_YOTO_REDIRECT_URI` exactly |
 | Disk full | Lower `NUXT_AUDIO_CACHE_MAX_BYTES` / `NUXT_AUDIO_CACHE_MAX_AGE_MS`, or clear `/data/audio/cache` manually |

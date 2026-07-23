@@ -77,7 +77,7 @@ Copy [`.env.example`](.env.example). Use **`NUXT_*` names** so the same file wor
 | `NUXT_AUDIO_JOB_MAX_AGE_MS`   | Stale `jobs/` cleanup (default 1h)                                                                                                    |
 | `NUXT_AUDIO_CACHE_MAX_AGE_MS` | Cache file TTL (default 14d)                                                                                                          |
 | `NUXT_AUDIO_CACHE_MAX_BYTES`  | Combined preview + save cache cap (default 5 GiB)                                                                                     |
-| `NUXT_YTDLP_PATH`             | Docker ships `yt-dlp` on `PATH`                                                                                                       |
+| `NUXT_YTDLP_PATH`             | Docker ships yt-dlp **nightly** on `PATH` (refreshed when the image is rebuilt with a new `YTDLP_CACHE_BUST`) |
 | `NUXT_YTDLP_COOKIES_FILE`     | Optional Netscape `cookies.txt`. Downloads try anonymously first; cookies are used only if YouTube blocks with bot check, hard 403, or age-gate. Prefer a throwaway Google account; never commit the file |
 
 #### Advanced / debug
