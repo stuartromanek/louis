@@ -87,12 +87,19 @@ import AppDevToolsStrip from '~/components/dev/AppDevToolsStrip.vue'
 import YotoAuthGate from '~/components/yoto-myo/YotoAuthGate.vue'
 import YotoConnectedModal from '~/components/yoto-myo/YotoConnectedModal.vue'
 import AppSplash from '~/components/splash/AppSplash.vue'
+import {
+  MOBILE_EDITOR_CHROME_KEY,
+  useMobileEditorChrome,
+} from '~/composables/useMobileEditorChrome'
 
 const yoto = useYotoMyo()
 provide(YOTO_MYO_KEY, yoto)
 
 const editor = useMyoEditor()
 provide(MYO_EDITOR_KEY, editor)
+
+const mobileChrome = useMobileEditorChrome()
+provide(MOBILE_EDITOR_CHROME_KEY, mobileChrome)
 
 const route = useRoute()
 const router = useRouter()
@@ -147,6 +154,19 @@ watch(
 const playlistTitle = computed(() => {
   if (!selectedCardId.value || !cardTitle.value.trim()) return 'Playlist'
   return cardTitle.value.trim()
+})
+
+/** On phone, selecting a card jumps to the Playlist tab. */
+watch(selectedCardId, (id, prev) => {
+  if (!mobileChrome.isPhone.value) return
+  if (!id || id === prev) return
+  mobileChrome.goToTab('playlist')
+})
+
+/** After a track is dropped/added, surface the Playlist tab on phone. */
+watch(scrollToVideoId, (id) => {
+  if (!mobileChrome.isPhone.value || !id) return
+  mobileChrome.goToTab('playlist')
 })
 
 function getItemData(entity: { data?: unknown } | null | undefined): DndItemData | null {

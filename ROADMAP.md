@@ -38,7 +38,7 @@ Explore pre-canned deploy targets that consume container images (Railway templat
 
 ### Smartphone-centric UI
 
-Phone layout for the three-panel editor. On small screens YouTube result titles are truncated to thumbnails with no way to read the full name; design a phone-first results list and overall flow (currently tuned for desktop and tablet).
+~~Phone layout for the three-panel editor~~ — **done**: below 600px, one panel at a time with Search / Cards / Playlist bottom tabs; denser YouTube rows with readable titles + tap-to-add; touch hit targets; status-bar overflow menu; desktop/tablet two-column grid unchanged at `sm`+.
 
 ### YouTube chapters → tracks
 

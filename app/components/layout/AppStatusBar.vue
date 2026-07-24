@@ -14,6 +14,10 @@ const { connected, status, refresh, disconnect, hasWriteScope, connect, errorMes
 
 const prefsOpen = ref(false)
 const howToOpen = ref(false)
+const overflowOpen = ref(false)
+const overflowRoot = ref<HTMLElement | null>(null)
+
+const FEEDBACK_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSccwkdCpYaJjODtpxSrtBIaye045nobwudH1L0VX8S6NzFtjA/viewform?usp=publish-editor'
 
 const needsReconnect = computed(
   () => connected.value && !hasWriteScope.value,
@@ -37,30 +41,68 @@ const statusDotClass = computed(() => {
   return 'status-dot--warn'
 })
 
+const showConnect = computed(
+  () => status.value === 'disconnected' || status.value === 'unconfigured',
+)
+
+const showSignOut = computed(
+  () => connected.value && status.value === 'idle',
+)
+
 function openHowTo() {
   playEvent('buttonClick')
+  overflowOpen.value = false
   howToOpen.value = true
 }
 
 function openPreferences() {
   playEvent('buttonClick')
+  overflowOpen.value = false
   prefsOpen.value = true
 }
 
 function onConnect() {
   playEvent('buttonPrimary')
+  overflowOpen.value = false
   connect()
 }
 
 function onDisconnect() {
   playEvent('buttonClick')
+  overflowOpen.value = false
   disconnect()
 }
 
 function onRetry() {
   playEvent('buttonClick')
+  overflowOpen.value = false
   refresh()
 }
+
+function toggleOverflow() {
+  playEvent('buttonClick')
+  overflowOpen.value = !overflowOpen.value
+}
+
+function onFeedbackClick() {
+  playEvent('buttonClick')
+  overflowOpen.value = false
+}
+
+function onPointerDownOutside(event: PointerEvent) {
+  if (!overflowOpen.value) return
+  const root = overflowRoot.value
+  if (root && event.target instanceof Node && root.contains(event.target)) return
+  overflowOpen.value = false
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', onPointerDownOutside)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', onPointerDownOutside)
+})
 </script>
 
 <template>
@@ -79,7 +121,7 @@ function onRetry() {
       </span>
       <span
         v-if="status === 'error' && errorMessage"
-        class="status-bar__meta text-maru-red truncate max-w-[12rem] sm:max-w-[20rem]"
+        class="status-bar__meta text-maru-red truncate max-w-[8rem] sm:max-w-[20rem]"
         :title="errorMessage"
       >
         {{ errorMessage }}
@@ -87,66 +129,157 @@ function onRetry() {
     </div>
 
     <div class="status-bar__cluster status-bar__cluster--actions shrink-0">
-      <button
-        type="button"
-        class="status-bar__action"
-        @click="openHowTo"
-      >
-        How To
-      </button>
+      <!-- Desktop / tablet: full action row -->
+      <div class="status-bar__actions-full hidden sm:contents">
+        <button
+          type="button"
+          class="status-bar__action"
+          @click="openHowTo"
+        >
+          How To
+        </button>
 
-      <a
-        class="status-bar__action"
-        href="https://docs.google.com/forms/d/e/1FAIpQLSccwkdCpYaJjODtpxSrtBIaye045nobwudH1L0VX8S6NzFtjA/viewform?usp=publish-editor"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Issue / Feedback
-      </a>
+        <a
+          class="status-bar__action"
+          :href="FEEDBACK_URL"
+          target="_blank"
+          rel="noopener noreferrer"
+          @click="onFeedbackClick"
+        >
+          Issue / Feedback
+        </a>
 
-      <button
-        type="button"
-        class="status-bar__action"
-        @click="openPreferences"
-      >
-        Preferences
-      </button>
+        <button
+          type="button"
+          class="status-bar__action"
+          @click="openPreferences"
+        >
+          Preferences
+        </button>
 
-      <button
-        v-if="status === 'disconnected' || status === 'unconfigured'"
-        type="button"
-        class="status-bar__action status-bar__action--emphasis"
-        @click="onConnect"
-      >
-        Connect
-      </button>
+        <button
+          v-if="showConnect"
+          type="button"
+          class="status-bar__action status-bar__action--emphasis"
+          @click="onConnect"
+        >
+          Connect
+        </button>
 
-      <button
-        v-if="needsReconnect"
-        type="button"
-        class="status-bar__action status-bar__action--emphasis"
-        @click="onConnect"
-      >
-        Reconnect
-      </button>
+        <button
+          v-if="needsReconnect"
+          type="button"
+          class="status-bar__action status-bar__action--emphasis"
+          @click="onConnect"
+        >
+          Reconnect
+        </button>
 
-      <button
-        v-if="connected && status === 'idle'"
-        type="button"
-        class="status-bar__action"
-        @click="onDisconnect"
-      >
-        Sign out
-      </button>
+        <button
+          v-if="showSignOut"
+          type="button"
+          class="status-bar__action"
+          @click="onDisconnect"
+        >
+          Sign out
+        </button>
 
-      <button
-        v-if="status === 'error'"
-        type="button"
-        class="status-bar__action status-bar__action--emphasis"
-        @click="onRetry"
-      >
-        Retry
-      </button>
+        <button
+          v-if="status === 'error'"
+          type="button"
+          class="status-bar__action status-bar__action--emphasis"
+          @click="onRetry"
+        >
+          Retry
+        </button>
+      </div>
+
+      <!-- Phone: critical actions + overflow -->
+      <div class="status-bar__actions-phone flex sm:hidden items-center gap-2">
+        <button
+          v-if="showConnect"
+          type="button"
+          class="status-bar__action status-bar__action--emphasis"
+          @click="onConnect"
+        >
+          Connect
+        </button>
+
+        <button
+          v-if="needsReconnect"
+          type="button"
+          class="status-bar__action status-bar__action--emphasis"
+          @click="onConnect"
+        >
+          Reconnect
+        </button>
+
+        <button
+          v-if="status === 'error'"
+          type="button"
+          class="status-bar__action status-bar__action--emphasis"
+          @click="onRetry"
+        >
+          Retry
+        </button>
+
+        <div
+          ref="overflowRoot"
+          class="status-bar__overflow"
+        >
+          <button
+            type="button"
+            class="status-bar__overflow-trigger"
+            :aria-expanded="overflowOpen"
+            aria-haspopup="menu"
+            aria-label="More actions"
+            @click="toggleOverflow"
+          >
+            ⋯
+          </button>
+          <div
+            v-if="overflowOpen"
+            class="status-bar__overflow-menu"
+            role="menu"
+          >
+            <button
+              type="button"
+              class="status-bar__overflow-item"
+              role="menuitem"
+              @click="openHowTo"
+            >
+              How To
+            </button>
+            <a
+              class="status-bar__overflow-item"
+              role="menuitem"
+              :href="FEEDBACK_URL"
+              target="_blank"
+              rel="noopener noreferrer"
+              @click="onFeedbackClick"
+            >
+              Issue / Feedback
+            </a>
+            <button
+              type="button"
+              class="status-bar__overflow-item"
+              role="menuitem"
+              @click="openPreferences"
+            >
+              Preferences
+            </button>
+            <button
+              v-if="showSignOut"
+              type="button"
+              class="status-bar__overflow-item"
+              role="menuitem"
+              @click="onDisconnect"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <HowToModal v-model:open="howToOpen" />

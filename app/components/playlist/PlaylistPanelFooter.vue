@@ -128,12 +128,12 @@ watch(
       >
         {{ footerHint }}
       </p>
-      <div class="w-full flex items-center gap-2 sm:gap-3 min-w-0">
+      <div class="w-full flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-w-0">
         <PlaylistCapacityMeters />
-        <div class="ml-auto flex items-center gap-2 sm:gap-3 shrink-0">
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0 w-full sm:w-auto sm:ml-auto">
           <button
             type="button"
-            class="panel-footer-btn panel-footer-btn--short panel-footer-btn--secondary shrink-0"
+            class="panel-footer-btn panel-footer-btn--short panel-footer-btn--secondary shrink-0 flex-1 sm:flex-none"
             :aria-disabled="!canReset"
             :tabindex="canReset ? 0 : -1"
             @click="onReset"
@@ -142,7 +142,7 @@ watch(
           </button>
           <button
             type="button"
-            class="panel-footer-btn panel-footer-btn--short panel-footer-btn--primary shrink-0"
+            class="panel-footer-btn panel-footer-btn--short panel-footer-btn--primary shrink-0 flex-1 sm:flex-none"
             :aria-disabled="!canUpdate"
             :tabindex="canUpdate ? 0 : -1"
             @click="onUpdate"

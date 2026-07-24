@@ -148,6 +148,13 @@ const cardMotionStyle = computed(() => {
   transition: z-index 0ms;
 }
 
+@media (max-width: 599px) {
+  .myo-playing-card-slot {
+    min-height: 9rem;
+    height: 92%;
+  }
+}
+
 .myo-playing-card-slot__motion {
   height: 100%;
   transform: rotate(var(--card-rotate, 0deg));
