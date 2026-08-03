@@ -67,8 +67,8 @@ const { isDragging, isDropTarget } = useSortable({
     >
 
     <div class="min-w-0 flex-1 leading-tight">
-      <p class="font-maru-bold text-xl sm:text-2xl line-clamp-2 text-pretty leading-[0.85]">{{ track.title }}</p>
-      <p class="font-maru-mono font-maru-regular text-[1.25rem] text-maru-black/75 leading-none">{{ track.subtitle }}</p>
+      <p class="type-title-sm font-maru-medium line-clamp-2">{{ track.title }}</p>
+      <p class="type-meta-sm text-maru-black/75">{{ track.subtitle }}</p>
     </div>
 
     <button

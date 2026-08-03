@@ -9,7 +9,7 @@ const packageJson = JSON.parse(
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
+  devtools: { enabled: false },
   // Production builds don't need client sourcemaps; disabling avoids noisy
   // SOURCEMAP_BROKEN warnings from @tailwindcss/vite and nuxt internals.
   sourcemap: false,

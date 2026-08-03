@@ -1,0 +1,324 @@
+/* ─── Typetester inline (from gt-maru.com) ─── */
+
+.area-container-outside {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  flex: 0 1 auto;
+  justify-content: space-between;
+}
+
+@media (min-width: 600px) {
+  .area-container-outside {
+    flex-direction: row;
+  }
+}
+
+.area-container-inside.col1-fullwidth {
+  width: 100%;
+}
+
+.padding-bottom-m {
+  padding-bottom: var(--spacing-maru-m);
+}
+
+.padding-bottom-s {
+  padding-bottom: var(--spacing-maru-s);
+}
+
+.padding-bottom-xs {
+  padding-bottom: var(--spacing-maru-xs);
+}
+
+.typetester-inline-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.typetester-inline-container {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  flex: 0 1 auto;
+  border-radius: 0 0 var(--radius-maru) var(--radius-maru);
+  z-index: 1;
+  box-sizing: border-box;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.typetester-inline-mono .typetester-inline-header {
+  background: var(--color-maru-blue);
+  color: var(--color-maru-white);
+}
+
+.typetester-inline-header {
+  display: flex;
+  position: relative;
+  flex-direction: row;
+  height: 35px;
+  border: 3px solid var(--color-maru-black);
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-maru) var(--radius-maru) 0 0;
+  text-align: center;
+  box-sizing: border-box;
+  font-family: var(--font-maru);
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+}
+
+@media (min-width: 600px) {
+  .typetester-inline-header {
+    height: 45px;
+    padding-bottom: 4px;
+    font-size: 1rem;
+  }
+}
+
+.typetester-inline-sample {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+  background: var(--color-maru-white);
+  font-size: 16vw;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  text-align: center;
+  box-sizing: border-box;
+  border-left: 3px solid var(--color-maru-black);
+  border-right: 3px solid var(--color-maru-black);
+  text-transform: none;
+  min-width: 0;
+}
+
+@media (min-width: 600px) {
+  .typetester-inline-sample {
+    padding-top: 10px;
+    padding-bottom: 40px;
+  }
+}
+
+.typetester-inline-mono .typetester-inline-sample {
+  font-family: var(--font-maru-mono);
+  font-size: 12vw;
+  line-height: 1.15;
+}
+
+.typetester-inline-sample--bottom {
+  border-bottom: 3px solid var(--color-maru-black);
+  border-radius: 0 0 var(--radius-maru) var(--radius-maru);
+}
+
+.typetester-inline-input-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  overflow: visible;
+}
+
+.typetester-inline-input-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  margin-top: 0.25em;
+  color: var(--color-maru-black);
+  font-family: var(--font-maru-mono);
+  font-size: 6.4rem;
+  letter-spacing: 0.02em;
+  line-height: 0.85;
+}
+
+.typetester-inline-input-stack:focus-within {
+  color: var(--color-maru-blue);
+}
+
+.typetester-inline-input-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  max-width: 100%;
+  width: 100%;
+  min-height: 0.85em;
+}
+
+.typetester-inline-input-wrap:focus-within {
+  color: var(--color-maru-blue);
+}
+
+.typetester-inline-input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 0.85em;
+  padding: 0;
+  outline: none;
+  color: var(--color-maru-black);
+  font-weight: 500;
+  letter-spacing: inherit;
+  appearance: none;
+  background: transparent;
+  border: none;
+  text-align: center;
+}
+
+.typetester-inline-mono .typetester-inline-input {
+  font-family: inherit;
+  font-size: inherit;
+  height: 4.8rem;
+  line-height: 0.85;
+}
+
+.typetester-inline-input::placeholder {
+  color: var(--color-maru-gray-light);
+  opacity: 1;
+  letter-spacing: inherit;
+}
+
+.typetester-inline-input:focus {
+  outline: none;
+}
+
+/* Compact typetester — embedded search panels */
+.typetester-inline--compact {
+  border-radius: 0 0 var(--radius-maru) var(--radius-maru);
+}
+
+.typetester-inline--compact .typetester-inline-header {
+  height: 26px;
+  border-radius: var(--radius-maru) var(--radius-maru) 0 0;
+  font-size: 0.625rem;
+  letter-spacing: 0.02em;
+}
+
+@media (min-width: 600px) {
+  .typetester-inline--compact .typetester-inline-header {
+    height: 32px;
+    padding-bottom: 2px;
+    font-size: 0.75rem;
+  }
+}
+
+.typetester-inline--compact .typetester-inline-sample {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-size: 9vw;
+}
+
+@media (min-width: 600px) {
+  .typetester-inline--compact .typetester-inline-sample {
+    padding-top: 3px;
+    padding-bottom: 10px;
+  }
+}
+
+.typetester-inline-mono.typetester-inline--compact .typetester-inline-sample {
+  font-size: 5.5vw;
+}
+
+.typetester-inline--compact .typetester-inline-sample--bottom {
+  border-radius: 0 0 var(--radius-maru) var(--radius-maru);
+}
+
+.typetester-inline-mono.typetester-inline--compact .typetester-inline-input-stack {
+  font-size: calc(clamp(2.5rem, 4.5vw, 3.75rem) * 0.85);
+}
+
+.typetester-inline-mono.typetester-inline--compact .typetester-inline-input {
+  height: calc(clamp(1.9rem, 3.4vw, 2.85rem) * 0.85);
+}
+
+.typetester-inline--compact .typetester-inline-input-stack {
+  margin-top: 0.1em;
+}
+
+.typetester-inline--compact .typetester-inline-input-wrap {
+  min-height: 0.85em;
+}
+
+.typetester-inline-input-area--with-search {
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 8px;
+}
+
+.typetester-inline--compact .typetester-inline-input-area--with-search {
+  padding: 8px;
+}
+
+@media (min-width: 600px) {
+  .typetester-inline--compact .typetester-inline-input-area--with-search {
+    padding: 8px;
+  }
+}
+
+.typetester-inline-field {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-inline: 0.5rem 0.25rem;
+}
+
+.typetester-inline-input-area--with-search .typetester-inline-input-stack {
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  margin-top: 0;
+}
+
+.typetester-inline-input-area--with-search .typetester-inline-input-wrap {
+  width: 100%;
+  max-width: 100%;
+  justify-content: center;
+}
+
+.typetester-inline-input-area--with-search .typetester-inline-input {
+  text-align: left;
+  height: auto;
+  line-height: 1;
+  padding-top: 0.22em;
+  padding-bottom: 0.14em;
+}
+
+.typetester-inline-search-btn {
+  flex-shrink: 0;
+  align-self: stretch;
+  min-height: 0;
+  height: auto;
+  box-sizing: border-box;
+  border-radius: var(--radius-maru);
+  padding-block: 0;
+  padding-inline: 0.85rem;
+  box-shadow: none;
+  font-size: var(--text-maru-button-secondary);
+  line-height: var(--text-maru-button-secondary--line-height);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.typetester-inline-search-btn .maru-button__label {
+  top: 2px;
+}
+
+/* No header — white input box only */
+.typetester-inline--no-header {
+  border-radius: var(--radius-maru);
+}
+
+.typetester-inline--no-header .typetester-inline-sample {
+  border-top: 3px solid var(--color-maru-black);
+  border-radius: var(--radius-maru);
+}

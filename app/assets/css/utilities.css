@@ -1,0 +1,66 @@
+/* ─── Font weights (Saeada: Regular 400 / Medium 500 / Bold 700) ─── */
+
+@utility font-maru-light {
+  font-weight: 400;
+}
+
+@utility font-maru-regular {
+  font-weight: 400;
+}
+
+@utility font-maru-medium {
+  font-weight: 500;
+}
+
+@utility font-maru-bold {
+  font-weight: 700;
+}
+
+@utility font-maru-black {
+  font-weight: 700;
+}
+
+@utility font-maru-mono {
+  font-family: var(--font-maru-mono);
+  font-weight: 400;
+}
+
+@utility font-maru-mega-mini {
+  font-family: var(--font-maru-mega);
+}
+
+@utility font-maru-mega-midi {
+  font-family: var(--font-maru-mega);
+}
+
+@utility font-maru-mega-maxi {
+  font-family: var(--font-maru-mega);
+}
+
+/* ─── Borders ─── */
+
+@utility border-maru {
+  border: 3px solid var(--color-maru-black);
+}
+
+@utility border-maru-top {
+  border-top: 3px solid var(--color-maru-black);
+}
+
+@utility border-maru-bottom {
+  border-bottom: 3px solid var(--color-maru-black);
+}
+
+/* ─── Layout ─── */
+
+@utility px-maru-gutter {
+  padding-inline: var(--spacing-maru-gutter);
+
+  @media (width >= 600px) {
+    padding-inline: var(--spacing-maru-gutter-sm);
+  }
+
+  @media (width >= 1100px) {
+    padding-inline: var(--spacing-maru-gutter-lg);
+  }
+}

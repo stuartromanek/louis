@@ -2,6 +2,7 @@
 import HowToYoutubeMock from '~/components/layout/howto/HowToYoutubeMock.vue'
 import HowToCardsMock from '~/components/layout/howto/HowToCardsMock.vue'
 import HowToPlaylistMock from '~/components/layout/howto/HowToPlaylistMock.vue'
+import MaruHeading from '~/components/layout/MaruHeading.vue'
 
 type Phase = 'idle' | 'entering' | 'open' | 'exiting'
 
@@ -32,11 +33,11 @@ const sections = [
   {
     id: 'youtube',
     title: 'YouTube Search',
-    body: 'Type a song, show, or artist to find videos. Preview audio right in the results, then drag a track into your playlist.',
+    body: 'Type a song, show, or artist to find videos. Preview audio right in the results, then add tracks to a MYO card.',
     bullets: [
       'Search and browse YouTube results',
       'Preview tracks before adding them',
-      'Drag results into the playlist panel',
+      'On desktop, drag into the playlist; on a phone, tap Add and pick a card',
     ],
   },
   {
@@ -44,7 +45,7 @@ const sections = [
     title: 'My Cards',
     body: '',
     bullets: [
-      'Sign in with Connect in the status bar',
+      'Sign in with Connect in the status bar (desktop) or Menu (phone)',
       'Choose the MYO card you want to edit',
       'Selected cards stay highlighted so you know the target',
     ],
@@ -54,9 +55,9 @@ const sections = [
     title: 'Playlist',
     body: '',
     bullets: [
-      'Drag to reorder tracks',
+      'On desktop, drag to reorder; on a phone, use the track menu to move or remove',
       'Watch capacity meters for track count and length',
-      'Update can take a few minutes while tracks download and process',
+      'Tap Update in the playlist footer (desktop) or Menu / card detail (phone) — saving can take a few minutes',
     ],
   },
 ] as const
@@ -142,12 +143,13 @@ onUnmounted(() => {
         :aria-hidden="!interactive"
       >
         <header class="howto-modal__header border-maru-bottom">
-          <h2
+          <MaruHeading
             :id="headingId"
-            class="howto-modal__title font-maru-bold m-0"
-          >
-            How To
-          </h2>
+            text="How To"
+            tone="white"
+            size="sm"
+            as="h2"
+          />
           <button
             type="button"
             class="howto-modal__close font-maru-mono"
@@ -160,7 +162,7 @@ onUnmounted(() => {
         </header>
 
         <div class="howto-modal__body">
-          <p class="howto-modal__intro font-maru-mono text-pretty m-0">
+          <p class="howto-modal__intro text-pretty m-0">
             This app helps you build Yoto Make Your Own playlists from YouTube.
             Search for videos, preview the audio, pick one of your MYO cards, arrange
             tracks in a playlist, then save the finished set back to your card so it
@@ -186,10 +188,14 @@ onUnmounted(() => {
             </div>
 
             <div class="howto-section__copy">
-              <h3 class="howto-section__heading font-maru-bold m-0">
-                {{ section.title }}
-              </h3>
-              <p class="howto-section__body font-maru-mono text-pretty m-0">
+              <MaruHeading
+                class="howto-section__heading"
+                :text="section.title"
+                tone="blue"
+                size="lg"
+                as="h3"
+              />
+              <p class="howto-section__body text-pretty m-0">
                 <template v-if="section.id === 'cards'">
                   Connect your Yoto account, then pick a
                   <a
@@ -208,7 +214,7 @@ onUnmounted(() => {
                   {{ section.body }}
                 </template>
               </p>
-              <ul class="howto-section__bullets font-maru-mono m-0">
+              <ul class="howto-section__bullets m-0">
                 <li
                   v-for="bullet in section.bullets"
                   :key="bullet"
@@ -219,7 +225,7 @@ onUnmounted(() => {
             </div>
           </section>
 
-          <p class="howto-modal__footer-note font-maru-mono text-pretty m-0">
+          <p class="howto-modal__footer-note text-pretty m-0">
             Stuck or found a bug? Use
             <a
               class="howto-section__link"
@@ -227,7 +233,7 @@ onUnmounted(() => {
               target="_blank"
               rel="noopener noreferrer"
             >Issue / Feedback</a>
-            in the status bar.
+            in the status bar (desktop) or Menu (phone).
           </p>
         </div>
       </div>

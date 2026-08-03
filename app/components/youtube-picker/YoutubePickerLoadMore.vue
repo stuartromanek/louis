@@ -88,6 +88,18 @@ function onClick() {
   min-width: 5.5rem;
 }
 
+@media (max-width: 599px) {
+  .load-more-side {
+    min-width: 3.25rem;
+    gap: 0.15rem;
+  }
+
+  /* Two fewer per side on phone — keep the first three. */
+  .load-more-side .load-more-emoji:nth-child(n + 4) {
+    display: none;
+  }
+}
+
 .load-more-side--left {
   justify-content: flex-start;
 }
@@ -101,14 +113,8 @@ function onClick() {
   top: 3px;
   flex: 1;
   text-align: center;
-  font-size: 1.75rem;
-  line-height: 0.9;
-}
-
-@media (width >= 600px) {
-  .load-more-label {
-    font-size: 2.25rem;
-  }
+  font-size: var(--text-maru-button);
+  line-height: var(--text-maru-button--line-height);
 }
 
 .load-more-emoji {

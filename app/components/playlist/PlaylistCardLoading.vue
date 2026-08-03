@@ -129,7 +129,7 @@ onBeforeUnmount(() => {
       </p>
       <p
         v-if="title"
-        class="empty-state-meta max-w-xs mt-1"
+        class="empty-state-meta max-w-xs"
       >
         {{ title }}
       </p>
@@ -178,7 +178,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
+  gap: 0.5rem;
   width: max-content;
   max-width: min(100%, 18rem);
   padding: 0.4375rem 1.25rem 0.5625rem;
@@ -192,8 +192,8 @@ onBeforeUnmount(() => {
   position: relative;
   top: 3px;
   margin: 0;
-  font-size: 1.75rem;
-  line-height: 0.9;
+  font-size: var(--text-maru-title);
+  line-height: var(--text-maru-title--line-height);
   white-space: nowrap;
 }
 

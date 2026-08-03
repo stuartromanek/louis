@@ -32,6 +32,10 @@
           <PlaylistPanelFooter />
         </template>
 
+        <template #phone-library>
+          <MobileLibraryView />
+        </template>
+
         <template #toolbar>
           <AppStatusBar />
         </template>
@@ -40,6 +44,8 @@
           <AppDevToolsStrip />
         </template>
       </AppMainLayout>
+      <MobileAddToCardDrawer />
+      <MobileToastHost />
     </DragDropProvider>
     <!-- Same bg as splash; covers first paint until splash boots or is skipped. -->
     <div
@@ -87,12 +93,22 @@ import AppDevToolsStrip from '~/components/dev/AppDevToolsStrip.vue'
 import YotoAuthGate from '~/components/yoto-myo/YotoAuthGate.vue'
 import YotoConnectedModal from '~/components/yoto-myo/YotoConnectedModal.vue'
 import AppSplash from '~/components/splash/AppSplash.vue'
+import MobileLibraryView from '~/components/layout/MobileLibraryView.vue'
+import MobileAddToCardDrawer from '~/components/layout/MobileAddToCardDrawer.vue'
+import MobileToastHost from '~/components/ui/MobileToastHost.vue'
+import {
+  MOBILE_EDITOR_CHROME_KEY,
+  useMobileEditorChrome,
+} from '~/composables/useMobileEditorChrome'
 
 const yoto = useYotoMyo()
 provide(YOTO_MYO_KEY, yoto)
 
 const editor = useMyoEditor()
 provide(MYO_EDITOR_KEY, editor)
+
+const mobileChrome = useMobileEditorChrome()
+provide(MOBILE_EDITOR_CHROME_KEY, mobileChrome)
 
 const route = useRoute()
 const router = useRouter()

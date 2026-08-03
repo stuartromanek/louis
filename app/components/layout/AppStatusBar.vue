@@ -74,7 +74,7 @@ function onRetry() {
         :class="statusDotClass"
         aria-hidden="true"
       />
-      <span class="status-bar__label font-maru-medium truncate self-center">
+      <span class="status-bar__label truncate self-center">
         {{ authStatusLabel }}
       </span>
       <span

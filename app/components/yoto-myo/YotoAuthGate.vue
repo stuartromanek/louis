@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import MaruHeading from '~/components/layout/MaruHeading.vue'
+import MobileTray from '~/components/ui/MobileTray.vue'
 import { YOTO_MYO_KEY } from './keys'
 
 const GATE_DELAY_MS = 2000
 const TV_BOOT_MS = 1100
+const PHONE_MQ = '(max-width: 599px)'
 
 type BlockedReason = 'disconnected' | 'needsReconnect' | 'unconfigured' | 'error'
 type GatePhase = 'hidden' | 'waiting' | 'animating' | 'visible'
@@ -37,6 +39,7 @@ const {
 
 const phase = ref<GatePhase>('hidden')
 const headingId = 'yoto-auth-gate-heading'
+const isPhone = ref(false)
 
 const prefersReducedMotion = ref(false)
 
@@ -87,6 +90,10 @@ const showScreen = computed(
   () => phase.value === 'animating' || phase.value === 'visible',
 )
 
+const showPhoneTray = computed(() => isPhone.value && showScreen.value)
+
+const showDesktopGate = computed(() => !isPhone.value && showScreen.value)
+
 const bodyWraps = computed(
   () => blockedReason.value === 'unconfigured' || blockedReason.value === 'error',
 )
@@ -97,8 +104,16 @@ const gateClass = computed(() => ({
   'yoto-auth-gate--reduced': prefersReducedMotion.value,
 }))
 
+const trayOpen = computed({
+  get: () => showPhoneTray.value,
+  set: (_value: boolean) => {
+    // Blocking gate — ignore user dismiss; open state follows showPhoneTray.
+  },
+})
+
 let delayTimer: ReturnType<typeof setTimeout> | null = null
 let bootFallbackTimer: ReturnType<typeof setTimeout> | null = null
+let phoneMq: MediaQueryList | null = null
 
 function clearTimers() {
   if (delayTimer) clearTimeout(delayTimer)
@@ -133,7 +148,8 @@ function onScreenAnimationEnd(event: AnimationEvent) {
 function beginBoot() {
   if (!blockedReason.value) return
 
-  if (prefersReducedMotion.value) {
+  // Phone drawer skips the TV boot animation.
+  if (prefersReducedMotion.value || isPhone.value) {
     showGateWithDim()
     return
   }
@@ -195,19 +211,95 @@ watch(
   { immediate: true },
 )
 
+function onPhoneChange() {
+  if (!phoneMq) return
+  const wasPhone = isPhone.value
+  isPhone.value = phoneMq.matches
+  // Crossing to desktop mid-gate: finish TV path if still blocked.
+  if (wasPhone && !isPhone.value && blockedReason.value && phase.value === 'visible') {
+    setBlocking(true)
+  }
+}
+
 onMounted(() => {
   prefersReducedMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  phoneMq = window.matchMedia(PHONE_MQ)
+  isPhone.value = phoneMq.matches
+  phoneMq.addEventListener('change', onPhoneChange)
 })
 
 onUnmounted(() => {
   clearTimers()
+  phoneMq?.removeEventListener('change', onPhoneChange)
+  phoneMq = null
 })
 </script>
 
 <template>
+  <!-- Phone: mobile tray with Louis inside the Yoto frame -->
+  <MobileTray
+    v-model:open="trayOpen"
+    :dismissible="false"
+    :close-on-backdrop="false"
+    role="dialog"
+    :aria-label="copy.heading"
+    height="75dvh"
+  >
+    <div
+      class="yoto-auth-gate-phone__player"
+      aria-hidden="true"
+    >
+      <img
+        class="yoto-auth-gate-phone__frame"
+        src="/images/yoto-on.svg"
+        alt=""
+        draggable="false"
+      >
+      <div class="yoto-auth-gate-phone__screen">
+        <img
+          src="/images/louis.svg"
+          alt=""
+          class="yoto-auth-gate-phone__louis"
+          draggable="false"
+        >
+      </div>
+    </div>
+    <div class="yoto-auth-gate-phone__copy">
+      <div
+        :id="headingId"
+        class="yoto-auth-gate-phone__heading-wrap"
+      >
+        <MaruHeading
+          :text="copy.heading"
+          as="h2"
+          tone="black"
+          size="lg"
+          align="center"
+          class="yoto-auth-gate__heading yoto-auth-gate-phone__heading"
+        />
+      </div>
+      <p
+        class="yoto-auth-gate__body yoto-auth-gate-phone__body"
+        :class="{ 'yoto-auth-gate__body--wrap': bodyWraps }"
+      >
+        {{ copy.body }}
+      </p>
+    </div>
+    <button
+      v-if="copy.cta"
+      type="button"
+      class="maru-button yoto-auth-gate-phone__cta yoto-auth-gate-phone__cta--candy"
+      :autofocus="phase === 'visible' && isPhone"
+      @click="onPrimaryAction"
+    >
+      <span class="maru-button__label">{{ copy.cta }}</span>
+    </button>
+  </MobileTray>
+
+  <!-- Desktop: TV frame gate -->
   <Teleport to="body">
     <div
-      v-if="showScreen"
+      v-if="showDesktopGate"
       class="yoto-auth-gate"
       :class="gateClass"
     >
@@ -218,11 +310,10 @@ onUnmounted(() => {
 
       <div class="yoto-auth-gate__stage">
         <div
-          v-if="showScreen"
           class="yoto-auth-gate__screen"
           role="dialog"
           aria-modal="true"
-          :aria-labelledby="headingId"
+          :aria-labelledby="`${headingId}-desktop`"
           @animationend="onScreenAnimationEnd"
         >
           <img
@@ -240,7 +331,7 @@ onUnmounted(() => {
               class="maru-emoji yoto-auth-gate__emoji"
               style="width: 5.6rem; height: 5.6rem;"
             >
-            <div :id="headingId">
+            <div :id="`${headingId}-desktop`">
               <MaruHeading
                 :text="copy.heading"
                 as="h2"
@@ -260,7 +351,7 @@ onUnmounted(() => {
               v-if="copy.cta"
               type="button"
               class="maru-button bg-maru-blue text-maru-white yoto-auth-gate__cta"
-              :autofocus="phase === 'visible'"
+              :autofocus="phase === 'visible' && !isPhone"
               @click="onPrimaryAction"
             >
               <span class="maru-button__label">{{ copy.cta }}</span>

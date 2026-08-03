@@ -1,0 +1,284 @@
+/* ─── OpenMoji SVG icons ─── */
+
+.maru-emoji {
+  display: inline-block;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.maru-emoji--xs {
+  width: 1rem;
+  height: 1rem;
+}
+
+.maru-emoji--sm {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.maru-emoji--md {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.maru-emoji--lg {
+  width: 2.8125rem;
+  height: 2.8125rem;
+}
+
+.maru-emoji--xl {
+  width: 3.375rem;
+  height: 3.375rem;
+}
+
+@media (width >= 600px) {
+  .maru-emoji--lg {
+    width: 3.375rem;
+    height: 3.375rem;
+  }
+}
+
+/* ─── Section headings (gt-maru.com h2 / MONO style, scaled down) ─── */
+
+.maru-heading {
+  font-family: var(--font-maru);
+  font-weight: 400;
+  text-transform: uppercase;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  word-spacing: -0.08em;
+}
+
+.maru-heading__label {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+  display: inline-block;
+  line-height: 0.85;
+  padding-block: 0;
+  margin-block: 0;
+}
+
+.maru-heading__label::before {
+  content: attr(data-outline-duplicate-text) / "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  color: transparent;
+  -webkit-text-stroke: 1.25px var(--color-maru-black);
+  text-transform: uppercase;
+  line-height: inherit;
+  letter-spacing: inherit;
+  word-spacing: inherit;
+  pointer-events: none;
+}
+
+@media (width >= 600px) {
+  .maru-heading__label::before {
+    -webkit-text-stroke: 1.5px var(--color-maru-black);
+  }
+}
+
+.maru-heading--blue {
+  color: var(--color-maru-blue);
+}
+
+.maru-heading--white {
+  color: var(--color-maru-white);
+}
+
+.maru-heading--black {
+  color: var(--color-maru-black);
+}
+
+/* Black fill + black outline reads as a blob — no stroke for this tone. */
+.maru-heading--black .maru-heading__label::before {
+  content: none;
+}
+
+.maru-heading--red {
+  color: var(--color-maru-red-light);
+}
+
+.maru-heading--green-lighter {
+  color: var(--color-maru-green-lighter);
+}
+
+.maru-heading--blue-lighter {
+  color: var(--color-maru-blue-lighter);
+}
+
+.maru-heading--yellow-light {
+  color: var(--color-maru-yellow-light);
+}
+
+.maru-heading--magenta-light {
+  color: var(--color-maru-magenta-light);
+}
+
+.maru-heading--left .maru-heading__label {
+  text-align: left;
+}
+
+.maru-heading--left .maru-heading__label::before {
+  text-align: left;
+}
+
+.maru-heading--center {
+  text-align: center;
+  justify-self: center;
+}
+
+.maru-heading--center .maru-heading__label::before {
+  text-align: center;
+}
+
+.maru-heading--sm {
+  font-size: clamp(1.5rem, 1.15rem + 1.1vw, 1.75rem);
+  letter-spacing: 0.8px;
+}
+
+/* Panel chrome: track header width so titles ease down on narrow phones. */
+.app-panel__header {
+  container-type: inline-size;
+  container-name: app-panel-header;
+}
+
+.app-panel__header .maru-heading--sm {
+  font-size: clamp(1.15rem, 7.5cqi, 1.75rem);
+}
+
+.maru-heading--with-emoji {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+}
+
+.maru-heading--center.maru-heading--with-emoji {
+  justify-content: center;
+}
+
+.maru-heading--with-emoji .maru-heading__emoji {
+  flex-shrink: 0;
+  width: 0.82em;
+  height: 0.82em;
+  align-self: center;
+}
+
+.maru-heading--with-emoji .maru-heading__label {
+  top: 2px;
+  line-height: 1;
+}
+
+.maru-heading--sm .maru-heading__label::before {
+  -webkit-text-stroke: 4px var(--color-maru-black);
+}
+
+.maru-heading--md {
+  font-size: clamp(1.05rem, 0.8rem + 0.85vw, 1.3rem);
+}
+
+.maru-heading--lg {
+  font-size: clamp(1.35rem, 1rem + 1.2vw, 1.85rem);
+}
+
+/* ─── Empty state typography ─── */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.5rem;
+  container-type: inline-size;
+}
+
+.empty-state-title {
+  font-size: var(--text-maru-empty-title);
+  line-height: var(--text-maru-empty-title--line-height);
+  font-weight: 700;
+  color: var(--color-maru-black);
+  text-wrap: balance;
+}
+
+.empty-state > .maru-emoji + .empty-state-title {
+  margin-top: -0.15em;
+}
+
+.empty-state-meta {
+  font-size: var(--text-maru-empty-body);
+  line-height: var(--text-maru-empty-body--line-height);
+  font-weight: 400;
+  color: color-mix(in srgb, var(--color-maru-black) 85%, transparent);
+  text-wrap: pretty;
+}
+
+.maru-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid var(--color-maru-black);
+  border-radius: var(--radius-maru);
+  font-family: var(--font-maru);
+  font-weight: 400;
+  font-size: var(--text-maru-button);
+  line-height: var(--text-maru-button--line-height);
+  padding: 0.5rem 1.5rem;
+  cursor: pointer;
+  transition: scale 0.15s ease-out, opacity 0.15s ease-out;
+}
+
+.maru-button__label {
+  position: relative;
+  top: 3px;
+  line-height: 1;
+}
+
+.maru-button:active {
+  scale: 0.96;
+}
+
+.maru-button--sm {
+  font-size: var(--text-maru-button-sm);
+  line-height: var(--text-maru-button-sm--line-height);
+  padding: 0.35rem 1rem;
+}
+
+@media (width >= 600px) {
+  .maru-button--sm {
+    padding: 0.3rem 1rem;
+  }
+}
+
+/* ─── Maru tooltip (teleported bubble) ─── */
+
+.maru-tooltip {
+  display: inline-flex;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.maru-tooltip__trigger {
+  display: inline-flex;
+  max-width: 100%;
+}
+
+.maru-tooltip__bubble {
+  position: fixed;
+  z-index: 1000;
+  box-sizing: border-box;
+  max-width: min(18rem, calc(100vw - 1.5rem));
+  padding: 0.35rem 0.6rem;
+  border: 3px solid var(--color-maru-black);
+  border-radius: var(--radius-maru);
+  background: var(--color-maru-white);
+  color: var(--color-maru-black);
+  box-shadow: 2px 2px 0 var(--color-maru-black);
+  font-size: var(--text-maru-caption);
+  line-height: var(--text-maru-caption--line-height);
+  letter-spacing: 0.02em;
+  font-weight: 700;
+  text-wrap: pretty;
+  pointer-events: none;
+}

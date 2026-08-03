@@ -9,7 +9,7 @@ import {
 
 const props = withDefaults(defineProps<{
   progress: SaveProgress
-  variant?: 'overlay' | 'footer'
+  variant?: 'overlay' | 'footer' | 'mobile'
 }>(), {
   variant: 'overlay',
 })
@@ -24,6 +24,10 @@ const trackCountMeta = computed(() => saveTrackCountMeta(props.progress.tracks))
 
 const isExtracting = computed(() =>
   props.progress.tracks.some(track => track.status === 'extracting'),
+)
+
+const showRichChrome = computed(
+  () => props.variant === 'overlay' || props.variant === 'mobile',
 )
 
 const displayedOperationProgress = ref(0)
@@ -76,23 +80,21 @@ onUnmounted(() => {
   cancelProgressAnimation()
 })
 
-const overallLabelClass = computed(() =>
-  props.variant === 'overlay'
-    ? 'font-maru-medium text-2xl sm:text-3xl text-maru-black/85'
-    : 'font-maru-medium text-[1.25rem] text-maru-gray',
-)
+const overallLabelClass = computed(() => {
+  if (props.variant === 'overlay') return 'type-title font-maru-medium text-maru-black/85'
+  if (props.variant === 'mobile') return 'type-title font-maru-medium text-maru-black'
+  return 'type-meta font-maru-medium text-maru-gray'
+})
 
-const operationLabelClass = computed(() =>
-  props.variant === 'overlay'
-    ? 'font-maru-mono text-[1.45rem] leading-tight text-maru-black truncate max-w-full'
-    : 'font-maru-mono text-[1.25rem] leading-tight text-maru-black truncate max-w-full',
-)
+const operationLabelClass = computed(() => {
+  if (props.variant === 'footer') return 'type-meta-sm text-maru-black truncate max-w-full'
+  return 'type-meta text-maru-black truncate max-w-full'
+})
 
-const metaClass = computed(() =>
-  props.variant === 'overlay'
-    ? 'font-maru-mono text-[1.35rem] leading-tight text-maru-black/80'
-    : 'font-maru-mono text-[1.25rem] leading-tight text-maru-black/60',
-)
+const metaClass = computed(() => {
+  if (props.variant === 'footer') return 'type-meta-sm text-maru-black/60'
+  return 'type-meta text-maru-black/80'
+})
 
 const fillComplete = computed(() => props.progress.progress >= 100)
 
@@ -117,13 +119,20 @@ const operationFillWidth = computed(() =>
 <template>
   <div
     class="w-full flex flex-col min-w-0 items-center text-center"
-    :class="variant === 'overlay' ? 'max-w-sm gap-2.5' : 'gap-2'"
+    :class="{
+      'max-w-sm gap-2.5': variant === 'overlay',
+      'gap-2': variant === 'footer',
+      'save-progress--mobile gap-2': variant === 'mobile',
+    }"
   >
     <div
-      v-if="variant === 'overlay'"
+      v-if="showRichChrome"
       class="flex flex-col items-center gap-0.5"
     >
-      <p class="save-progress-percent tabular-nums">
+      <p
+        class="save-progress-percent tabular-nums"
+        :class="{ 'save-progress-percent--mobile': variant === 'mobile' }"
+      >
         {{ progress.progress }}%
       </p>
       <p :class="overallLabelClass">
@@ -138,11 +147,13 @@ const operationFillWidth = computed(() =>
     </p>
 
     <div
-      v-if="variant === 'overlay'"
-      class="save-progress-bar-wrapper w-full mr-1"
+      v-if="showRichChrome"
+      class="save-progress-bar-wrapper w-full"
+      :class="{ 'save-progress-bar-wrapper--mobile': variant === 'mobile' }"
     >
       <div
         class="save-progress-bar w-full"
+        :class="{ 'save-progress-bar--mobile': variant === 'mobile' }"
         role="progressbar"
         :aria-valuenow="progress.progress"
         aria-valuemin="0"
@@ -151,16 +162,24 @@ const operationFillWidth = computed(() =>
       >
         <div
           class="save-progress-bar__fill"
-          :class="{ 'save-progress-bar__fill--complete': fillComplete }"
+          :class="{
+            'save-progress-bar__fill--complete': fillComplete,
+            'save-progress-bar__fill--mobile': variant === 'mobile',
+          }"
           :style="{ width: `${progress.progress}%` }"
         />
       </div>
       <span
         class="save-progress-bar__thumb"
+        :class="{ 'save-progress-bar__thumb--mobile': variant === 'mobile' }"
         :style="{ left: thumbLeft }"
         aria-hidden="true"
       >
-        <MaruEmoji :name="scrubberEmoji" size="sm" class="save-progress-bar__thumb-emoji" />
+        <MaruEmoji
+          :name="scrubberEmoji"
+          size="sm"
+          class="save-progress-bar__thumb-emoji"
+        />
       </span>
     </div>
     <div
@@ -173,7 +192,7 @@ const operationFillWidth = computed(() =>
       :aria-label="`${overallLabel} ${progress.progress}%`"
     >
       <div
-        class="h-full bg-maru-magenta transition-[width] duration-300"
+        class="h-full bg-maru-blue transition-[width] duration-300"
         :style="{ width: `${progress.progress}%` }"
       />
     </div>
@@ -181,13 +200,14 @@ const operationFillWidth = computed(() =>
     <div
       v-if="operationLabel"
       class="w-full flex flex-col min-w-0 gap-1.5"
-      :class="variant === 'overlay' ? 'mt-2.5' : ''"
+      :class="{ 'mt-1.5': showRichChrome }"
     >
       <p :class="operationLabelClass">
         {{ operationLabel }}
       </p>
       <div
         class="save-operation-bar w-full"
+        :class="{ 'save-operation-bar--mobile': variant === 'mobile' }"
         role="progressbar"
         :aria-valuenow="Math.round(displayedOperationProgress)"
         aria-valuemin="0"
@@ -196,6 +216,7 @@ const operationFillWidth = computed(() =>
       >
         <div
           class="save-operation-bar__fill"
+          :class="{ 'save-operation-bar__fill--mobile': variant === 'mobile' }"
           :style="{ width: operationFillWidth }"
         />
       </div>
@@ -214,17 +235,49 @@ const operationFillWidth = computed(() =>
 .save-progress-percent {
   margin: 0;
   font-weight: 700;
-  font-size: 1.75rem;
-  line-height: 0.78;
+  font-size: var(--text-maru-display);
+  line-height: var(--text-maru-display--line-height);
   color: var(--color-maru-black);
   display: inline-block;
   text-box-trim: trim-both;
   text-box-edge: cap alphabetic;
 }
 
-@media (width >= 600px) {
-  .save-progress-percent {
-    font-size: 3.25rem;
-  }
+.save-progress-percent--mobile {
+  font-size: clamp(1.75rem, 1.2rem + 2.5vw, 2.75rem);
+  line-height: 0.9;
+}
+
+.save-progress-bar-wrapper--mobile {
+  margin-top: 0.15rem;
+  margin-bottom: 0.35rem;
+  padding-inline: 0.15rem;
+}
+
+.save-progress-bar--mobile {
+  height: 1.15rem;
+  box-shadow: 3px 3px 0 var(--color-maru-black);
+}
+
+.save-progress-bar__fill--mobile {
+  /* Yellow pops on teal busy button — avoids magenta/teal mud. */
+  background: var(--color-maru-yellow);
+}
+
+.save-progress-bar__thumb--mobile {
+  width: 2.15rem;
+  height: 2.15rem;
+  border-width: 2px;
+  box-shadow: 2px 2px 0 var(--color-maru-black);
+}
+
+.save-operation-bar--mobile {
+  height: 0.65rem;
+  border-width: 2px;
+  background: var(--color-maru-white);
+}
+
+.save-operation-bar__fill--mobile {
+  background: var(--color-maru-blue);
 }
 </style>

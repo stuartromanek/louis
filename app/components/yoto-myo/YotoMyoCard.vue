@@ -108,12 +108,12 @@ const cardMotionStyle = computed(() => {
             loading="lazy"
           >
           <div v-else class="myo-playing-card__cover myo-playing-card__cover--empty">
-            <span class="font-maru-mono text-[10px] text-maru-gray">MYO</span>
+            <span class="type-caption text-maru-gray">MYO</span>
           </div>
 
           <p
             v-if="card.duration || card.trackCount"
-            class="myo-playing-card__duration font-maru-mono text-[1.25rem] tabular-nums"
+            class="myo-playing-card__duration type-meta-sm"
           >
             <template v-if="card.duration">{{ formatDuration(card.duration) }}</template>
             <template v-if="card.duration && card.trackCount"> · </template>
@@ -122,12 +122,12 @@ const cardMotionStyle = computed(() => {
         </div>
 
         <div class="myo-playing-card__footer border-maru-top">
-          <p class="myo-playing-card__title font-maru-bold text-maru-black line-clamp-2 text-pretty">
+          <p class="myo-playing-card__title type-title font-maru-medium text-maru-black line-clamp-2">
             {{ card.title }}
           </p>
           <p
             v-if="card.author"
-            class="font-maru-mono text-[10px] text-maru-gray truncate leading-tight mt-0.5"
+            class="type-meta-sm text-maru-gray truncate mt-0.5"
           >
             {{ card.author }}
           </p>
@@ -286,17 +286,6 @@ const cardMotionStyle = computed(() => {
 .myo-playing-card__footer {
   padding: 0.5rem 0.5rem 0.625rem;
   background: var(--color-maru-white);
-}
-
-.myo-playing-card__title {
-  font-size: 1.25rem;
-  line-height: 0.75;
-}
-
-@media (min-width: 600px) {
-  .myo-playing-card__title {
-    font-size: 1.5rem;
-  }
 }
 
 .myo-playing-card--loading .myo-playing-card__face {

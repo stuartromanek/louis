@@ -4,9 +4,9 @@ The application source code is licensed under the MIT License (see [LICENSE](LIC
 
 ## Fonts
 
-[Dongle](https://fonts.google.com/specimen/Dongle) is bundled in `public/fonts/` under the [SIL Open Font License](https://openfontlicense.org). See [public/fonts/LICENSE.txt](public/fonts/LICENSE.txt).
+[Rubik](https://fonts.google.com/specimen/Rubik) is loaded from [Google Fonts](https://fonts.google.com) under the [SIL Open Font License](https://openfontlicense.org). See [public/fonts/LICENSE.txt](public/fonts/LICENSE.txt).
 
-- **Dongle** — UI, display, and secondary text (`font-maru`, `font-maru-mega`, `font-maru-mono`)
+- **Rubik** (`wght` 300–900, italic) — UI, display, and secondary text (`font-maru`, `font-maru-mega`, `font-maru-mono`)
 
 ## Emoji icons
 

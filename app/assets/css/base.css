@@ -1,0 +1,15 @@
+/* ─── Base ─── */
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: var(--font-maru);
+  font-weight: 400;
+  font-size: var(--text-maru-body);
+  line-height: var(--text-maru-body--line-height);
+  color: var(--color-maru-black);
+  background: var(--color-maru-white);
+}

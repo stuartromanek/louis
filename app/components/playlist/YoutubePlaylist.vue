@@ -378,7 +378,7 @@ watch(() => props.scrollToVideoId, async (id) => {
     >
       <p
         v-if="saveProgressTestMode"
-        class="font-maru-mono text-[10px] uppercase tracking-wide text-maru-black/50"
+        class="type-caption uppercase tracking-wide text-maru-black/50"
       >
         Test mode — ?testSaveProgress
       </p>

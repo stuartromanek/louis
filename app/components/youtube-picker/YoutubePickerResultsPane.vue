@@ -29,9 +29,14 @@ const emit = defineEmits<{
   <div
     class="border-maru rounded-maru bg-maru-red-lighter flex flex-col"
     :class="[
-      mode === 'results' ? 'px-2 sm:px-3' : 'p-2 sm:p-3',
-      fill ? 'flex-1 min-h-0 overflow-hidden' : '',
-      fill && mode !== 'results' ? 'justify-center' : '',
+      mode === 'results'
+        ? 'px-2 sm:px-3'
+        : mode === 'initial'
+          ? 'px-2 pt-2 sm:px-3 sm:pt-3'
+          : 'p-2 sm:p-3',
+      fill && mode === 'results' ? 'flex-1 min-h-0 overflow-hidden' : '',
+      fill && mode === 'initial' ? 'flex-1 min-h-0 overflow-hidden' : '',
+      fill && mode !== 'results' && mode !== 'initial' ? 'flex-1 min-h-0 overflow-y-auto' : '',
     ]"
   >
     <YoutubePickerEmptyState
@@ -45,7 +50,7 @@ const emit = defineEmits<{
     <div
       v-else-if="mode === 'loading'"
       class="empty-state"
-      :class="fill ? 'flex-1 min-h-0' : 'min-h-32 py-6'"
+      :class="fill ? 'min-h-full w-full shrink-0' : 'min-h-32 py-6'"
       role="status"
       aria-live="polite"
       aria-busy="true"

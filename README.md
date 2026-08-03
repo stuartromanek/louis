@@ -16,7 +16,7 @@ https://github.com/user-attachments/assets/6083e578-a0ba-4047-8d44-d2c4efad511d
 
 - Search YouTube and preview audio (server-side via yt-dlp)
 - Browse and select your Yoto MYO cards
-- Drag-and-drop playlist editing
+- Drag-and-drop playlist editing (desktop); phone Search / Library flow with Add-to-card
 - Save playlists to Yoto with download / transcode progress
 
 ## Quick start (Docker)
@@ -129,6 +129,6 @@ Maintainer demo setup: [docs/DEMO.md](docs/DEMO.md). Self-hosters should registe
 
 MIT — see [LICENSE](LICENSE).
 
-Fonts (Dongle), OpenMoji icons, and [SND](https://snd.dev/) UI sounds are bundled; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Fonts (Rubik via Google Fonts), OpenMoji icons, and [SND](https://snd.dev/) UI sounds are used; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 Security reports: [SECURITY.md](SECURITY.md).

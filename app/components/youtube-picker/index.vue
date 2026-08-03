@@ -14,6 +14,7 @@ import {
   useYoutubeAudioPlayer,
   YOUTUBE_AUDIO_PLAYER_KEY,
 } from './useYoutubeAudioPlayer'
+import { MOBILE_EDITOR_CHROME_KEY } from '~/composables/useMobileEditorChrome'
 
 const props = withDefaults(defineProps<{
   placeholders?: string[]
@@ -56,13 +57,21 @@ const {
   nextPageToken,
   loadingMore,
   search,
-  resetSearch,
   loadMore,
   selectVideo,
   requestEnableLongTracks,
   cancelEnableLongTracks,
   moveFocus,
 } = useYoutubePicker(props.maxResults)
+
+const chrome = inject(MOBILE_EDITOR_CHROME_KEY, null)
+const { showError } = useMobileToast()
+
+watch(errorMessage, (msg, prev) => {
+  if (!chrome?.isPhone.value) return
+  if (!msg || msg === prev) return
+  showError(msg)
+})
 
 const resultsPaneMode = computed(() => {
   if (!submittedQuery.value.trim()) return 'initial' as const
@@ -73,10 +82,6 @@ const resultsPaneMode = computed(() => {
 
 function onSearchSubmit() {
   search()
-}
-
-function onSearchClear() {
-  resetSearch()
 }
 
 function onPlaceholderSearch(term: string) {
@@ -143,7 +148,7 @@ onUnmounted(() => {
   <div
     ref="containerRef"
     tabindex="0"
-    :class="embedded ? 'relative flex flex-col h-full min-h-0' : 'relative'"
+    :class="embedded ? 'relative flex flex-col gap-2 sm:gap-3 h-full min-h-0' : 'relative'"
   >
     <div :class="embedded ? 'shrink-0' : ''">
       <YoutubePickerSearch
@@ -151,14 +156,13 @@ onUnmounted(() => {
         :placeholders="searchPlaceholders"
         :embedded="embedded"
         @submit="onSearchSubmit"
-        @clear="onSearchClear"
       />
     </div>
 
     <div :class="embedded ? 'flex flex-1 min-h-0 flex-col overflow-hidden' : ''">
       <p
         v-if="status === 'error'"
-        class="font-maru-mono font-maru-regular text-sm text-maru-red py-4 border-maru rounded-maru bg-maru-red-lighter px-4"
+        class="type-meta text-maru-red py-4 border-maru rounded-maru bg-maru-red-lighter px-4"
       >
         {{ errorMessage }}
       </p>

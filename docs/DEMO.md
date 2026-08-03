@@ -4,7 +4,7 @@ This document is for maintainers hosting the public demo. Self-hosters should fo
 
 ## Overview
 
-The demo is a **separate production deployment** of the same Docker image as self-hosting. It uses a dedicated Yoto **public** client and maintainer-owned API keys.
+The demo is a **separate production deployment** of the same Docker image as self-hosting. It uses a dedicated Yoto **public** client and maintainer-owned API keys. The editor UI is phone-capable (Search / Library below 600px); desktop/tablet keep the two-column layout.
 
 **Cookies are effectively required on Railway (and most cloud hosts).** Shared datacenter IPs almost always fail anonymous yt-dlp with YouTube’s bot check. Mount a Netscape `cookies.txt` from a **throwaway YouTube account** via `NUXT_YTDLP_COOKIES_FILE`. Downloads still try **anonymous first**, then escalate to `--cookies` on bot check, hard HTTP 403, or age-restricted / members-only walls. Escalation in logs is expected — not an outage by itself.
 

@@ -38,7 +38,11 @@ Explore pre-canned deploy targets that consume container images (Railway templat
 
 ### Smartphone-centric UI
 
-Phone layout for the three-panel editor. On small screens YouTube result titles are truncated to thumbnails with no way to read the full name; design a phone-first results list and overall flow (currently tuned for desktop and tablet).
+~~Phone layout for the three-panel editor~~ — **done**: below 600px, Search / Library tabs with nested card detail, Add-to-card drawer, phone header (Update + menu); denser YouTube rows; desktop/tablet two-column grid unchanged at `sm+`.
+
+### Resume pending playlist edits
+
+~~Persist dirty MYO playlist drafts across refresh~~ — **done**: pending (and live dirty) drafts are stored in `localStorage` and restored when the card is opened again.
 
 ### YouTube chapters → tracks
 

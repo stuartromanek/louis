@@ -1,0 +1,439 @@
+/* ─── How To modal ─── */
+
+.howto-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  pointer-events: auto;
+}
+
+.howto-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.45);
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+
+.howto-modal--entering .howto-modal__backdrop,
+.howto-modal--open .howto-modal__backdrop {
+  opacity: 1;
+}
+
+.howto-modal--exiting .howto-modal__backdrop {
+  opacity: 0;
+  transition-duration: 180ms;
+}
+
+.howto-modal__window {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(1100px, 94vw);
+  max-height: 85vh;
+  overflow: hidden;
+  box-shadow: 6px 6px 0 var(--color-maru-black);
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 240ms cubic-bezier(0.2, 0, 0, 1),
+    transform 240ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.howto-modal--entering .howto-modal__window,
+.howto-modal--open .howto-modal__window {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.howto-modal--exiting .howto-modal__window {
+  opacity: 0;
+  transform: translateY(8px);
+  transition-duration: 200ms;
+}
+
+.howto-modal--reduced .howto-modal__backdrop,
+.howto-modal--reduced .howto-modal__window {
+  transition-duration: 1ms;
+}
+
+.howto-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.1rem;
+  background: var(--color-maru-yellow);
+  flex-shrink: 0;
+}
+
+.howto-modal__close {
+  margin: 0;
+  padding: 0.2rem 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-maru-black);
+  font-size: var(--text-maru-button-secondary);
+  line-height: var(--text-maru-button-secondary--line-height);
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+
+.howto-modal__close:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.howto-modal__body {
+  overflow-y: auto;
+  padding: 1.1rem 1.1rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.howto-modal__intro {
+  font-size: var(--text-maru-title);
+  line-height: var(--text-maru-empty-body--line-height);
+  letter-spacing: var(--tracking-maru-ui);
+  color: var(--color-maru-black);
+}
+
+.howto-modal__footer-note {
+  font-size: var(--text-maru-title);
+  line-height: var(--text-maru-empty-body--line-height);
+  letter-spacing: var(--tracking-maru-ui);
+  color: var(--color-maru-gray);
+}
+
+.howto-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: 1.25rem 1.5rem;
+  align-items: start;
+}
+
+.howto-section__mock {
+  position: sticky;
+  top: 0.75rem;
+  pointer-events: none;
+  user-select: none;
+}
+
+.howto-mock-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.howto-mock__playlist-body {
+  position: relative;
+  min-height: 11rem;
+}
+
+.howto-mock__list--dimmed {
+  opacity: 0.35;
+}
+
+.howto-mock__remove {
+  width: 28px;
+  height: 28px;
+  border-width: 2px;
+  box-shadow: 1px 1px 0 var(--color-maru-black);
+  cursor: default;
+}
+
+.howto-mock__save-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.75rem 1rem;
+  text-align: center;
+}
+
+.howto-mock__save-percent {
+  font-size: var(--text-maru-title);
+  line-height: var(--text-maru-title--line-height);
+  color: var(--color-maru-black);
+}
+
+.howto-mock__save-overall {
+  font-size: var(--text-maru-meta);
+  line-height: var(--text-maru-meta--line-height);
+  color: color-mix(in srgb, var(--color-maru-black) 85%, transparent);
+}
+
+.howto-mock__save-bar-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 14rem;
+  margin: 0.35rem 0 0.15rem;
+}
+
+.howto-mock__save-bar-wrap .save-progress-bar {
+  height: 1rem;
+  box-shadow: 2px 2px 0 var(--color-maru-black);
+}
+
+.howto-mock__save-bar-wrap .save-progress-bar__thumb {
+  width: 1.85rem;
+  height: 1.85rem;
+  box-shadow: 2px 2px 0 var(--color-maru-black);
+}
+
+.howto-mock__save-op {
+  width: 100%;
+  max-width: 14rem;
+  margin-top: 0.35rem;
+  font-size: var(--text-maru-meta);
+  line-height: var(--text-maru-meta--line-height);
+  color: var(--color-maru-black);
+}
+
+.howto-mock__save-overlay .save-operation-bar {
+  width: 100%;
+  max-width: 14rem;
+}
+
+.howto-mock__save-meta {
+  font-size: var(--text-maru-meta-sm);
+  line-height: var(--text-maru-meta-sm--line-height);
+  color: color-mix(in srgb, var(--color-maru-black) 75%, transparent);
+}
+
+.howto-section__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding-top: 0.15rem;
+}
+
+.howto-section__body {
+  font-size: var(--text-maru-title);
+  line-height: var(--text-maru-empty-body--line-height);
+  letter-spacing: var(--tracking-maru-ui);
+}
+
+.howto-section__link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.howto-section__link:hover {
+  color: var(--color-maru-magenta);
+}
+
+.howto-section__bullets {
+  padding-left: 1.35rem;
+  list-style: disc;
+  font-size: var(--text-maru-title);
+  line-height: var(--text-maru-empty-body--line-height);
+  letter-spacing: var(--tracking-maru-ui);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.howto-mock__panel {
+  min-height: 0;
+}
+
+.howto-mock__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.howto-mock__list--inset {
+  padding: 0.35rem 0.45rem;
+}
+
+.howto-mock__result,
+.howto-mock__track {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.45rem 0.55rem;
+}
+
+.howto-mock__search {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.5rem 0.45rem 0.65rem;
+  margin-bottom: 0.75rem;
+  box-shadow: 2px 2px 0 var(--color-maru-black);
+}
+
+.howto-mock__search-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  translate: 0 1px;
+}
+
+.howto-mock__search-query {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--text-maru-search-placeholder);
+  line-height: var(--text-maru-search-placeholder--line-height);
+  color: var(--color-maru-black);
+}
+
+.howto-mock__search-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.65rem 0.2rem;
+  border: 2px solid var(--color-maru-black);
+  border-radius: var(--radius-maru);
+  background: var(--color-maru-yellow-light);
+  font-size: var(--text-maru-button-secondary);
+  font-weight: 400;
+  line-height: var(--text-maru-button-secondary--line-height);
+  box-shadow: 2px 2px 0 var(--color-maru-black);
+}
+
+.howto-mock__thumb {
+  width: 3.75rem;
+  aspect-ratio: 16 / 9;
+  border: 2px solid var(--color-maru-black);
+  border-radius: calc(var(--radius-maru) - 2px);
+  flex-shrink: 0;
+}
+
+.howto-mock__result-title {
+  font-size: var(--text-maru-title);
+  line-height: var(--text-maru-title--line-height);
+}
+
+.howto-mock__result-meta {
+  font-size: var(--text-maru-meta);
+  color: color-mix(in srgb, var(--color-maru-black) 70%, transparent);
+  line-height: var(--text-maru-meta--line-height);
+  margin-top: 0.15rem;
+}
+
+.howto-mock__cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.howto-mock__card {
+  flex: 1 1 6.5rem;
+  min-width: 5.5rem;
+  max-width: 8rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  transform: rotate(var(--card-tilt, 0deg));
+  box-shadow: 2px 2px 0 var(--color-maru-black);
+}
+
+.howto-mock__card--selected {
+  background: var(--color-maru-yellow-light);
+  outline: 3px solid var(--color-maru-blue);
+  outline-offset: 1px;
+}
+
+.howto-mock__card-art {
+  aspect-ratio: 5 / 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-maru-gray-light);
+}
+
+.howto-mock__card-art--blue {
+  background: var(--color-maru-blue-lighter);
+}
+
+.howto-mock__card-art--orange {
+  background: color-mix(in srgb, var(--color-maru-orange) 55%, var(--color-maru-white));
+}
+
+.howto-mock__card-art--green {
+  background: var(--color-maru-green-lighter);
+}
+
+.howto-mock__card-art-label {
+  font-size: var(--text-maru-caption);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--color-maru-black) 45%, transparent);
+}
+
+.howto-mock__card-footer {
+  padding: 0.45rem 0.55rem 0.5rem;
+  background: var(--color-maru-white);
+}
+
+.howto-mock__card--selected .howto-mock__card-footer {
+  background: var(--color-maru-yellow-light);
+}
+
+.howto-mock__card-title {
+  font-size: var(--text-maru-title);
+  line-height: var(--text-maru-title--line-height);
+}
+
+.howto-mock__card-meta {
+  margin-top: 0.3rem;
+  font-size: var(--text-maru-meta);
+  line-height: var(--text-maru-meta--line-height);
+  color: color-mix(in srgb, var(--color-maru-black) 70%, transparent);
+}
+
+.howto-mock__footer-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem 0.1rem;
+  border: 2px solid var(--color-maru-black);
+  border-radius: var(--radius-maru);
+  background: var(--color-maru-white);
+  font-size: var(--text-maru-button-secondary);
+  font-weight: 400;
+  line-height: var(--text-maru-button-secondary--line-height);
+  box-shadow: 2px 2px 0 var(--color-maru-black);
+}
+
+.howto-mock__footer-btn--primary {
+  background: var(--color-maru-green-light);
+}
+
+@media (max-width: 699px) {
+  .howto-section {
+    grid-template-columns: 1fr;
+  }
+
+  .howto-section__mock {
+    position: static;
+  }
+}
+
+@media (min-width: 600px) {
+  .howto-modal__header {
+    padding: 1rem 1.35rem;
+  }
+
+  .howto-modal__body {
+    padding: 1.25rem 1.35rem 1.6rem;
+    gap: 2.1rem;
+  }
+}
