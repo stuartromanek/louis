@@ -243,7 +243,7 @@ onUnmounted(() => {
     :close-on-backdrop="false"
     role="dialog"
     :aria-label="copy.heading"
-    height="75dvh"
+    height="75svh"
   >
     <div
       class="yoto-auth-gate-phone__player"

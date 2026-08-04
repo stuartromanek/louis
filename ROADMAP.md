@@ -40,6 +40,10 @@ Explore pre-canned deploy targets that consume container images (Railway templat
 
 ~~Phone layout for the three-panel editor~~ — **done**: below 600px, Search / Library tabs with nested card detail, Add-to-card drawer, phone header (Update + menu); denser YouTube rows; desktop/tablet two-column grid unchanged at `sm+`.
 
+### “Add to Desktop” in mobile menu
+
+Install / “Add to Home Screen” affordance in the phone overflow menu (uses the browser install prompt / platform instructions). Manifest + apple web-app meta already target standalone; this is the in-app entry point.
+
 ### Resume pending playlist edits
 
 ~~Persist dirty MYO playlist drafts across refresh~~ — **done**: pending (and live dirty) drafts are stored in `localStorage` and restored when the card is opened again.

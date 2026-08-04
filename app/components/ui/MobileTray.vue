@@ -29,7 +29,7 @@ const props = withDefaults(defineProps<{
   playSounds?: boolean
   role?: string
 }>(), {
-  height: '50dvh',
+  height: '50svh',
   placement: 'bottom',
   variant: 'sheet',
   showBackdrop: true,
@@ -48,6 +48,8 @@ const { playEvent } = useUiSound()
 const phase = ref<Phase>('idle')
 const prefersReducedMotion = ref(false)
 const titleId = useId()
+/** Pixel-locked sheet box for the open cycle — avoids dvh/chrome jumps mid-slide. */
+const sheetBoxStyle = ref<Record<string, string> | null>(null)
 let timers: ReturnType<typeof setTimeout>[] = []
 let rafIds: number[] = []
 
@@ -100,9 +102,51 @@ function afterPaint(fn: () => void) {
   rafIds.push(id1)
 }
 
+/**
+ * Freeze sheet height in px from the *current* visual viewport.
+ * Mobile chrome often changes dvh mid-enter (URL bar), which makes a
+ * %-height sheet shoot too high then snap back to the bottom edge.
+ */
+function lockSheetBox() {
+  if (typeof window === 'undefined') {
+    sheetBoxStyle.value = null
+    return
+  }
+
+  if (props.height === 'auto') {
+    sheetBoxStyle.value = {
+      height: 'auto',
+      maxHeight: '90svh',
+    }
+    return
+  }
+
+  const raw = props.height.trim()
+  const viewH = window.visualViewport?.height ?? window.innerHeight
+  const vhMatch = /^([\d.]+)(d|s)?vh$/i.exec(raw)
+  if (vhMatch) {
+    const pct = Number.parseFloat(vhMatch[1]!)
+    // Sheet margins (~0.65rem×2) + hard shadow — keep the box on-screen.
+    const marginBudget = 28
+    const target = Math.round((pct / 100) * viewH)
+    const px = Math.max(160, Math.min(target, Math.floor(viewH - marginBudget)))
+    sheetBoxStyle.value = {
+      height: `${px}px`,
+      maxHeight: `${px}px`,
+    }
+    return
+  }
+
+  sheetBoxStyle.value = {
+    height: raw,
+    maxHeight: raw,
+  }
+}
+
 function beginOpen() {
   clearTimers()
-  // Paint closed styles first so the enter transition has a from-state.
+  // Lock before the closed frame paints so translateY(100%) stays stable.
+  lockSheetBox()
   phase.value = 'preenter'
   if (props.playSounds) playEvent('toggleOn')
 
@@ -135,6 +179,7 @@ function beginClose() {
 
   after(prefersReducedMotion.value ? 40 : 220, () => {
     phase.value = 'idle'
+    sheetBoxStyle.value = null
     open.value = false
     emit('close')
   })
@@ -237,9 +282,7 @@ defineExpose({
       <div
         class="mobile-tray__sheet border-maru bg-maru-white"
         :class="{ 'mobile-tray__sheet--auto': height === 'auto' }"
-        :style="height === 'auto'
-          ? { height: 'auto', maxHeight: '90dvh' }
-          : { height, maxHeight: height }"
+        :style="sheetBoxStyle ?? undefined"
         :role="role"
         :aria-modal="variant === 'toast' ? undefined : 'true'"
         :aria-label="ariaLabel"

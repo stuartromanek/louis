@@ -25,7 +25,19 @@ export default defineNuxtConfig({
         { rel: 'manifest', href: '/favicons/manifest.json' },
       ],
       meta: [
+        {
+          name: 'viewport',
+          content: 'width=device-width, initial-scale=1, viewport-fit=cover',
+        },
         { name: 'theme-color', content: '#fff5f0' },
+        { name: 'mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-title', content: 'Louis' },
+        {
+          name: 'apple-mobile-web-app-status-bar-style',
+          content: 'default',
+        },
+        { name: 'application-name', content: 'Louis' },
       ],
       // Paint splash ground before Vue boots so the app never flashes underneath.
       style: [
@@ -38,6 +50,13 @@ export default defineNuxtConfig({
         },
       ],
       script: [
+        {
+          key: 'app-vvh',
+          textContent:
+            '(function(){try{var h=(window.visualViewport&&window.visualViewport.height)||window.innerHeight;'
+            + 'if(h>0)document.documentElement.style.setProperty("--app-vvh",Math.round(h)+"px");'
+            + '}catch(e){}})();',
+        },
         {
           key: 'app-splash-pending',
           // Runs before body parse; mirrors useAppSplash session/debug rules.

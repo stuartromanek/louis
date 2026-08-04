@@ -172,7 +172,7 @@ onUnmounted(() => {
     role="dialog"
     aria-label="You're connected"
     :labelled-by="headingId"
-    height="85dvh"
+    height="85svh"
   >
     <div
       class="yoto-auth-gate-phone__player"

@@ -1,6 +1,6 @@
 <template>
   <div
-    class="h-screen overflow-hidden min-h-0"
+    class="app-shell"
     :inert="authGateBlocksApp || welcomeBlocksApp || splashHoldsGate || undefined"
   >
     <DragDropProvider
