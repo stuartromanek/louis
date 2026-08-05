@@ -21,7 +21,7 @@ const activeTab = computed(() => chrome?.activeTab.value ?? 'search')
 const libraryMode = computed(() => chrome?.libraryMode.value ?? 'grid')
 
 const tabs: { id: MobileEditorTab, label: string, emoji: EmojiId }[] = [
-  { id: 'search', label: 'Search', emoji: 'Videocassette' },
+  { id: 'search', label: 'Search', emoji: 'MagnifyingGlass' },
   { id: 'library', label: 'Library', emoji: 'Books' },
 ]
 

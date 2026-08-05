@@ -57,7 +57,7 @@ const updateInProgress = computed(
 
 /**
  * Ready for a new Update only after any in-flight saves finish.
- * Keeps Menu bubble / Update UI from jumping to “next steps” mid-job.
+ * Keeps Menu / Update UI from jumping to “next steps” mid-job.
  */
 const updateReady = computed(
   () => Boolean(
@@ -105,19 +105,14 @@ const updateButtonLabel = computed(() => {
   return title ? `Update ${title}` : 'Update playlist'
 })
 
-const showMenuBubble = computed(
-  () => updateReady.value || hasActiveSaves.value,
-)
+const menuTriggerEmoji = computed(() => {
+  if (hasActiveSaves.value) return 'IndexPointingUp' as const
+  if (updateReady.value) return 'Bell' as const
+  return 'CardFileBox' as const
+})
 
-const menuBubbleEmoji = computed(() =>
-  hasActiveSaves.value ? 'Construction' as const : 'Bell' as const,
-)
-
-/** Circular ring around busy bubble — overall save completion. */
-const BUBBLE_RING_R = 16.65
-const BUBBLE_RING_C = 2 * Math.PI * BUBBLE_RING_R
-
-const menuBubbleProgress = computed(() => {
+/** Overall save completion for the Menu tab progress fill. */
+const menuUpdateProgress = computed(() => {
   if (saveProgressTestMode.value) {
     return Math.min(100, Math.max(0, SAVE_PROGRESS_TEST_FIXTURE.progress))
   }
@@ -126,9 +121,11 @@ const menuBubbleProgress = computed(() => {
   return 0
 })
 
-const menuBubbleRingDash = computed(() => {
-  const filled = (menuBubbleProgress.value / 100) * BUBBLE_RING_C
-  return `${filled} ${BUBBLE_RING_C}`
+const menuTriggerStyle = computed(() => {
+  if (!hasActiveSaves.value) return undefined
+  return {
+    '--menu-update-progress': `${menuUpdateProgress.value}%`,
+  }
 })
 
 function openHowTo() {
@@ -255,65 +252,19 @@ onBeforeUnmount(() => {
         'mobile-overflow-menu__trigger--ready': updateReady,
         'mobile-overflow-menu__trigger--busy': hasActiveSaves,
       }"
+      :style="menuTriggerStyle"
       :aria-expanded="menuOpen"
       aria-haspopup="dialog"
       :aria-label="menuAriaLabel"
       @click="toggleMenu"
     >
       <MaruEmoji
-        name="CardFileBox"
+        :key="menuTriggerEmoji"
+        :name="menuTriggerEmoji"
         :size-rem="1.4"
         class="mobile-overflow-menu__trigger-emoji"
       />
       <span class="mobile-editor-tabs__label">Menu</span>
-      <Transition name="mobile-ready-bubble">
-        <span
-          v-if="showMenuBubble"
-          class="mobile-overflow-menu__ready-bubble"
-          :class="{ 'mobile-overflow-menu__ready-bubble--busy': hasActiveSaves }"
-          aria-hidden="true"
-        >
-          <Transition name="mobile-ready-ring">
-            <svg
-              v-if="hasActiveSaves"
-              key="busy-ring"
-              class="mobile-overflow-menu__ready-ring"
-              viewBox="0 0 36 36"
-              aria-hidden="true"
-            >
-              <circle
-                class="mobile-overflow-menu__ready-ring-track"
-                cx="18"
-                cy="18"
-                :r="BUBBLE_RING_R"
-                fill="none"
-              />
-              <circle
-                class="mobile-overflow-menu__ready-ring-fill"
-                cx="18"
-                cy="18"
-                :r="BUBBLE_RING_R"
-                fill="none"
-                :stroke-dasharray="menuBubbleRingDash"
-                transform="rotate(-90 18 18)"
-              />
-            </svg>
-          </Transition>
-          <span class="mobile-overflow-menu__ready-point-slot">
-            <Transition
-              name="mobile-ready-emoji"
-              mode="out-in"
-            >
-              <MaruEmoji
-                :key="menuBubbleEmoji"
-                :name="menuBubbleEmoji"
-                :size-rem="1.785"
-                class="mobile-overflow-menu__ready-point"
-              />
-            </Transition>
-          </span>
-        </span>
-      </Transition>
     </button>
 
     <MobileTray

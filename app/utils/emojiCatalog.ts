@@ -57,6 +57,7 @@ export const EMOJI_IDS = [
   'Hole',
   'HotDog',
   'IndexPointingUp',
+  'IncomingEnvelope',
   'KiwiFruit',
   'LevelSlider',
   'LightBulb',
