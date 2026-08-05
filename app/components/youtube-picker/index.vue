@@ -62,6 +62,7 @@ const {
   requestEnableLongTracks,
   cancelEnableLongTracks,
   moveFocus,
+  resetSearch,
 } = useYoutubePicker(props.maxResults)
 
 const chrome = inject(MOBILE_EDITOR_CHROME_KEY, null)
@@ -82,6 +83,10 @@ const resultsPaneMode = computed(() => {
 
 function onSearchSubmit() {
   search()
+}
+
+function onClearSearch() {
+  resetSearch()
 }
 
 function onPlaceholderSearch(term: string) {
@@ -148,6 +153,7 @@ onUnmounted(() => {
   <div
     ref="containerRef"
     tabindex="0"
+    class="yt-picker"
     :class="embedded ? 'relative flex flex-col gap-2 sm:gap-3 h-full min-h-0' : 'relative'"
   >
     <div :class="embedded ? 'shrink-0' : ''">
@@ -155,7 +161,9 @@ onUnmounted(() => {
         v-model="query"
         :placeholders="searchPlaceholders"
         :embedded="embedded"
+        :clearable="Boolean(submittedQuery.trim())"
         @submit="onSearchSubmit"
+        @clear="onClearSearch"
       />
     </div>
 

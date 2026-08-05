@@ -268,7 +268,9 @@
   position: fixed;
   z-index: 1000;
   box-sizing: border-box;
-  max-width: min(18rem, calc(100vw - 1.5rem));
+  /* JS sets a viewport-aware maxWidth; this is the CSS fallback. */
+  max-width: min(22rem, calc(100vw - 1.5rem));
+  width: max-content;
   padding: 0.35rem 0.6rem;
   border: 3px solid var(--color-maru-black);
   border-radius: var(--radius-maru);

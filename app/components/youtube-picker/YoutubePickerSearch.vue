@@ -8,14 +8,18 @@ const props = withDefaults(defineProps<{
   label?: string
   placeholders?: string[]
   embedded?: boolean
+  /** True after a search has been submitted (show Clear instead of Search). */
+  clearable?: boolean
 }>(), {
   label: 'Search for stuff',
   placeholders: () => ['Nakameguro', 'Studio Ghibli', 'lofi hip hop'],
   embedded: false,
+  clearable: false,
 })
 
 const emit = defineEmits<{
   submit: []
+  clear: []
 }>()
 
 const suggestionsStopped = ref(false)
@@ -74,9 +78,28 @@ function onSearchClick() {
   emit('submit')
 }
 
+function onClearClick() {
+  playEvent('buttonClick')
+  emit('clear')
+}
+
+function onActionClick() {
+  if (props.clearable) {
+    onClearClick()
+    return
+  }
+  onSearchClick()
+}
+
 watch(query, (value) => {
   if (value.trim()) {
     stopSuggestions()
+  }
+})
+
+watch(() => props.clearable, (canClear, wasClearable) => {
+  if (wasClearable && !canClear && !query.value.trim()) {
+    startSuggestions()
   }
 })
 
@@ -139,10 +162,12 @@ onUnmounted(() => {
           </div>
           <button
             type="button"
-            class="maru-button maru-button--sm typetester-inline-search-btn bg-maru-turquoise-light text-maru-black"
-            @click="onSearchClick"
+            class="maru-button maru-button--sm typetester-inline-search-btn text-maru-black"
+            :class="clearable ? 'bg-maru-yellow-light' : 'bg-maru-turquoise-light'"
+            :aria-label="clearable ? 'Clear search' : 'Search'"
+            @click="onActionClick"
           >
-            <span class="maru-button__label">Search</span>
+            <span class="maru-button__label">{{ clearable ? 'Clear' : 'Search' }}</span>
           </button>
         </div>
       </div>

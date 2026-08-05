@@ -33,9 +33,11 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  width: min(1100px, 94vw);
+  /* 100% of padded grid area — 94vw ignored padding and hugged the right edge */
+  width: min(1100px, 100%);
   max-height: 85vh;
   overflow: hidden;
+  box-sizing: border-box;
   box-shadow: 6px 6px 0 var(--color-maru-black);
   opacity: 0;
   transform: translateY(12px);
@@ -73,22 +75,30 @@
 
 .howto-modal__close {
   margin: 0;
-  padding: 0.2rem 0;
-  border: 0;
-  background: transparent;
+  padding: 0.3rem 0.75rem 0.2rem;
+  border: 3px solid var(--color-maru-black);
+  border-radius: var(--radius-maru);
+  background: var(--color-maru-white);
   color: var(--color-maru-black);
+  font-family: var(--font-maru-mono);
   font-size: var(--text-maru-button-secondary);
   line-height: var(--text-maru-button-secondary--line-height);
-  font-weight: 400;
+  font-weight: 500;
   letter-spacing: 0.03em;
-  text-decoration: underline;
-  text-underline-offset: 0.18em;
+  text-decoration: none;
+  box-shadow: 2px 2px 0 var(--color-maru-black);
   cursor: pointer;
+  transition: scale 0.12s ease-out;
+}
+
+.howto-modal__close:active:not(:disabled) {
+  scale: 0.96;
 }
 
 .howto-modal__close:disabled {
   opacity: 0.45;
   cursor: default;
+  box-shadow: none;
 }
 
 .howto-modal__body {
@@ -435,5 +445,59 @@
   .howto-modal__body {
     padding: 1.25rem 1.35rem 1.6rem;
     gap: 2.1rem;
+  }
+}
+
+/* Stu's phone — keep modal inset evenly; shrink fake UI to fit */
+@media (max-width: 310px) {
+  .howto-modal {
+    padding: 0.5rem;
+  }
+
+  .howto-modal__window {
+    max-height: calc(100dvh - 1rem);
+    box-shadow: 3px 3px 0 var(--color-maru-black);
+  }
+
+  .howto-modal__header {
+    gap: 0.5rem;
+    padding: 0.55rem 0.65rem;
+  }
+
+  .howto-modal__close {
+    padding: 0.25rem 0.55rem 0.15rem;
+    border-width: 2px;
+    box-shadow: 1px 1px 0 var(--color-maru-black);
+  }
+
+  .howto-modal__body {
+    padding: 0.7rem 0.65rem 0.9rem;
+    gap: 1.15rem;
+    overflow-x: hidden;
+  }
+
+  .howto-section__mock {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  /* zoom shrinks layout + paint so mocks stay inside the pane */
+  .howto-mock,
+  .howto-mock-stack {
+    zoom: 0.78;
+  }
+
+  .howto-mock__cards {
+    gap: 0.4rem;
+  }
+
+  .howto-mock__card {
+    min-width: 0;
+    flex: 1 1 4.5rem;
+    max-width: none;
+  }
+
+  .howto-mock__thumb {
+    width: 2.5rem;
   }
 }

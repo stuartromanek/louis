@@ -184,6 +184,13 @@
   letter-spacing: 0.02em;
 }
 
+.yt-result-card__footer-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
 .yt-result-card__info {
   display: inline-flex;
   align-items: center;

@@ -920,6 +920,12 @@ function onKeydown(event: KeyboardEvent) {
   }
 }
 
+@media (max-width: 399px) {
+  .empty-exp-howto__nav {
+    --howto-nav-scale: 0.92; /* 0.8 × 1.15 — whole button, not width+scale */
+  }
+}
+
 /* Narrow + short landscape — disabled for now (see short-viewport block above). */
 @media (max-width: 599px) and (max-height: 579px) and (min-width: 100000px) {
   .empty-exp--howto {

@@ -5,6 +5,8 @@
  *
  * Enter must paint a closed frame first (preenter), then flip to
  * entering — otherwise v-if mounts already "open" and CSS transitions skip.
+ * Slide is driven by WAAPI translateY with a pixel-locked height so the
+ * sheet can't flash at the dock mid-enter.
  */
 
 type Phase = 'idle' | 'preenter' | 'entering' | 'open' | 'exiting'
@@ -48,8 +50,12 @@ const { playEvent } = useUiSound()
 const phase = ref<Phase>('idle')
 const prefersReducedMotion = ref(false)
 const titleId = useId()
-/** Pixel-locked sheet box for the open cycle — avoids dvh/chrome jumps mid-slide. */
+/** Pixel-locked sheet box for the open cycle (height + bottom dock). */
 const sheetBoxStyle = ref<Record<string, string> | null>(null)
+/** Slide distance (px) for the current open cycle. */
+const slideYPx = ref(0)
+const sheetEl = ref<HTMLElement | null>(null)
+let sheetAnim: Animation | null = null
 let timers: ReturnType<typeof setTimeout>[] = []
 let rafIds: number[] = []
 
@@ -86,6 +92,10 @@ function clearTimers() {
   timers = []
   for (const id of rafIds) cancelAnimationFrame(id)
   rafIds = []
+  if (sheetAnim) {
+    try { sheetAnim.cancel() } catch { /* already finished */ }
+    sheetAnim = null
+  }
 }
 
 function after(ms: number, fn: () => void) {
@@ -102,65 +112,190 @@ function afterPaint(fn: () => void) {
   rafIds.push(id1)
 }
 
-/**
- * Freeze sheet height in px from the *current* visual viewport.
- * Mobile chrome often changes dvh mid-enter (URL bar), which makes a
- * %-height sheet shoot too high then snap back to the bottom edge.
- */
-function lockSheetBox() {
+function viewHeightPx() {
+  return window.visualViewport?.height ?? window.innerHeight
+}
+
+function edgeGapPx() {
+  // Matches --tray-edge-gap (0.65rem) + offscreen pad (1.75rem).
+  const rootFs = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+  return {
+    edge: 0.65 * rootFs,
+    pad: 1.75 * rootFs,
+  }
+}
+
+/** Freeze sheet height at the bottom dock; park/rest via translateY. */
+function applySheetBox(opts: {
+  height: string
+  maxHeight: string
+  edge: number
+  slideY: number
+  parked: boolean
+}) {
+  const sign = props.placement === 'top' ? -1 : 1
+  slideYPx.value = opts.slideY
+  const transform = opts.parked
+    ? `translate3d(0, ${sign * opts.slideY}px, 0)`
+    : 'translate3d(0, 0, 0)'
+
+  if (props.placement === 'top') {
+    sheetBoxStyle.value = {
+      height: opts.height,
+      maxHeight: opts.maxHeight,
+      top: `${opts.edge}px`,
+      bottom: 'auto',
+      transform,
+    }
+  }
+  else {
+    sheetBoxStyle.value = {
+      height: opts.height,
+      maxHeight: opts.maxHeight,
+      top: 'auto',
+      bottom: `${opts.edge}px`,
+      transform,
+    }
+  }
+}
+
+function lockSheetBox(measuredHeight?: number, parked = true) {
   if (typeof window === 'undefined') {
     sheetBoxStyle.value = null
     return
   }
 
+  const viewH = viewHeightPx()
+  const { edge, pad } = edgeGapPx()
+  const maxSheet = Math.max(160, Math.floor(viewH - edge * 2))
+  const edgePx = Math.round(edge)
+
   if (props.height === 'auto') {
-    sheetBoxStyle.value = {
+    const h = Math.min(
+      measuredHeight && measuredHeight > 0 ? measuredHeight : maxSheet,
+      Math.round(viewH * 0.9),
+      maxSheet,
+    )
+    applySheetBox({
       height: 'auto',
-      maxHeight: '90svh',
-    }
+      maxHeight: `${Math.round(viewH * 0.9)}px`,
+      edge: edgePx,
+      slideY: Math.round(h + pad),
+      parked,
+    })
     return
   }
 
   const raw = props.height.trim()
-  const viewH = window.visualViewport?.height ?? window.innerHeight
   const vhMatch = /^([\d.]+)(d|s)?vh$/i.exec(raw)
+  let px: number
+
   if (vhMatch) {
     const pct = Number.parseFloat(vhMatch[1]!)
-    // Sheet margins (~0.65rem×2) + hard shadow — keep the box on-screen.
-    const marginBudget = 28
     const target = Math.round((pct / 100) * viewH)
-    const px = Math.max(160, Math.min(target, Math.floor(viewH - marginBudget)))
-    sheetBoxStyle.value = {
-      height: `${px}px`,
-      maxHeight: `${px}px`,
-    }
+    px = Math.max(160, Math.min(target, maxSheet))
+  }
+  else if (measuredHeight && measuredHeight > 0) {
+    px = Math.min(Math.round(measuredHeight), maxSheet)
+  }
+  else {
+    px = measuredHeight && measuredHeight > 0
+      ? Math.min(Math.round(measuredHeight), maxSheet)
+      : maxSheet
+    applySheetBox({
+      height: raw,
+      maxHeight: raw,
+      edge: edgePx,
+      slideY: Math.round(px + pad),
+      parked,
+    })
     return
   }
 
-  sheetBoxStyle.value = {
-    height: raw,
-    maxHeight: raw,
+  if (measuredHeight && measuredHeight > 0) {
+    px = Math.min(Math.round(measuredHeight), maxSheet)
   }
+
+  applySheetBox({
+    height: `${px}px`,
+    maxHeight: `${px}px`,
+    edge: edgePx,
+    slideY: Math.round(px + pad),
+    parked,
+  })
+}
+
+function parkedTransform() {
+  const sign = props.placement === 'top' ? -1 : 1
+  return `translate3d(0, ${sign * slideYPx.value}px, 0)`
+}
+
+function runSlideAnimation(direction: 'in' | 'out'): Promise<void> {
+  const el = sheetEl.value
+  if (!el) return Promise.resolve()
+
+  const from = direction === 'in' ? parkedTransform() : 'translate3d(0, 0, 0)'
+  const to = direction === 'in' ? 'translate3d(0, 0, 0)' : parkedTransform()
+  const duration = prefersReducedMotion.value
+    ? 0
+    : (direction === 'in' ? 320 : 220)
+
+  el.style.transition = 'none'
+  el.style.transform = from
+  void el.offsetWidth
+
+  if (sheetAnim) {
+    try { sheetAnim.cancel() } catch { /* ignore */ }
+    sheetAnim = null
+  }
+
+  const anim = el.animate(
+    [{ transform: from }, { transform: to }],
+    {
+      duration,
+      easing: 'cubic-bezier(0.32, 0.72, 0, 1)',
+      fill: 'forwards',
+    },
+  )
+  sheetAnim = anim
+
+  return anim.finished.then(() => {
+    el.style.transform = to
+    // Keep Vue :style in sync — otherwise a re-render re-applies parked transform.
+    if (sheetBoxStyle.value) {
+      sheetBoxStyle.value = {
+        ...sheetBoxStyle.value,
+        transform: to,
+      }
+    }
+    try { anim.cancel() } catch { /* ignore */ }
+    if (sheetAnim === anim) sheetAnim = null
+  }).catch(() => {
+    /* cancelled */
+  })
 }
 
 function beginOpen() {
   clearTimers()
-  // Lock before the closed frame paints so translateY(100%) stays stable.
   lockSheetBox()
   phase.value = 'preenter'
   if (props.playSounds) playEvent('toggleOn')
 
   afterPaint(() => {
     if (phase.value !== 'preenter') return
-    phase.value = 'entering'
+    lockSheetBox(sheetEl.value?.offsetHeight, true)
+    afterPaint(() => {
+      if (phase.value !== 'preenter') return
+      phase.value = 'entering'
+      void runSlideAnimation('in')
 
-    const settleMs = props.variant === 'toast'
-      ? (prefersReducedMotion.value ? 40 : 420)
-      : (prefersReducedMotion.value ? 40 : 1300)
-
-    // Last delay (~880ms) + chunk duration (420ms); keep --entering until settled.
-    after(settleMs, () => {
-      if (phase.value === 'entering') phase.value = 'open'
+      // Stay in --entering until stagger finishes (chunk-in is tied to that class).
+      const settleMs = props.variant === 'toast'
+        ? (prefersReducedMotion.value ? 40 : 420)
+        : (prefersReducedMotion.value ? 40 : 1300)
+      after(settleMs, () => {
+        if (phase.value === 'entering') phase.value = 'open'
+      })
     })
   })
 }
@@ -177,7 +312,9 @@ function beginClose() {
   phase.value = 'exiting'
   if (props.playSounds) playEvent('buttonClick')
 
-  after(prefersReducedMotion.value ? 40 : 220, () => {
+  const exitMs = prefersReducedMotion.value ? 40 : 220
+  void runSlideAnimation('out')
+  after(exitMs, () => {
     phase.value = 'idle'
     sheetBoxStyle.value = null
     open.value = false
@@ -280,6 +417,7 @@ defineExpose({
         @click="onBackdrop"
       />
       <div
+        ref="sheetEl"
         class="mobile-tray__sheet border-maru bg-maru-white"
         :class="{ 'mobile-tray__sheet--auto': height === 'auto' }"
         :style="sheetBoxStyle ?? undefined"

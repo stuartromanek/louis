@@ -89,13 +89,12 @@ function onClick() {
 }
 
 @media (max-width: 599px) {
-  .load-more-side {
-    min-width: 3.25rem;
-    gap: 0.15rem;
+  .load-more-btn {
+    justify-content: center;
+    min-height: 3.25rem;
   }
 
-  /* Two fewer per side on phone — keep the first three. */
-  .load-more-side .load-more-emoji:nth-child(n + 4) {
+  .load-more-side {
     display: none;
   }
 }

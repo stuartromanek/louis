@@ -2,6 +2,7 @@
 
 .mobile-tray {
   --ease-tray-out: cubic-bezier(0.23, 1, 0.32, 1);
+  /* No overshoot — keep end value at 1 so the sheet can't sail past the dock. */
   --ease-tray-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --dur-tray-enter: 320ms;
   --dur-tray-exit: 220ms;
@@ -22,20 +23,16 @@
   --tray-stagger-7: calc(var(--tray-stagger-base) + var(--tray-stagger-step) * 7);
   /* Extra travel past the origin edge (margins + hard shadow). */
   --tray-offscreen-pad: 1.75rem;
+  --tray-edge-gap: 0.65rem;
 
   position: fixed;
   inset: 0;
   z-index: 85;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  /* Clip to the origin edge so the sheet can park fully off-screen. */
-  overflow: hidden;
+  /* Sheet is absolutely docked; overflow visible so transform layers
+     don't flash the untransformed dock mid-enter. */
+  display: block;
+  overflow: visible;
   pointer-events: none;
-}
-
-.mobile-tray--top {
-  justify-content: flex-start;
 }
 
 .mobile-tray--entering,
@@ -55,11 +52,6 @@
 
 .mobile-tray--toast .mobile-tray__sheet {
   pointer-events: auto;
-}
-
-.mobile-tray--entering .mobile-tray__sheet,
-.mobile-tray--exiting .mobile-tray__sheet {
-  will-change: transform;
 }
 
 .mobile-tray__backdrop {
@@ -86,53 +78,42 @@
 }
 
 .mobile-tray__sheet {
-  position: relative;
+  position: absolute;
   z-index: 1;
+  left: var(--tray-edge-gap);
+  right: var(--tray-edge-gap);
+  bottom: calc(var(--tray-edge-gap) + env(safe-area-inset-bottom, 0px));
+  top: auto;
   display: flex;
   flex-direction: column;
   width: auto;
   min-height: 0;
-  margin: 0.65rem;
-  margin-bottom: calc(0.65rem + env(safe-area-inset-bottom, 0px));
+  margin: 0;
   border-radius: var(--radius-maru);
   box-shadow:
     4px 4px 0 var(--color-maru-black),
     8px 8px 0 var(--color-maru-black);
   padding-bottom: 0.35rem;
-  /* Park fully past the bottom edge (height + margin/shadow pad). */
-  transform: translateY(calc(100% + var(--tray-offscreen-pad) + env(safe-area-inset-bottom, 0px)));
-  transition: transform var(--dur-tray-enter) var(--ease-tray-drawer);
+  box-sizing: border-box;
+  /* Layer from first paint; slide distance set inline / WAAPI. */
+  will-change: transform;
+  transform: translate3d(0, 110%, 0);
+  transition: none;
 }
 
+/* Slide is WAAPI-owned — no CSS transform transitions on the sheet. */
+.mobile-tray--preenter .mobile-tray__sheet,
 .mobile-tray--entering .mobile-tray__sheet,
-.mobile-tray--open .mobile-tray__sheet {
-  transform: translateY(0);
-}
-
-.mobile-tray--exiting .mobile-tray__sheet,
-.mobile-tray--preenter .mobile-tray__sheet {
-  transform: translateY(calc(100% + var(--tray-offscreen-pad) + env(safe-area-inset-bottom, 0px)));
-}
-
+.mobile-tray--open .mobile-tray__sheet,
 .mobile-tray--exiting .mobile-tray__sheet {
-  transition-duration: var(--dur-tray-exit);
+  transition: none;
 }
 
 /* Top placement — slide down from above the viewport */
 .mobile-tray--top .mobile-tray__sheet {
-  margin-bottom: 0.65rem;
-  margin-top: calc(0.65rem + env(safe-area-inset-top, 0px));
-  transform: translateY(calc(-100% - var(--tray-offscreen-pad) - env(safe-area-inset-top, 0px)));
-}
-
-.mobile-tray--top.mobile-tray--entering .mobile-tray__sheet,
-.mobile-tray--top.mobile-tray--open .mobile-tray__sheet {
-  transform: translateY(0);
-}
-
-.mobile-tray--top.mobile-tray--exiting .mobile-tray__sheet,
-.mobile-tray--top.mobile-tray--preenter .mobile-tray__sheet {
-  transform: translateY(calc(-100% - var(--tray-offscreen-pad) - env(safe-area-inset-top, 0px)));
+  top: calc(var(--tray-edge-gap) + env(safe-area-inset-top, 0px));
+  bottom: auto;
+  transform: translate3d(0, -110%, 0);
 }
 
 /* Toast: compact sheet, faster stagger, green accent fill */
@@ -234,16 +215,8 @@
   }
 }
 
-/* Belt-and-suspenders for browsers that support entry transitions on mount */
+/* Backdrop only — sheet slide is driven by JS-pinned `top`, not transform. */
 @starting-style {
-  .mobile-tray--entering .mobile-tray__sheet {
-    transform: translateY(calc(100% + var(--tray-offscreen-pad) + env(safe-area-inset-bottom, 0px)));
-  }
-
-  .mobile-tray--top.mobile-tray--entering .mobile-tray__sheet {
-    transform: translateY(calc(-100% - var(--tray-offscreen-pad) - env(safe-area-inset-top, 0px)));
-  }
-
   .mobile-tray--entering .mobile-tray__backdrop {
     opacity: 0;
   }
@@ -423,7 +396,6 @@
 /* ─── Reduced motion: opacity only, no travel ─── */
 
 .mobile-tray--reduced .mobile-tray__sheet {
-  transform: none;
   opacity: 0;
   transition: opacity var(--dur-tray-exit) var(--ease-tray-out);
 }
@@ -436,7 +408,6 @@
 .mobile-tray--reduced.mobile-tray--preenter .mobile-tray__sheet,
 .mobile-tray--reduced.mobile-tray--exiting .mobile-tray__sheet {
   opacity: 0;
-  transform: none;
 }
 
 .mobile-tray--reduced .mobile-tray__backdrop {

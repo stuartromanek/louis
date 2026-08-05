@@ -38,7 +38,7 @@ function onBackToCards() {
 </script>
 
 <template>
-  <div class="h-full flex flex-col gap-2 sm:gap-3 p-2 sm:p-3 min-h-0 bg-maru-gray-light">
+  <div class="mobile-app-frame h-full flex flex-col gap-2 sm:gap-3 p-2 sm:p-3 min-h-0 bg-maru-gray-light">
     <div
       v-if="$slots.toolbar"
       class="desktop-only-block shrink-0 w-full"

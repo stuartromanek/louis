@@ -1310,6 +1310,51 @@
   }
 }
 
+/* Stu's phone: Add to Playlist on its own row; square result art */
+@media (max-width: 310px) {
+  /* Drop outer frame padding — no gray gutter around the stage */
+  .mobile-app-frame {
+    padding: 0;
+    gap: 0;
+  }
+
+  .yt-result-card__actions {
+    flex-wrap: wrap;
+  }
+
+  .yt-result-card__add {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .yt-result-card__thumb-img {
+    width: 3rem;
+    max-width: 3rem;
+    aspect-ratio: 1 / 1;
+  }
+
+  .mobile-card-track {
+    grid-template-columns: 3rem minmax(0, 1fr) auto;
+  }
+
+  .mobile-card-track__media {
+    width: 3rem;
+    max-width: 3rem;
+    min-height: 0;
+    aspect-ratio: 1 / 1;
+    align-self: start;
+  }
+
+  .mobile-card-track__title {
+    font-size: var(--text-maru-meta);
+    line-height: var(--text-maru-meta--line-height);
+  }
+
+  .mobile-overflow-menu__item-hint {
+    display: none;
+  }
+}
+
 .yt-result-card__add:active {
   scale: 0.96;
 }
@@ -1424,19 +1469,74 @@
     font-size: 4.75vw;
   }
 
+  /* After long tracks are enabled, the chip is redundant on phone cards. */
+  .yt-result-long-chip {
+    display: none;
+  }
+
   .yt-result-card__footer {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.45rem;
-    padding: 0.45rem 0.65rem;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.35rem;
+    padding: 0.28rem 0.45rem;
+  }
+
+  .yt-result-card__footer-label,
+  .yt-result-card__footer-text {
+    display: none;
+  }
+
+  .yt-result-card__footer-actions {
+    flex: 1 1 auto;
+    justify-content: flex-start;
+    gap: 0.35rem;
+    min-width: 0;
+  }
+
+  .yt-result-card__enable,
+  .yt-result-card__info {
+    margin: 0;
+    border: 2px solid var(--color-maru-black);
+    border-radius: var(--radius-maru);
+    background: var(--color-maru-white);
+    color: var(--color-maru-black);
+    font-family: var(--font-maru-mono);
+    font-size: var(--text-maru-meta);
+    font-weight: 500;
+    line-height: var(--text-maru-meta--line-height);
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    box-shadow: 1.5px 1.5px 0 var(--color-maru-black);
+    cursor: pointer;
   }
 
   .yt-result-card__enable {
-    align-self: flex-start;
-    min-height: 2.25rem;
-    padding: 0.35rem 0;
-    font-size: var(--text-maru-button-secondary);
-    line-height: var(--text-maru-button-secondary--line-height);
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    padding: 0.28rem 0.55rem 0.18rem;
+    align-self: auto;
+  }
+
+  .yt-result-card__enable:hover,
+  .yt-result-card__info:hover {
+    opacity: 1;
+  }
+
+  .yt-result-card__enable:active,
+  .yt-result-card__info:active {
+    scale: 0.97;
+    opacity: 1;
+  }
+
+  .yt-result-card__info {
+    flex: 0 0 auto;
+    width: auto;
+    height: auto;
+    min-width: 1.85rem;
+    padding: 0.28rem 0.45rem 0.18rem;
   }
 
   .yt-long-tracks-confirm {
@@ -1453,5 +1553,126 @@
   .yt-long-tracks-confirm__actions .maru-button {
     flex: 1;
     min-height: 2.75rem;
+  }
+}
+
+/* ─── ≤360px: densify — cut nested padding / double borders / hard shadows ─── */
+@media (max-width: 360px) {
+  .mobile-app-frame {
+    padding: 0.25rem;
+    gap: 0.25rem;
+  }
+
+  /* Outer stage keeps brand edge; nested chrome thins. */
+  .mobile-app-frame .mobile-stage > .app-panel__header,
+  .mobile-app-frame .mobile-library-panel__header {
+    padding: 0.3rem 0.45rem;
+    gap: 0.4rem;
+    min-height: 0;
+  }
+
+  .mobile-app-frame .mobile-stage > .app-panel__body {
+    padding: 0.4rem;
+  }
+
+  .mobile-app-frame .yt-picker {
+    gap: 0.4rem;
+  }
+
+  .mobile-app-frame .yt-results-pane {
+    border-width: 2px;
+    padding: 0.35rem !important;
+  }
+
+  .mobile-app-frame .yt-results-pane.px-2,
+  .mobile-app-frame .yt-results-pane.pt-2,
+  .mobile-app-frame .yt-results-pane.p-2 {
+    padding: 0.35rem !important;
+  }
+
+  .mobile-app-frame .typetester-inline-input-area--with-search,
+  .mobile-app-frame .typetester-inline--compact .typetester-inline-input-area--with-search {
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .mobile-app-frame .typetester-inline-field {
+    padding-inline: 0.35rem 0.15rem;
+  }
+
+  .mobile-app-frame .typetester-inline-search-btn {
+    padding-inline: 0.55rem;
+  }
+
+  .mobile-library-grid {
+    gap: 0.4rem;
+    padding: 0.35rem !important;
+  }
+
+  .mobile-library-tile {
+    border-width: 2px;
+    box-shadow: 1px 1px 0 var(--color-maru-black);
+  }
+
+  .mobile-library-tile__title {
+    padding: 0.22rem 0.3rem 0.16rem;
+  }
+
+  .mobile-library-panel__header {
+    padding-inline: 0.45rem;
+    padding-block: 0.3rem;
+  }
+
+  .mobile-editor-tabs {
+    gap: 0.22rem;
+    padding: 0.22rem;
+    padding-bottom: calc(0.22rem + env(safe-area-inset-bottom, 0px));
+    border-width: 2px;
+    box-shadow: 2px 2px 0 var(--color-maru-black);
+  }
+
+  .mobile-editor-tabs__tab {
+    gap: 0.18rem;
+    min-height: 2.45rem;
+    padding: 0.22rem 0.1rem 0.16rem;
+  }
+
+  .mobile-editor-tabs__tab--active {
+    border-width: 2px;
+    box-shadow: 1px 1px 0 var(--color-maru-black);
+  }
+
+  .mobile-card-track {
+    border-width: 2px;
+    padding: 0.4rem;
+    gap: 0.35rem 0.5rem;
+    box-shadow: 1px 1px 0 var(--color-maru-black);
+  }
+
+  .mobile-add-drawer__card {
+    border-width: 2px;
+    box-shadow: 1px 1px 0 var(--color-maru-black);
+  }
+
+  .mobile-overflow-menu__item {
+    padding: 0.5rem 0.65rem;
+    border-width: 2px;
+    box-shadow: 2px 2px 0 var(--color-maru-black);
+  }
+
+  /* Howto fan: thinner nested card chrome */
+  .empty-exp-howto__card {
+    border-width: 2px;
+    padding: 0.35rem 0.45rem 0.5rem;
+  }
+
+  .empty-exp-howto__window {
+    padding: 0.45rem;
+    border-width: 2px;
+  }
+
+  .empty-exp-howto__nav {
+    border-width: 2px;
+    box-shadow: 2px 2px 0 var(--color-maru-black);
   }
 }

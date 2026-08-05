@@ -164,7 +164,16 @@ function onAdd(event: Event) {
       class="yt-result-card__footer"
     >
       <p class="yt-result-card__footer-label font-maru-mono text-maru-black">
-        <span>{{ YOTO_MYO_OVER_TRACK_DURATION_FOOTER }}</span>
+        <span class="yt-result-card__footer-text">{{ YOTO_MYO_OVER_TRACK_DURATION_FOOTER }}</span>
+      </p>
+      <div class="yt-result-card__footer-actions">
+        <button
+          type="button"
+          class="yt-result-card__enable font-maru-mono text-maru-black"
+          @click="onEnableLongTracks"
+        >
+          Enable long tracks
+        </button>
         <MaruTooltip
           :text="YOTO_MYO_OVER_TRACK_DURATION_TOOLTIP"
           placement="top"
@@ -178,14 +187,7 @@ function onAdd(event: Event) {
             ?
           </button>
         </MaruTooltip>
-      </p>
-      <button
-        type="button"
-        class="yt-result-card__enable font-maru-mono text-maru-black"
-        @click="onEnableLongTracks"
-      >
-        Enable long tracks
-      </button>
+      </div>
     </div>
   </div>
 
@@ -253,7 +255,16 @@ function onAdd(event: Event) {
       class="yt-result-card__footer"
     >
       <p class="yt-result-card__footer-label font-maru-mono text-maru-black">
-        <span>{{ YOTO_MYO_OVER_TRACK_DURATION_FOOTER }}</span>
+        <span class="yt-result-card__footer-text">{{ YOTO_MYO_OVER_TRACK_DURATION_FOOTER }}</span>
+      </p>
+      <div class="yt-result-card__footer-actions">
+        <button
+          type="button"
+          class="yt-result-card__enable font-maru-mono text-maru-black"
+          @click="onEnableLongTracks"
+        >
+          Enable long tracks
+        </button>
         <MaruTooltip
           :text="YOTO_MYO_OVER_TRACK_DURATION_TOOLTIP"
           placement="top"
@@ -267,14 +278,7 @@ function onAdd(event: Event) {
             ?
           </button>
         </MaruTooltip>
-      </p>
-      <button
-        type="button"
-        class="yt-result-card__enable font-maru-mono text-maru-black"
-        @click="onEnableLongTracks"
-      >
-        Enable long tracks
-      </button>
+      </div>
     </div>
   </div>
 </template>

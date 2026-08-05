@@ -79,7 +79,7 @@ const footerTextClass = computed(() => props.footerTextClass ?? props.headerText
     </div>
     <div
       v-else
-      class="flex-1 min-h-0"
+      class="app-panel__body flex-1 min-h-0"
       :class="[
         bodyPadding ? 'p-3 sm:p-4' : '',
         fillBody

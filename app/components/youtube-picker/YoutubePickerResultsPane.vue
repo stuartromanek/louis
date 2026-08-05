@@ -27,7 +27,7 @@ const emit = defineEmits<{
 
 <template>
   <div
-    class="border-maru rounded-maru bg-maru-red-lighter flex flex-col"
+    class="yt-results-pane border-maru rounded-maru bg-maru-red-lighter flex flex-col"
     :class="[
       mode === 'results'
         ? 'px-2 sm:px-3'

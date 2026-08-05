@@ -152,7 +152,7 @@ onUnmounted(() => {
           />
           <button
             type="button"
-            class="howto-modal__close font-maru-mono"
+            class="howto-modal__close"
             :disabled="!interactive"
             aria-label="Close How To"
             @click="beginClose"
