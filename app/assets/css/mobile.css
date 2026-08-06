@@ -1157,7 +1157,7 @@
   }
 }
 
-/* Stu's phone: Add to Playlist on its own row; square result art */
+/* Stu's phone: Add to… on its own row; square result art */
 @media (max-width: 310px) {
   /* Drop outer frame padding — no gray gutter around the stage */
   .mobile-app-frame {
@@ -1241,7 +1241,7 @@
   cursor: wait;
 }
 
-.mobile-add-drawer__card--podcast {
+.mobile-add-drawer__card--podcast:disabled {
   opacity: 0.72;
   cursor: not-allowed;
 }

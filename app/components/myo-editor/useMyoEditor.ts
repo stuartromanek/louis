@@ -198,8 +198,26 @@ export function useMyoEditor() {
     return out
   }
 
+  const DRAFT_PERSIST_DEBOUNCE_MS = 400
+  let draftPersistTimer: ReturnType<typeof setTimeout> | null = null
+
+  /** Immediate localStorage write — cancel any pending debounced persist first. */
   function persistPendingDrafts() {
+    if (draftPersistTimer) {
+      clearTimeout(draftPersistTimer)
+      draftPersistTimer = null
+    }
     writePersistedDrafts(buildPersistedDrafts())
+  }
+
+  /** Coalesce rapid playlist edits (drag-reorder, batch adds) into one write. */
+  function schedulePersistPendingDrafts() {
+    if (import.meta.server) return
+    if (draftPersistTimer) clearTimeout(draftPersistTimer)
+    draftPersistTimer = setTimeout(() => {
+      draftPersistTimer = null
+      writePersistedDrafts(buildPersistedDrafts())
+    }, DRAFT_PERSIST_DEBOUNCE_MS)
   }
 
   function touchPendingDrafts() {
@@ -702,17 +720,18 @@ export function useMyoEditor() {
   onBeforeUnmount(() => {
     window.removeEventListener('pagehide', persistPendingDrafts)
     document.removeEventListener('visibilitychange', flushDraftsOnHide)
+    persistPendingDrafts()
   })
 
   function flushDraftsOnHide() {
     if (document.visibilityState === 'hidden') persistPendingDrafts()
   }
 
-  // Keep durable drafts in sync while editing the live selection.
+  // Keep durable drafts in sync while editing — debounced; flushed on hide/unmount.
   watch(
     [playlist, baselinePlaylist, cardTitle, selectedCardId, isDirty, isPodcast],
     () => {
-      persistPendingDrafts()
+      schedulePersistPendingDrafts()
     },
   )
 

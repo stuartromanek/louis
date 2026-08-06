@@ -151,10 +151,10 @@ function onAdd(event: Event) {
         <button
           type="button"
           class="yt-result-card__add"
-          aria-label="Add to playlist"
+          aria-label="Add to a card"
           @click="onAdd"
         >
-          Add to Playlist
+          Add to…
         </button>
       </div>
     </div>

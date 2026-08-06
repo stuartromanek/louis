@@ -145,8 +145,7 @@ function onGoLibrary() {
           type="button"
           class="mobile-add-drawer__card"
           :class="{ 'mobile-add-drawer__card--podcast': cardIsPodcast(card) }"
-          :disabled="picking"
-          :aria-disabled="cardIsPodcast(card) || picking || undefined"
+          :disabled="cardIsPodcast(card) || picking"
           @click="onPickCard(card)"
         >
           <div class="mobile-add-drawer__card-art-wrap">
