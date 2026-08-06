@@ -8,7 +8,7 @@ Self-hosted **Nuxt** server app. Yoto OAuth token exchange and YouTube audio dow
 
 https://github.com/user-attachments/assets/6083e578-a0ba-4047-8d44-d2c4efad511d
 
-[Self-host](#self-host) · [Native development](#native-development) · [Contributing](CONTRIBUTING.md) · [Releases](docs/RELEASE.md) · [Demo runbook](docs/DEMO.md)
+[Self-host](#self-host) · [Native development](#native-development) · [Contributing](CONTRIBUTING.md) · [Releases](docs/RELEASE.md)
 
 **Personal use only.** You are responsible for complying with [YouTube’s Terms of Service](https://www.youtube.com/t/terms) and applicable law when downloading audio.
 
@@ -84,7 +84,6 @@ Copy [`.env.example`](.env.example). Use **`NUXT_*` names** so the same file wor
 
 | Variable                | Notes                                                                              |
 | ----------------------- | ---------------------------------------------------------------------------------- |
-| `NUXT_PUBLIC_DEMO_MODE` | `true` shows a demo note in Preferences ([docs/DEMO.md](docs/DEMO.md))             |
 | `NUXT_ENABLE_DEBUG_ROUTES` | `true` enables debug API routes                                                 |
 
 ```bash
@@ -121,14 +120,10 @@ npm run build
 npm run start
 ```
 
-## Demo instance
-
-Maintainer demo setup: [docs/DEMO.md](docs/DEMO.md). Self-hosters should register their own Yoto app — do not reuse demo credentials.
-
 ## License & notices
 
 MIT — see [LICENSE](LICENSE).
 
-Fonts (Rubik via Google Fonts), OpenMoji icons, and [SND](https://snd.dev/) UI sounds are used; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Fonts (LT Saeada, self-hosted), OpenMoji icons, and [SND](https://snd.dev/) UI sounds are used; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 Security reports: [SECURITY.md](SECURITY.md).

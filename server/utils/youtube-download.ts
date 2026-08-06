@@ -347,7 +347,7 @@ async function downloadYoutubeAudioUncached(
           if (errorClass === 'retryable') {
             recoveredFromRetryableFailure = true
           }
-          // Expected on datacenter IPs (demo/Railway) when cookies are configured — not an outage.
+          // Expected on datacenter IPs (e.g. Railway) when cookies are configured — not an outage.
           console.info(
             `[yt-dlp] escalate videoId=${youtubeId} mode=${cacheMode} attempt=${attempt + 1}/${maxAttempts} client=${clientLabel} reason=${errorClass}`,
           )

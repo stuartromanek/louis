@@ -4,10 +4,10 @@
       Design System
     </p>
     <h1 class="font-maru-mega font-maru-mega-maxi text-[13vw] sm:text-[11vw] leading-none text-balance mb-6">
-      Rubik
+      Saeada
     </h1>
     <p class="font-maru-medium text-lg sm:text-2xl lg:text-[25px] max-w-2xl text-pretty tracking-wide">
-      Variable sans throughout — warm, playful UI typography for Louis.
+      Self-hosted LT Saeada — warm, playful UI typography for Louis.
     </p>
   </section>
 </template>
