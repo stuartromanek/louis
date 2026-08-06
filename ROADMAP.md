@@ -58,6 +58,10 @@ Package Louis as a cross-OS executable so less technical users can run it withou
 
 **Direction:** Electron shell around the existing Nitro `.output` (spawn Node server → `BrowserWindow`). Deno Desktop was spiked successfully but dropped for dual-runtime risk. See [docs/DESKTOP.md](docs/DESKTOP.md). Ship checklist (merge → Release Assets + GHCR): [docs/DESKTOP_SHIP.md](docs/DESKTOP_SHIP.md).
 
+### Experiment with yt-dlp search backend
+
+Spike replacing YouTube Data API v3 search/metadata with bundled/`PATH` yt-dlp (`ytsearch` + `--flat-playlist`) so desktop users need no Google Cloud API key. Keep the existing `/api/youtube/search` response shape; optional Data API fallback for self-host. Goal: fewer setup steps for the Electron app.
+
 ### Audio trim
 
 Cut intros/outros (and similar) before save. Non-trivial UX; trim points per track in the playlist editor.

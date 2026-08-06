@@ -27,6 +27,8 @@ if (!yoto) {
 }
 
 const { playEvent } = useUiSound()
+const { isDesktop } = useDesktopHost()
+const { openPreferences } = usePreferencesShell()
 
 const {
   status,
@@ -64,9 +66,11 @@ const copy = computed(() => {
     case 'unconfigured':
       return {
         heading: 'Yoto not configured',
-        body: 'This server is missing a Yoto API client ID. Ask the host to set NUXT_YOTO_CLIENT_ID.',
-        cta: null,
-        action: null,
+        body: isDesktop.value
+          ? 'Add your Yoto client ID in Preferences (Desktop API keys). Register the redirect URI shown there on yoto.dev.'
+          : 'This server is missing a Yoto API client ID. Ask the host to set NUXT_YOTO_CLIENT_ID.',
+        cta: isDesktop.value ? 'Open Preferences' : null,
+        action: isDesktop.value ? 'preferences' as const : null,
       }
     case 'error':
       return {
@@ -185,6 +189,11 @@ function onPrimaryAction() {
   if (copy.value.action === 'refresh') {
     playEvent('buttonClick')
     refresh()
+    return
+  }
+  if (copy.value.action === 'preferences') {
+    playEvent('buttonClick')
+    openPreferences()
   }
 }
 

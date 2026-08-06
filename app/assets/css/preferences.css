@@ -517,6 +517,91 @@
   color: var(--color-maru-gray);
 }
 
+.prefs-projector__section {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  width: 100%;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-maru-black) 18%, transparent);
+}
+
+.prefs-projector__section-title {
+  margin: 0;
+  font-family: var(--font-maru);
+  font-size: var(--text-maru-body);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--color-maru-black);
+}
+
+.prefs-projector__section .prefs-projector__hint {
+  margin-top: 0;
+}
+
+.prefs-projector__input {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.7rem;
+  border: 3px solid var(--color-maru-black);
+  border-radius: var(--radius-maru);
+  background: var(--color-maru-white);
+  box-shadow: 3px 3px 0 var(--color-maru-black);
+  font-size: var(--text-maru-label);
+  line-height: 1.3;
+  color: var(--color-maru-black);
+}
+
+.prefs-projector__input:focus-visible {
+  outline: 3px solid var(--color-maru-blue);
+  outline-offset: 2px;
+}
+
+.prefs-projector__input:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.prefs-projector__file-row {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  align-items: stretch;
+}
+
+.prefs-projector__file-row .prefs-projector__input {
+  flex: 1;
+  min-width: 0;
+}
+
+.prefs-projector__browse {
+  flex-shrink: 0;
+  padding: 0.35rem 0.75rem !important;
+}
+
+.prefs-projector__code {
+  display: block;
+  width: 100%;
+  padding: 0.45rem 0.7rem;
+  border: 3px solid var(--color-maru-black);
+  border-radius: var(--radius-maru);
+  background: var(--color-maru-gray-light);
+  font-size: var(--text-maru-meta);
+  line-height: 1.35;
+  color: var(--color-maru-black);
+  overflow-wrap: anywhere;
+}
+
+.prefs-projector__error {
+  margin: 0;
+  font-size: var(--text-maru-label);
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--color-maru-red);
+}
+
 .prefs-projector__done {
   align-self: flex-end;
   padding: 0.35rem 1.1rem !important;

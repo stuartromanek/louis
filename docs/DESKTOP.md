@@ -34,8 +34,9 @@ Spike host lives under [`desktop/`](../desktop/) (`main.mjs`, `preload.cjs`, `lo
 |---------|--------|
 | Port | **4010** (avoids clash with `npm run dev` on 4000) |
 | Audio dir | `app.getPath('userData')/audio` (userData forced to `…/Louis`) |
-| Secrets | Dev: load repo `.env` into Electron process — **do not** bake into the binary |
+| Secrets | **Phase 3:** Preferences → Desktop API keys → `userData/config.json`; spawn sets `NUXT_YOTO_*` / `NUXT_YOUTUBE_API_KEY`. Spike still may load checkout `.env` as fallback when prefs empty. |
 | yt-dlp / ffmpeg | Bundled under `desktop/resources/bin/<platform>/` (`npm run desktop:fetch-binaries`); spawn sets `NUXT_YTDLP_PATH` and prepends bin dir to `PATH` |
+| OAuth redirect | Always `http://127.0.0.1:4010/api/yoto/auth/callback` (register in Yoto developer portal) |
 | Packaged Nitro | `process.resourcesPath/.output` via electron-builder `extraResources` |
 
 ```bash
@@ -77,6 +78,18 @@ Consumers do not need Homebrew.
 4. `NUXT_AUDIO_WORK_DIR` stays under Electron `userData`.
 
 See Phase 2 in [DESKTOP_SHIP.md](DESKTOP_SHIP.md).
+
+## Credentials (desktop)
+
+Do **not** bake secrets into the app binary.
+
+1. Create a **public** (PKCE) Yoto app at [yoto.dev](https://yoto.dev/get-started/start-here/).
+2. Register redirect URI exactly:
+   `http://127.0.0.1:4010/api/yoto/auth/callback`
+3. In Louis → **Preferences** → **Desktop API keys**, paste Yoto client ID + YouTube Data API v3 key (optional cookies.txt path).
+4. **Save & restart** writes `~/Library/Application Support/Louis/config.json` (macOS) and restarts Nitro with `NUXT_*` env.
+
+First launch without keys opens Preferences (`?desktopSetup=1`). Spike checkouts may still use a repo `.env` when prefs fields are empty.
 
 ## Historical: Deno Desktop probe (2026-08-06, macOS arm64)
 

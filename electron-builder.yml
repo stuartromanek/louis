@@ -12,6 +12,7 @@
   "files": [
     "main.mjs",
     "preload.cjs",
+    "configStore.mjs",
     "loading.html",
     "icons/**/*",
     "package.json"

@@ -39,11 +39,12 @@ Open [http://localhost:4000](http://localhost:4000). Health: `GET /api/health`.
 
 Create a **public** client at [yoto.dev](https://yoto.dev/get-started/start-here/):
 
-| Setting        | Value                                          |
-| -------------- | ---------------------------------------------- |
-| Redirect URI   | `https://your-domain/api/yoto/auth/callback`   |
+| Setting | Value |
+| ------- | ----- |
+| Redirect URI (self-host) | `https://your-domain/api/yoto/auth/callback` |
 | Local redirect | `http://localhost:4000/api/yoto/auth/callback` |
-| Scopes         | `user:content:view user:content:manage`        |
+| Desktop app redirect | `http://127.0.0.1:4010/api/yoto/auth/callback` — see [DESKTOP.md](docs/DESKTOP.md) |
+| Scopes | `user:content:view user:content:manage` |
 
 You only need `NUXT_YOTO_CLIENT_ID`. Leave `NUXT_YOTO_CLIENT_SECRET` empty for PKCE.
 

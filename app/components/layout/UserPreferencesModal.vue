@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useUserPreferences } from '~/composables/useUserPreferences'
+import { useDesktopHost } from '~/composables/useDesktopHost'
+import { usePreferencesShell } from '~/composables/usePreferencesShell'
 
 type Phase = 'idle' | 'entering' | 'open' | 'exiting'
 
@@ -12,6 +14,8 @@ const {
   setShowDebugPanel,
   setSearchPlaceholdersFromText,
 } = useUserPreferences()
+const { isDesktop, getConfig, setConfig, pickCookiesFile, getRedirectUri } = useDesktopHost()
+const { open: shellOpen } = usePreferencesShell()
 
 const runtimeConfig = useRuntimeConfig()
 const demoMode = computed(() => Boolean(runtimeConfig.public.demoMode))
@@ -21,6 +25,14 @@ const phase = ref<Phase>('idle')
 const prefersReducedMotion = ref(false)
 const placeholdersDraft = ref('')
 
+const yotoClientIdDraft = ref('')
+const youtubeApiKeyDraft = ref('')
+const ytdlpCookiesDraft = ref('')
+const redirectUri = ref('http://127.0.0.1:4010/api/yoto/auth/callback')
+const credentialsSaving = ref(false)
+const credentialsError = ref('')
+const credentialsSavedFlash = ref(false)
+
 const headingId = 'user-prefs-heading'
 const prefsTitleChars = 'Preferences'.split('')
 let timers: ReturnType<typeof setTimeout>[] = []
@@ -29,7 +41,7 @@ const visible = computed(
   () => phase.value === 'entering' || phase.value === 'open' || phase.value === 'exiting',
 )
 
-const formInteractive = computed(() => phase.value === 'open')
+const formInteractive = computed(() => phase.value === 'open' && !credentialsSaving.value)
 
 const rootClass = computed(() => ({
   'prefs-projector': true,
@@ -52,9 +64,26 @@ function syncDraftFromPrefs() {
   placeholdersDraft.value = searchPlaceholdersText.value
 }
 
+async function syncDesktopCredentials() {
+  if (!isDesktop.value) return
+  credentialsError.value = ''
+  credentialsSavedFlash.value = false
+  try {
+    const [config, uri] = await Promise.all([getConfig(), getRedirectUri()])
+    yotoClientIdDraft.value = config.yotoClientId
+    youtubeApiKeyDraft.value = config.youtubeApiKey
+    ytdlpCookiesDraft.value = config.ytdlpCookiesFile
+    redirectUri.value = uri
+  }
+  catch (err) {
+    credentialsError.value = err instanceof Error ? err.message : 'Could not load desktop config'
+  }
+}
+
 function beginOpen() {
   clearTimers()
   syncDraftFromPrefs()
+  void syncDesktopCredentials()
   phase.value = 'entering'
   playEvent('toggleOn')
 
@@ -65,7 +94,6 @@ function beginOpen() {
     return
   }
 
-  // lights + screen drop + flicker stabilize
   after(1300, () => {
     if (phase.value === 'entering') phase.value = 'open'
   })
@@ -73,6 +101,7 @@ function beginOpen() {
 
 function beginClose() {
   if (phase.value !== 'open' && phase.value !== 'entering') return
+  if (credentialsSaving.value) return
   clearTimers()
   phase.value = 'exiting'
   playEvent('buttonClick')
@@ -81,14 +110,15 @@ function beginClose() {
     after(280, () => {
       phase.value = 'idle'
       open.value = false
+      shellOpen.value = false
     })
     return
   }
 
-  // Fast raise + backdrop fade
   after(320, () => {
     phase.value = 'idle'
     open.value = false
+    shellOpen.value = false
   })
 }
 
@@ -122,14 +152,47 @@ function onPlaceholdersInput(event: Event) {
   setSearchPlaceholdersFromText(target.value)
 }
 
+async function onPickCookies() {
+  if (!formInteractive.value) return
+  playEvent('buttonClick')
+  const picked = await pickCookiesFile()
+  if (picked) ytdlpCookiesDraft.value = picked
+}
+
+async function onSaveCredentials() {
+  if (!isDesktop.value || !formInteractive.value) return
+  credentialsSaving.value = true
+  credentialsError.value = ''
+  credentialsSavedFlash.value = false
+  playEvent('buttonPrimary')
+  try {
+    await setConfig({
+      yotoClientId: yotoClientIdDraft.value.trim(),
+      youtubeApiKey: youtubeApiKeyDraft.value.trim(),
+      ytdlpCookiesFile: ytdlpCookiesDraft.value.trim(),
+      yotoClientSecret: '',
+    })
+    credentialsSavedFlash.value = true
+  }
+  catch (err) {
+    credentialsError.value = err instanceof Error ? err.message : 'Save failed'
+    credentialsSaving.value = false
+  }
+}
+
 watch(open, (isOpen) => {
   if (isOpen) {
+    shellOpen.value = true
     if (phase.value === 'idle') beginOpen()
     return
   }
   if (phase.value === 'open' || phase.value === 'entering') {
     beginClose()
   }
+})
+
+watch(shellOpen, (isOpen) => {
+  if (isOpen && !open.value) open.value = true
 })
 
 onMounted(() => {
@@ -181,6 +244,109 @@ onUnmounted(() => {
                 aria-hidden="true"
               >{{ ch === ' ' ? '\u00a0' : ch }}</span>
             </h2>
+
+            <div
+              v-if="isDesktop"
+              class="prefs-projector__section"
+            >
+              <p class="prefs-projector__section-title">
+                Desktop API keys
+              </p>
+              <p class="prefs-projector__hint">
+                Stored in app data (not a checkout <span class="font-maru-mono">.env</span>). Saving restarts the local server.
+              </p>
+
+              <div class="prefs-projector__field">
+                <label
+                  class="prefs-projector__label"
+                  for="prefs-yoto-client-id"
+                >Yoto client ID</label>
+                <input
+                  id="prefs-yoto-client-id"
+                  v-model="yotoClientIdDraft"
+                  class="prefs-projector__input font-maru-mono"
+                  type="text"
+                  autocomplete="off"
+                  spellcheck="false"
+                  :disabled="!formInteractive"
+                  placeholder="Public PKCE client from yoto.dev"
+                >
+              </div>
+
+              <div class="prefs-projector__field">
+                <label
+                  class="prefs-projector__label"
+                  for="prefs-youtube-api-key"
+                >YouTube Data API key</label>
+                <input
+                  id="prefs-youtube-api-key"
+                  v-model="youtubeApiKeyDraft"
+                  class="prefs-projector__input font-maru-mono"
+                  type="password"
+                  autocomplete="off"
+                  spellcheck="false"
+                  :disabled="!formInteractive"
+                  placeholder="Google Cloud Console key"
+                >
+              </div>
+
+              <div class="prefs-projector__field">
+                <label
+                  class="prefs-projector__label"
+                  for="prefs-ytdlp-cookies"
+                >yt-dlp cookies.txt (optional)</label>
+                <div class="prefs-projector__file-row">
+                  <input
+                    id="prefs-ytdlp-cookies"
+                    v-model="ytdlpCookiesDraft"
+                    class="prefs-projector__input font-maru-mono"
+                    type="text"
+                    autocomplete="off"
+                    spellcheck="false"
+                    :disabled="!formInteractive"
+                    placeholder="/path/to/cookies.txt"
+                  >
+                  <button
+                    type="button"
+                    class="prefs-projector__browse maru-button"
+                    :disabled="!formInteractive"
+                    @click="onPickCookies"
+                  >
+                    <span class="maru-button__label">Browse</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="prefs-projector__field">
+                <span class="prefs-projector__label">OAuth redirect URI</span>
+                <code class="prefs-projector__code font-maru-mono">{{ redirectUri }}</code>
+                <p class="prefs-projector__hint">
+                  Register this exact URI on your Yoto developer app.
+                </p>
+              </div>
+
+              <p
+                v-if="credentialsError"
+                class="prefs-projector__error"
+              >
+                {{ credentialsError }}
+              </p>
+              <p
+                v-else-if="credentialsSavedFlash"
+                class="prefs-projector__hint"
+              >
+                Saved.
+              </p>
+
+              <button
+                type="button"
+                class="prefs-projector__done maru-button bg-maru-green-light"
+                :disabled="!formInteractive"
+                @click="onSaveCredentials"
+              >
+                <span class="maru-button__label">{{ credentialsSaving ? 'Saving…' : 'Save & restart' }}</span>
+              </button>
+            </div>
 
             <div class="prefs-projector__field prefs-projector__field--row prefs-projector__field--switch">
               <span

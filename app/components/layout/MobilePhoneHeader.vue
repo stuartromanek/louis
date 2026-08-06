@@ -24,10 +24,10 @@ const editor = inject(MYO_EDITOR_KEY, null)
 const chrome = inject(MOBILE_EDITOR_CHROME_KEY, null)
 const { playEvent } = useUiSound()
 const saveProgressTestMode = useSaveProgressTestMode()
+const { open: prefsOpen, openPreferences: openPreferencesShell } = usePreferencesShell()
 
 const { connected, status, refresh, disconnect, hasWriteScope, connect } = yoto
 
-const prefsOpen = ref(false)
 const howToOpen = ref(false)
 const menuOpen = ref(false)
 const showCapacityConfirm = ref(false)
@@ -137,7 +137,7 @@ function openHowTo() {
 function openPreferences() {
   playEvent('buttonClick')
   menuOpen.value = false
-  prefsOpen.value = true
+  openPreferencesShell()
 }
 
 function onConnect() {

@@ -115,6 +115,8 @@ const router = useRouter()
 
 const { playEvent } = useUiSound()
 const { shouldShowSplash, splashHoldsGate, splashDebug, markSplashSeen } = useAppSplash()
+const { openPreferences } = usePreferencesShell()
+const { isDesktop } = useDesktopHost()
 
 const { playlist, isPlaylistLocked, selectedCardId, cardTitle } = editor
 const { connected, status } = yoto
@@ -126,6 +128,7 @@ const welcomeOpen = ref(false)
 const scrollToVideoId = ref<string | null>(null)
 let lastReorderIndex: number | null = null
 let welcomeHandled = false
+let desktopSetupHandled = false
 
 async function clearYotoConnectedQuery() {
   if (route.query.yoto !== 'connected') return
@@ -134,10 +137,32 @@ async function clearYotoConnectedQuery() {
   await router.replace({ query: nextQuery })
 }
 
+async function clearDesktopSetupQuery() {
+  if (route.query.desktopSetup !== '1') return
+  const nextQuery = { ...route.query }
+  delete nextQuery.desktopSetup
+  await router.replace({ query: nextQuery })
+}
+
 function onWelcomeDismiss() {
   welcomeOpen.value = false
   void clearYotoConnectedQuery()
 }
+
+watch(
+  [() => route.query.desktopSetup, splashHoldsGate, isDesktop],
+  ([flag, holdsGate, desktop]) => {
+    if (desktopSetupHandled) return
+    if (flag !== '1') return
+    if (holdsGate) return
+    if (!desktop) return
+
+    desktopSetupHandled = true
+    openPreferences()
+    void clearDesktopSetupQuery()
+  },
+  { immediate: true },
+)
 
 watch(
   [() => route.query.yoto, connected, status, splashHoldsGate],

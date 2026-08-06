@@ -4,8 +4,9 @@ Electron host for Louis. Spawns production Nitro on `127.0.0.1:4010`, waits for 
 
 | File | Role |
 |------|------|
-| `main.mjs` | Path resolution, Nitro spawn (`ELECTRON_RUN_AS_NODE`), bundled bin env, single-instance, loading UI |
-| `preload.cjs` | contextIsolation stub (no APIs yet) |
+| `main.mjs` | Path resolution, Nitro spawn, bundled bins, credentials env, IPC |
+| `configStore.mjs` | `userData/config.json` read/write + env mapping |
+| `preload.cjs` | `window.louisDesktop` bridge (contextIsolation) |
 | `loading.html` | Shown until health succeeds |
 | `icons/` | App icon (`icon.png`) |
 | `resources/bin/<platform>/` | Bundled `yt-dlp` (onedir + `_internal/`) + `ffmpeg` |
@@ -19,7 +20,11 @@ npm run desktop:fetch-binaries   # once per machine / when bumping the pin
 npm run desktop:spike
 ```
 
-Dev resolves `.output` from the repo root and loads `.env` into the Electron process. Packaged builds do not load `.env`. Bundled bins still win via `NUXT_YTDLP_PATH` + PATH prepend.
+Credentials: **Preferences → Desktop API keys** (saved under Application Support). Spike may also load repo `.env` when prefs fields are empty. Packaged builds never load `.env`.
+
+Register this redirect URI on your Yoto developer app:
+
+`http://127.0.0.1:4010/api/yoto/auth/callback`
 
 ## Unpackaged build smoke
 
@@ -27,7 +32,7 @@ Dev resolves `.output` from the repo root and loads `.env` into the Electron pro
 npm run desktop:dir
 ```
 
-Fetches host-platform binaries, builds Nuxt, then electron-builder `--dir` → `desktop/out/` (e.g. `mac-arm64/Louis.app`). Host files in a thin `app.asar`; `.output` and `bin/` via `extraResources`.
+Fetches host-platform binaries, builds Nuxt, then electron-builder `--dir` → `desktop/out/`.
 
 Config: [`electron-builder.yml`](../electron-builder.yml). Ship checklist: [DESKTOP_SHIP.md](../docs/DESKTOP_SHIP.md). Overview: [DESKTOP.md](../docs/DESKTOP.md).
 
@@ -35,6 +40,5 @@ Config: [`electron-builder.yml`](../electron-builder.yml). Ship checklist: [DESK
 
 | Area | Current behavior |
 |------|------------------|
-| Secrets | Dev spike loads repo `.env`; packaged needs Preferences (Phase 3) |
-| Installers | `--dir` only — no DMG/NSIS yet (Phase 6) |
+| Installers | `--dir` only — no DMG/NSIS yet (Phase 4+) |
 | Port | Fixed `127.0.0.1:4010` |

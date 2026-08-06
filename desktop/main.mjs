@@ -4,9 +4,15 @@ import { fileURLToPath } from 'node:url'
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import { createInterface } from 'node:readline'
+import {
+  applyDesktopConfigToEnv,
+  createConfigStore,
+  DESKTOP_REDIRECT_URI,
+  desktopConfigNeedsSetup,
+} from './configStore.mjs'
 
 const require = createRequire(import.meta.url)
-const { app, BrowserWindow, dialog } = require('electron')
+const { app, BrowserWindow, dialog, ipcMain } = require('electron')
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -25,6 +31,9 @@ let nitroChild = null
 let mainWindow = null
 let quitting = false
 let nitroExitNotified = false
+let restartingNitro = false
+
+const configStore = createConfigStore(fs, path, app.getPath('userData'))
 
 function resolveAppRoot() {
   // Packaged: .output is shipped via extraResources → resources/.output
@@ -107,6 +116,57 @@ async function waitForHealth(timeoutMs = 60_000) {
   throw new Error(`Nitro health check timed out (${HEALTH_URL}): ${lastError}`)
 }
 
+function buildNitroEnv() {
+  const audioWorkDir = path.join(app.getPath('userData'), 'audio')
+  fs.mkdirSync(audioWorkDir, { recursive: true })
+
+  const tools = resolveBundledTools()
+  const pathParts = []
+  if (tools.ffmpegPath || tools.ytdlpPath) {
+    pathParts.push(tools.binDir)
+  }
+  if (process.env.PATH) pathParts.push(process.env.PATH)
+
+  /** @type {Record<string, string | undefined>} */
+  const env = {
+    ...process.env,
+    ELECTRON_RUN_AS_NODE: '1',
+    NODE_ENV: 'production',
+    HOST,
+    PORT: String(PORT),
+    NUXT_AUDIO_WORK_DIR: process.env.NUXT_AUDIO_WORK_DIR || audioWorkDir,
+    PATH: pathParts.join(path.delimiter),
+  }
+
+  if (tools.ytdlpPath) {
+    env.NUXT_YTDLP_PATH = tools.ytdlpPath
+  }
+
+  const desktopConfig = configStore.read()
+  applyDesktopConfigToEnv(env, desktopConfig)
+
+  console.log('[louis-desktop] tools', {
+    binDir: tools.binDir,
+    ytdlp: tools.ytdlpPath,
+    ffmpeg: tools.ffmpegPath,
+  })
+  console.log('[louis-desktop] config', {
+    path: configStore.configPath,
+    hasYotoClientId: Boolean(desktopConfig.yotoClientId || env.NUXT_YOTO_CLIENT_ID),
+    hasYoutubeApiKey: Boolean(desktopConfig.youtubeApiKey || env.NUXT_YOUTUBE_API_KEY),
+    hasCookies: Boolean(desktopConfig.ytdlpCookiesFile || env.NUXT_YTDLP_COOKIES_FILE),
+    redirectUri: DESKTOP_REDIRECT_URI,
+    needsSetup: desktopConfigNeedsSetup({
+      yotoClientId: desktopConfig.yotoClientId || env.NUXT_YOTO_CLIENT_ID || '',
+      youtubeApiKey: desktopConfig.youtubeApiKey || env.NUXT_YOUTUBE_API_KEY || '',
+      yotoClientSecret: '',
+      ytdlpCookiesFile: '',
+    }),
+  })
+
+  return env
+}
+
 function startNitro() {
   const nitroEntry = resolveNitroEntry()
   const appRoot = resolveAppRoot()
@@ -119,38 +179,8 @@ function startNitro() {
     )
   }
 
-  const audioWorkDir = path.join(app.getPath('userData'), 'audio')
-  fs.mkdirSync(audioWorkDir, { recursive: true })
+  const env = buildNitroEnv()
 
-  const tools = resolveBundledTools()
-  const pathParts = []
-  if (tools.ffmpegPath || tools.ytdlpPath) {
-    pathParts.push(tools.binDir)
-  }
-  if (process.env.PATH) pathParts.push(process.env.PATH)
-
-  const env = {
-    ...process.env,
-    ELECTRON_RUN_AS_NODE: '1',
-    NODE_ENV: 'production',
-    HOST,
-    PORT: String(PORT),
-    NUXT_AUDIO_WORK_DIR: process.env.NUXT_AUDIO_WORK_DIR || audioWorkDir,
-    PATH: pathParts.join(path.delimiter),
-  }
-
-  // Prefer bundled yt-dlp when present (overrides shell / Homebrew).
-  if (tools.ytdlpPath) {
-    env.NUXT_YTDLP_PATH = tools.ytdlpPath
-  }
-
-  console.log('[louis-desktop] tools', {
-    binDir: tools.binDir,
-    ytdlp: tools.ytdlpPath,
-    ffmpeg: tools.ffmpegPath,
-  })
-
-  // Use Electron binary as Node — no separate Node runtime in the package.
   nitroChild = spawn(process.execPath, [nitroEntry], {
     cwd: appRoot,
     env,
@@ -171,7 +201,7 @@ function startNitro() {
 
   nitroChild.on('exit', (code, signal) => {
     nitroChild = null
-    if (quitting) return
+    if (quitting || restartingNitro) return
     console.error(`${tag} exited unexpectedly (code=${code}, signal=${signal})`)
     if (!nitroExitNotified) {
       nitroExitNotified = true
@@ -206,6 +236,55 @@ function stopNitro() {
   }, 3000)
 }
 
+function stopNitroAsync() {
+  return new Promise((resolve) => {
+    if (!nitroChild || nitroChild.killed) {
+      resolve()
+      return
+    }
+    const child = nitroChild
+    nitroChild = null
+    const done = () => {
+      clearTimeout(timer)
+      resolve()
+    }
+    const timer = setTimeout(() => {
+      try {
+        if (!child.killed) child.kill('SIGKILL')
+      }
+      catch {
+        // ignore
+      }
+      done()
+    }, 4000)
+    child.once('exit', done)
+    try {
+      child.kill('SIGTERM')
+    }
+    catch {
+      done()
+    }
+  })
+}
+
+async function restartNitroAndReload() {
+  restartingNitro = true
+  try {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      await mainWindow.loadFile(path.join(__dirname, 'loading.html'))
+    }
+    await stopNitroAsync()
+    startNitro()
+    await waitForHealth()
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      await mainWindow.loadURL(BASE_URL)
+    }
+  }
+  finally {
+    restartingNitro = false
+  }
+}
+
 function createWindow() {
   const iconPath = path.join(__dirname, 'icons', 'icon.png')
   mainWindow = new BrowserWindow({
@@ -235,6 +314,16 @@ function createWindow() {
   return mainWindow
 }
 
+function effectiveConfigForSetupCheck() {
+  const stored = configStore.read()
+  return {
+    yotoClientId: stored.yotoClientId || process.env.NUXT_YOTO_CLIENT_ID || '',
+    youtubeApiKey: stored.youtubeApiKey || process.env.NUXT_YOUTUBE_API_KEY || '',
+    yotoClientSecret: stored.yotoClientSecret || '',
+    ytdlpCookiesFile: stored.ytdlpCookiesFile || '',
+  }
+}
+
 async function showLoadingThenApp() {
   const win = createWindow()
   const loadingPath = path.join(__dirname, 'loading.html')
@@ -249,11 +338,39 @@ async function showLoadingThenApp() {
     ffmpeg: health?.checks?.ffmpeg,
     userData: app.getPath('userData'),
   })
-  await win.loadURL(BASE_URL)
+
+  const needsSetup = desktopConfigNeedsSetup(effectiveConfigForSetupCheck())
+  const url = needsSetup ? `${BASE_URL}/?desktopSetup=1` : BASE_URL
+  await win.loadURL(url)
+}
+
+function registerIpc() {
+  ipcMain.handle('louis:get-config', () => configStore.read())
+  ipcMain.handle('louis:get-redirect-uri', () => DESKTOP_REDIRECT_URI)
+
+  ipcMain.handle('louis:set-config', async (_event, next) => {
+    const saved = configStore.write(next || {})
+    await restartNitroAndReload()
+    return saved
+  })
+
+  ipcMain.handle('louis:pick-cookies-file', async () => {
+    const result = await dialog.showOpenDialog(mainWindow ?? undefined, {
+      title: 'Choose yt-dlp cookies.txt',
+      properties: ['openFile'],
+      filters: [
+        { name: 'Cookies', extensions: ['txt'] },
+        { name: 'All files', extensions: ['*'] },
+      ],
+    })
+    if (result.canceled || !result.filePaths[0]) return null
+    return result.filePaths[0]
+  })
 }
 
 async function boot() {
   loadDotEnv()
+  registerIpc()
   await showLoadingThenApp()
 }
 

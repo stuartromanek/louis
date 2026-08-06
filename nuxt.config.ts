@@ -102,6 +102,8 @@ export default defineNuxtConfig({
     public: {
       demoMode: false,
       appVersion: packageJson.version || '0.0.0',
+      /** Set NUXT_PUBLIC_DESKTOP=1 by the Electron host when spawning Nitro. */
+      desktop: false,
     },
   },
   vite: {
