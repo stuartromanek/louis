@@ -1,25 +1,38 @@
-# Desktop spike (Electron)
+# Desktop (Electron)
 
-Thin Electron host for Louis. Spawns production Nitro from `../.output/server/index.mjs` on `127.0.0.1:4010`.
+Electron host for Louis. Spawns production Nitro on `127.0.0.1:4010`, waits for `/api/health`, then loads the UI.
 
-- `main.mjs` — spawn Nitro, health-wait, `BrowserWindow`, clean quit
-- `preload.cjs` — contextIsolation stub (no APIs exposed yet)
+| File | Role |
+|------|------|
+| `main.mjs` | Path resolution, Nitro spawn (`ELECTRON_RUN_AS_NODE`), single-instance, loading UI, crash dialog |
+| `preload.cjs` | contextIsolation stub (no APIs yet) |
+| `loading.html` | Shown until health succeeds |
+| `icons/` | App icon (`icon.png`) |
+
+## Dev (repo checkout)
 
 ```bash
 npm run build
 npm run desktop:spike
 ```
 
-## Spike-only limits (Phase 0)
+Dev resolves `.output` from the repo root and loads `.env` into the Electron process. Packaged builds do not load `.env`.
 
-Not a shippable installer yet. See [DESKTOP_SHIP.md](../docs/DESKTOP_SHIP.md) for the path to Release Assets.
+## Unpackaged build smoke
 
-| Area | Spike behavior |
-|------|----------------|
-| yt-dlp / ffmpeg | System `PATH` (e.g. Homebrew) — not bundled |
-| Secrets | Loads repo-root `.env` into the Electron process at runtime — do not distribute that |
-| Layout | Expects a git checkout with `.output/` from `npm run build` |
-| Port | Fixed `127.0.0.1:4010` (document Yoto redirect when testing OAuth) |
-| Packaging | No electron-builder / DMG / NSIS |
+```bash
+npm run desktop:dir
+```
 
-Ship checklist: [DESKTOP_SHIP.md](../docs/DESKTOP_SHIP.md). Overview: [DESKTOP.md](../docs/DESKTOP.md).
+Produces an unpackaged app under `desktop/out/` (e.g. `mac-arm64/Louis.app`). Host files live in a thin `app.asar`; Nitro `.output` is copied via `extraResources`. `desktop/package.json` is the electron-builder app package (no Nuxt deps). Launch the `.app` to confirm UI without the git-checkout layout.
+
+Config: [`electron-builder.yml`](../electron-builder.yml). Ship checklist: [DESKTOP_SHIP.md](../docs/DESKTOP_SHIP.md). Overview: [DESKTOP.md](../docs/DESKTOP.md).
+
+## Still not shippable (later phases)
+
+| Area | Current behavior |
+|------|------------------|
+| yt-dlp / ffmpeg | System `PATH` — not bundled (Phase 2) |
+| Secrets | Dev spike loads repo `.env`; packaged needs Preferences (Phase 3) |
+| Installers | `--dir` only — no DMG/NSIS yet (Phase 6) |
+| Port | Fixed `127.0.0.1:4010` |

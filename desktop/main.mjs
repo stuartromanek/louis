@@ -6,13 +6,13 @@ import fs from 'node:fs'
 import { createInterface } from 'node:readline'
 
 const require = createRequire(import.meta.url)
-const { app, BrowserWindow } = require('electron')
-
-app.setName('Louis')
+const { app, BrowserWindow, dialog } = require('electron')
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const repoRoot = path.resolve(__dirname, '..')
-const nitroEntry = path.join(repoRoot, '.output', 'server', 'index.mjs')
+
+app.setName('Louis')
+// Force userData before ready so paths are not "Electron/…"
+app.setPath('userData', path.join(app.getPath('appData'), 'Louis'))
 
 const HOST = '127.0.0.1'
 const PORT = 4010
@@ -24,9 +24,22 @@ let nitroChild = null
 /** @type {import('electron').BrowserWindow | null} */
 let mainWindow = null
 let quitting = false
+let nitroExitNotified = false
+
+function resolveAppRoot() {
+  // Packaged: .output is shipped via extraResources → resources/.output
+  // Dev spike: repo root (parent of desktop/)
+  if (app.isPackaged) return process.resourcesPath
+  return path.resolve(__dirname, '..')
+}
+
+function resolveNitroEntry() {
+  return path.join(resolveAppRoot(), '.output', 'server', 'index.mjs')
+}
 
 function loadDotEnv() {
-  const envPath = path.join(repoRoot, '.env')
+  if (app.isPackaged) return
+  const envPath = path.join(resolveAppRoot(), '.env')
   if (!fs.existsSync(envPath)) return
   const text = fs.readFileSync(envPath, 'utf8')
   for (const line of text.split(/\r?\n/)) {
@@ -64,9 +77,14 @@ async function waitForHealth(timeoutMs = 60_000) {
 }
 
 function startNitro() {
+  const nitroEntry = resolveNitroEntry()
+  const appRoot = resolveAppRoot()
+
   if (!fs.existsSync(nitroEntry)) {
     throw new Error(
-      `Missing ${nitroEntry}. Run \`npm run build\` before \`npm run desktop:spike\`.`,
+      app.isPackaged
+        ? `Missing packaged Nitro server at ${nitroEntry}.`
+        : `Missing ${nitroEntry}. Run \`npm run build\` before \`npm run desktop:spike\`.`,
     )
   }
 
@@ -75,15 +93,16 @@ function startNitro() {
 
   const env = {
     ...process.env,
+    ELECTRON_RUN_AS_NODE: '1',
     NODE_ENV: 'production',
     HOST,
     PORT: String(PORT),
     NUXT_AUDIO_WORK_DIR: process.env.NUXT_AUDIO_WORK_DIR || audioWorkDir,
   }
 
-  const nodeBin = process.env.npm_node_execpath || 'node'
-  nitroChild = spawn(nodeBin, [nitroEntry], {
-    cwd: repoRoot,
+  // Use Electron binary as Node — no separate Node runtime in the package.
+  nitroChild = spawn(process.execPath, [nitroEntry], {
+    cwd: appRoot,
     env,
     stdio: ['ignore', 'pipe', 'pipe'],
   })
@@ -102,10 +121,16 @@ function startNitro() {
 
   nitroChild.on('exit', (code, signal) => {
     nitroChild = null
-    if (!quitting) {
-      console.error(`${tag} exited unexpectedly (code=${code}, signal=${signal})`)
-      app.quit()
+    if (quitting) return
+    console.error(`${tag} exited unexpectedly (code=${code}, signal=${signal})`)
+    if (!nitroExitNotified) {
+      nitroExitNotified = true
+      dialog.showErrorBox(
+        'Louis stopped',
+        'The local server exited unexpectedly. Louis will close.',
+      )
     }
+    app.quit()
   })
 }
 
@@ -132,12 +157,15 @@ function stopNitro() {
 }
 
 function createWindow() {
+  const iconPath = path.join(__dirname, 'icons', 'icon.png')
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 840,
     minWidth: 360,
     minHeight: 640,
     title: 'Louis',
+    show: false,
+    icon: fs.existsSync(iconPath) ? iconPath : undefined,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -150,33 +178,64 @@ function createWindow() {
     mainWindow = null
   })
 
-  return mainWindow.loadURL(BASE_URL)
+  mainWindow.once('ready-to-show', () => {
+    mainWindow?.show()
+  })
+
+  return mainWindow
+}
+
+async function showLoadingThenApp() {
+  const win = createWindow()
+  const loadingPath = path.join(__dirname, 'loading.html')
+  await win.loadFile(loadingPath)
+
+  startNitro()
+  const health = await waitForHealth()
+  console.log('[louis-desktop] health ok', {
+    packaged: app.isPackaged,
+    appRoot: resolveAppRoot(),
+    ytdlp: health?.checks?.ytdlp?.available,
+    ffmpeg: health?.checks?.ffmpeg?.available,
+    userData: app.getPath('userData'),
+  })
+  await win.loadURL(BASE_URL)
 }
 
 async function boot() {
   loadDotEnv()
-  startNitro()
-  const health = await waitForHealth()
-  console.log('[louis-desktop] health ok', {
-    ytdlp: health?.checks?.ytdlp?.available,
-    ffmpeg: health?.checks?.ffmpeg?.available,
-  })
-  await createWindow()
+  await showLoadingThenApp()
 }
 
-app.whenReady().then(() => {
-  boot().catch((err) => {
-    console.error('[louis-desktop] boot failed', err)
-    stopNitro()
-    app.exit(1)
-  })
-})
-
-app.on('before-quit', () => {
-  quitting = true
-  stopNitro()
-})
-
-app.on('window-all-closed', () => {
+const gotLock = app.requestSingleInstanceLock()
+if (!gotLock) {
   app.quit()
-})
+}
+else {
+  app.on('second-instance', () => {
+    if (!mainWindow) return
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.focus()
+  })
+
+  app.whenReady().then(() => {
+    boot().catch((err) => {
+      console.error('[louis-desktop] boot failed', err)
+      dialog.showErrorBox(
+        'Louis failed to start',
+        err instanceof Error ? err.message : String(err),
+      )
+      stopNitro()
+      app.exit(1)
+    })
+  })
+
+  app.on('before-quit', () => {
+    quitting = true
+    stopNitro()
+  })
+
+  app.on('window-all-closed', () => {
+    app.quit()
+  })
+}

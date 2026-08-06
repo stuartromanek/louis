@@ -1,0 +1,39 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "app.louis.desktop",
+  "productName": "Louis",
+  "copyright": "Copyright © Louis contributors",
+  "directories": {
+    "app": "desktop",
+    "output": "desktop/out",
+    "buildResources": "desktop/icons"
+  },
+  "beforeBuild": "desktop/electron-before-build.cjs",
+  "files": [
+    "main.mjs",
+    "preload.cjs",
+    "loading.html",
+    "icons/**/*",
+    "package.json"
+  ],
+  "extraResources": [
+    {
+      "from": ".output",
+      "to": ".output"
+    }
+  ],
+  "asar": true,
+  "mac": {
+    "category": "public.app-category.entertainment",
+    "target": ["dir"],
+    "icon": "icon.png"
+  },
+  "win": {
+    "target": ["dir"],
+    "icon": "icon.png"
+  },
+  "linux": {
+    "target": ["dir"],
+    "icon": "icon.png"
+  }
+}

@@ -2,6 +2,7 @@
   "name": "Louis",
   "version": "1.0.0",
   "type": "module",
+  "main": "desktop/main.mjs",
   "engines": {
     "node": ">=22"
   },
@@ -13,6 +14,7 @@
     "preview": "nuxt preview",
     "start": "node .output/server/index.mjs",
     "desktop:spike": "electron desktop/main.mjs",
+    "desktop:dir": "npm run build && electron-builder --dir",
     "test": "node --experimental-strip-types --test shared/**/*.test.ts",
     "postinstall": "nuxt prepare",
     "release": "release-it"
@@ -34,6 +36,7 @@
   "devDependencies": {
     "@release-it/keep-a-changelog": "^7.1.0",
     "electron": "^37.10.3",
+    "electron-builder": "^26.15.3",
     "release-it": "^20.2.1"
   }
 }

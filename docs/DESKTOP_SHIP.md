@@ -94,13 +94,13 @@ For tag `v1.2.0`, open `…/releases/tag/v1.2.0`:
 
 **Do:**
 
-- [ ] Resolve `.output` for dev vs packaged (`app.getAppPath()` / `process.resourcesPath`)
-- [ ] Spawn Nitro with `ELECTRON_RUN_AS_NODE=1` on the Electron binary (no second Node runtime)
-- [ ] Set productName **Louis**, icons, `userData` under Louis (not “Electron”)
-- [ ] Single-instance lock; loading UI until `/api/health`; dialog if Nitro exits unexpectedly
-- [ ] Local smoke: `electron-builder --dir` (or equivalent unpackaged build) boots UI
+- [x] Resolve `.output` for dev vs packaged (`process.resourcesPath` when packaged; repo root in spike)
+- [x] Spawn Nitro with `ELECTRON_RUN_AS_NODE=1` on the Electron binary (no second Node runtime)
+- [x] Set productName **Louis**, icons, `userData` under Louis (not “Electron”)
+- [x] Single-instance lock; loading UI until `/api/health`; dialog if Nitro exits unexpectedly
+- [x] Local smoke: `electron-builder --dir` (or equivalent unpackaged build) boots UI
 
-**Acceptance:** Unpackaged built app launches Louis UI without requiring the repo tree layout of a spike.
+**Acceptance:** Unpackaged built app launches Louis UI without requiring the repo tree layout of a spike. ✅ (2026-08-06, macOS arm64 — `desktop/out/mac-arm64/Louis.app`; health + `/` 200; `userData` → `~/Library/Application Support/Louis`)
 
 **Exit →** Phase 2
 

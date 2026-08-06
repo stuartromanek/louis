@@ -39,6 +39,8 @@ yoto-cards.dylib
 # Electron desktop spike / packaging outputs
 desktop/out/
 desktop/dist/
+desktop/icons/*.icns
+desktop/icons/*.ico
 out/
 release/
 

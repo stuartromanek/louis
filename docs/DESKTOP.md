@@ -26,16 +26,17 @@ Electron main
   → on quit: SIGTERM Nitro child
 ```
 
-Spike host lives under [`desktop/`](../desktop/) (`main.mjs`, `preload.mjs`). Root script: `npm run desktop:spike`.
+Spike host lives under [`desktop/`](../desktop/) (`main.mjs`, `preload.cjs`, `loading.html`). Scripts: `npm run desktop:spike` (dev), `npm run desktop:dir` (unpackaged electron-builder smoke).
 
-### Spike defaults
+### Defaults (spike + Phase 1 host)
 
 | Setting | Value |
 |---------|--------|
 | Port | **4010** (avoids clash with `npm run dev` on 4000) |
-| Audio dir | `app.getPath('userData')/audio` |
-| Secrets | Inherit process env / shell `.env` — **do not** bake into the binary |
-| yt-dlp / ffmpeg | System `PATH` for the spike |
+| Audio dir | `app.getPath('userData')/audio` (userData forced to `…/Louis`) |
+| Secrets | Dev: load repo `.env` into Electron process — **do not** bake into the binary |
+| yt-dlp / ffmpeg | System `PATH` until Phase 2 |
+| Packaged Nitro | `process.resourcesPath/.output` via electron-builder `extraResources` |
 
 ```bash
 npm run build
