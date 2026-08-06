@@ -8,7 +8,7 @@ Self-hosted **Nuxt** server app. Yoto OAuth token exchange and YouTube audio dow
 
 https://github.com/user-attachments/assets/6083e578-a0ba-4047-8d44-d2c4efad511d
 
-[Self-host](#self-host) · [Native development](#native-development) · [Contributing](CONTRIBUTING.md) · [Releases](docs/RELEASE.md)
+[Self-host](#self-host) · [Native development](#native-development) · [Contributing](CONTRIBUTING.md) · [Releases](docs/RELEASE.md) · [Desktop](docs/DESKTOP.md)
 
 **Personal use only.** You are responsible for complying with [YouTube’s Terms of Service](https://www.youtube.com/t/terms) and applicable law when downloading audio.
 

@@ -30,6 +30,18 @@ NOTES.md
 # Demo / self-host data
 data/
 
+# Deno Desktop local spike artifacts (may embed secrets if built with --env-file)
+yoto-cards.app/
+*.app/
+.deno_desktop_entry-*.ts
+yoto-cards.dylib
+
+# Electron desktop spike / packaging outputs
+desktop/out/
+desktop/dist/
+out/
+release/
+
 # Editor / agent tooling
 .cursor/
 .agents/

@@ -10,6 +10,7 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 ## [Unreleased]
 
 ### Added
+- Electron desktop spike (`npm run desktop:spike`): spawns Nitro on `127.0.0.1:4010` in a BrowserWindow — maintainer checkout only; see [docs/DESKTOP.md](docs/DESKTOP.md) and ship checklist [docs/DESKTOP_SHIP.md](docs/DESKTOP_SHIP.md).
 - Phone editor IA below 600px: Search / Library tabs, nested card detail, Add-to-card drawer, Menu tray, toasts, and denser YouTube results (desktop/tablet two-column layout unchanged at `sm+`).
 - Mobile Menu update affordances: Bell + light pink when a save is pending; IndexPointingUp + left-to-right pink progress fill while updating.
 - How-to empty state and How To modal with beat art; Search Clear after submit; phone-friendly over-limit / long-track controls.

@@ -52,9 +52,11 @@ Install / “Add to Home Screen” affordance in the phone overflow menu (uses t
 
 Optional per-result toggle to expand YouTube chapters into separate playlist tracks. Must compose cleanly with auto ~1-hour long-track splitting.
 
-### Desktop app wrapper (Electron or Tauri)
+### Desktop app wrapper (Electron)
 
 Package Louis as a cross-OS executable so less technical users can run it without Docker/GitHub CLI — consumer-friendly install alongside the one-click hosting work.
+
+**Direction:** Electron shell around the existing Nitro `.output` (spawn Node server → `BrowserWindow`). Deno Desktop was spiked successfully but dropped for dual-runtime risk. See [docs/DESKTOP.md](docs/DESKTOP.md). Ship checklist (merge → Release Assets + GHCR): [docs/DESKTOP_SHIP.md](docs/DESKTOP_SHIP.md).
 
 ### Audio trim
 
