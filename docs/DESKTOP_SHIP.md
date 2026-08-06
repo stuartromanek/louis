@@ -172,14 +172,14 @@ For tag `v1.2.0`, open `…/releases/tag/v1.2.0`:
 
 **Do:**
 
-- [ ] Keep existing Docker / GHCR job
-- [ ] Add macOS + Windows desktop jobs on `v*` tags
-- [ ] Set `permissions: contents: write` + `packages: write`
-- [ ] Upload installers to the Release for `github.ref_name` (`gh release upload` or equivalent)
-- [ ] Update RELEASE.md after-release checklist: confirm GHCR **and** Release Assets
-- [ ] Optional `desktop:build` for local/CI parity — **does not** replace `npm run release`
+- [x] Keep existing Docker / GHCR job
+- [x] Add macOS + Windows desktop jobs on `v*` tags
+- [x] Set `permissions: contents: write` + `packages: write`
+- [x] Upload installers to the Release for `github.ref_name` (`softprops/action-gh-release`)
+- [x] Update RELEASE.md after-release checklist: confirm GHCR **and** Release Assets
+- [x] Optional `desktop:build` / `desktop:build:mac` / `desktop:build:win` for local/CI parity — **does not** replace `npm run release`
 
-**Acceptance:** After a `v*` tag: open `…/releases/tag/vX.Y.Z` and see DMG + NSIS under Assets; GHCR has `:vX.Y.Z` / `:latest`.
+**Acceptance:** After a `v*` tag: open `…/releases/tag/vX.Y.Z` and see DMG + NSIS under Assets; GHCR has `:vX.Y.Z` / `:latest`. ✅ Workflow wired in [`.github/workflows/release.yml`](../.github/workflows/release.yml) (verify on next `npm run release` / `v*` tag).
 
 **Exit →** Phase 6
 

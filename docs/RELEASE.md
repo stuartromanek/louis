@@ -4,18 +4,29 @@ Versioning uses [SemVer](https://semver.org/), [Keep a Changelog](https://keepac
 
 The app version shown in Preferences (`Louis v…`) comes from `package.json` via `runtimeConfig.public.appVersion`.
 
-Pushing a tag matching `v*` runs [`.github/workflows/release.yml`](../.github/workflows/release.yml), which publishes a Docker image to GHCR (`:latest` and `:{tag}`).
+Pushing a tag matching `v*` runs [`.github/workflows/release.yml`](../.github/workflows/release.yml), which:
 
-### Desktop artifacts (Phase 4+)
+1. Publishes a Docker image to GHCR (`:latest` and `:{tag}`)
+2. Builds macOS DMGs (arm64 + x64) and Windows NSIS Setup
+3. Uploads those installers as **Assets** on the same GitHub Release created by `release-it`
+
+### Desktop artifacts
 
 Installer filenames (from `electron-builder.yml`):
 
 - `Louis-<version>-arm64.dmg` / `Louis-<version>-x64.dmg`
 - `Louis-Setup-<version>.exe`
 
-Local: `npm run desktop:build:host` or `npm run desktop:build`. Signing: [DESKTOP_SIGNING.md](DESKTOP_SIGNING.md).
+Local parity (does **not** replace `npm run release`):
 
-Attaching those files as **Assets on the same GitHub Release** as GHCR is Phase 5 in [DESKTOP_SHIP.md](DESKTOP_SHIP.md). Until then, Releases are notes + GHCR only; maintainers can still produce unsigned installers locally.
+```bash
+npm run desktop:build:host   # this Mac only
+npm run desktop:build:mac    # both mac DMGs
+npm run desktop:build:win    # NSIS (on Windows or with wine)
+npm run desktop:build        # mac + win in one go (awkward cross-OS)
+```
+
+Signing: [DESKTOP_SIGNING.md](DESKTOP_SIGNING.md). CI currently ships **unsigned** installers until signing secrets + config overrides are wired.
 
 ## Day to day
 
@@ -43,13 +54,13 @@ npm run release -- major
 
 What `npm run release` does:
 
-1. Bumps `package.json` / `package-lock.json` version
+1. Bumps `package.json` / `package-lock.json` version (`desktop:sync-version` runs in CI so `desktop/package.json` matches)
 2. Moves `[Unreleased]` → `[x.y.z] - YYYY-MM-DD`, adds compare links, and leaves a fresh empty `[Unreleased]`
 3. Commits with `chore(release): vX.Y.Z`
 4. Creates git tag `vX.Y.Z`
 5. Pushes commit + tag to `origin`
 6. Creates a GitHub Release for that tag
-7. Tag push triggers GHCR image publish
+7. Tag push triggers [`.github/workflows/release.yml`](../.github/workflows/release.yml): GHCR **and** desktop installer Assets
 
 Dry run (no commit / tag / push):
 
@@ -69,10 +80,17 @@ Example: splash + welcome modal + auth gate redesign → **minor** (e.g. `0.1.0`
 
 ## After release
 
-- Confirm the GitHub Action **Release** succeeded and the image `ghcr.io/<org>/louis:vX.Y.Z` (or your repo name) exists
-- When desktop CI is enabled ([DESKTOP_SHIP.md](DESKTOP_SHIP.md) Phase 5): confirm the Release page lists `Louis-*-*.dmg` / `Louis-Setup-*.exe` under **Assets** (see [DESKTOP_SIGNING.md](DESKTOP_SIGNING.md))
-- Deploy that tag on Railway (or your host) when you want a pinned version; `:latest` tracks the newest tagged release
-- Start the next cycle by writing new bullets under `[Unreleased]` again
+Checklist for tag `vX.Y.Z`:
+
+- [ ] GitHub Action **Release** workflow succeeded (all jobs green)
+- [ ] GHCR image exists: `ghcr.io/<org>/louis:vX.Y.Z` and `:latest`
+- [ ] Release page `…/releases/tag/vX.Y.Z` lists under **Assets**:
+  - `Louis-X.Y.Z-arm64.dmg`
+  - `Louis-X.Y.Z-x64.dmg`
+  - `Louis-Setup-X.Y.Z.exe`
+- [ ] Deploy that tag on Railway (or your host) when you want a pinned Docker version; `:latest` tracks the newest tagged release
+- [ ] Start the next cycle by writing new bullets under `[Unreleased]` again
+
 ## Config
 
 See [`.release-it.json`](../.release-it.json). Notable choices:

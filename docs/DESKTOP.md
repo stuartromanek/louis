@@ -100,11 +100,13 @@ First launch without keys opens Preferences (`?desktopSetup=1`). Spike checkouts
 
 ```bash
 npm run desktop:build:host   # unsigned DMG for this Mac
-npm run desktop:build        # fetch darwin-arm64/x64 + win32-x64 bins, then DMG + NSIS
+npm run desktop:build:mac    # both mac DMGs (CI parity)
+npm run desktop:build:win    # NSIS (CI parity; run on Windows)
+npm run desktop:build        # full matrix locally when possible
 npm run desktop:dir          # unpackaged app only (fast smoke)
 ```
 
-Output under `desktop/out/`. Signing / notarization for CI: [DESKTOP_SIGNING.md](DESKTOP_SIGNING.md). Uploading to GitHub Release Assets is Phase 5.
+Output under `desktop/out/`. Signing / notarization for CI: [DESKTOP_SIGNING.md](DESKTOP_SIGNING.md). Tag publish (GHCR + Release Assets): [RELEASE.md](RELEASE.md) / Phase 5 in [DESKTOP_SHIP.md](DESKTOP_SHIP.md).
 
 ## Historical: Deno Desktop probe (2026-08-06, macOS arm64)
 

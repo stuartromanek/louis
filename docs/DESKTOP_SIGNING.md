@@ -9,9 +9,28 @@ npm run desktop:build:host   # host-arch DMG (mac) unsigned
 
 `electron-builder.yml` sets `mac.identity: null` and scripts set `CSC_IDENTITY_AUTO_DISCOVERY=false` so a developer cert on the machine is not picked up accidentally (nested yt-dlp `Python.framework` previously broke codesign).
 
-## CI / release (Phase 5+)
+## CI / release (Phase 5)
 
-When attaching signed installers to GitHub Releases, set these secrets on the repo (names are conventional; wire them in the workflow):
+[`.github/workflows/release.yml`](../.github/workflows/release.yml) on `v*` tags:
+
+1. GHCR Docker image (`:latest` + `:{tag}`)
+2. macOS DMGs + Windows NSIS (currently **unsigned**)
+3. Upload to the GitHub Release for that tag
+
+Local smoke does **not** require signing:
+
+```bash
+npm run desktop:dir          # unpackaged .app / win-unpacked
+npm run desktop:build:host   # host-arch DMG (mac) unsigned
+npm run desktop:build:mac    # both mac DMGs
+npm run desktop:build:win    # NSIS
+```
+
+`electron-builder.yml` sets `mac.identity: null` and CI sets `CSC_IDENTITY_AUTO_DISCOVERY=false` so a developer cert on the machine is not picked up accidentally (nested yt-dlp `Python.framework` previously broke codesign).
+
+## Signing secrets (optional, post–Phase 5)
+
+When you are ready for signed installers, set these secrets and update the workflow / builder config to stop forcing `identity: null` / `CSC_IDENTITY_AUTO_DISCOVERY=false`:
 
 ### macOS
 
@@ -25,8 +44,8 @@ When attaching signed installers to GitHub Releases, set these secrets on the re
 
 Also set (or derive) in the job:
 
-- `CSC_IDENTITY_AUTO_DISCOVERY=true` (or omit the false override)
-- Remove / override `mac.identity: null` for the release job so electron-builder signs with Developer ID
+- Drop `CSC_IDENTITY_AUTO_DISCOVERY=false` override when secrets are present
+- Override `mac.identity: null` for the release job so electron-builder signs with Developer ID
 - Notarization: electron-builder `notarize: true` (or `@electron/notarize`) after signing
 
 Artifact names (already configured):

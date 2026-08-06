@@ -6,11 +6,12 @@ on:
       - 'v*'
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
-  publish:
+  publish-docker:
+    name: GHCR
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,3 +35,117 @@ jobs:
             YTDLP_CACHE_BUST=${{ github.run_id }}-${{ github.run_attempt }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  desktop-mac:
+    name: Desktop macOS DMG
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Sync desktop package version
+        run: npm run desktop:sync-version
+
+      - name: Fetch macOS yt-dlp + ffmpeg
+        run: npm run desktop:fetch-binaries -- darwin-arm64 darwin-x64
+
+      - name: Build Nuxt
+        run: npm run build
+
+      - name: Build DMGs (unsigned; see docs/DESKTOP_SIGNING.md for CI signing)
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npx electron-builder --mac dmg
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-mac
+          path: |
+            desktop/out/Louis-*.dmg
+          if-no-files-found: error
+
+  desktop-win:
+    name: Desktop Windows NSIS
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Sync desktop package version
+        run: npm run desktop:sync-version
+
+      - name: Fetch Windows yt-dlp + ffmpeg
+        run: npm run desktop:fetch-binaries -- win32-x64
+
+      - name: Build Nuxt
+        run: npm run build
+
+      - name: Build NSIS (unsigned; see docs/DESKTOP_SIGNING.md for CI signing)
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npx electron-builder --win nsis
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-win
+          path: |
+            desktop/out/Louis-Setup-*.exe
+          if-no-files-found: error
+
+  upload-desktop-assets:
+    name: Attach installers to GitHub Release
+    needs: [desktop-mac, desktop-win]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-mac
+          path: dist
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-win
+          path: dist
+
+      - name: Wait for GitHub Release (release-it creates it after tag push)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${{ github.ref_name }}"
+          for i in $(seq 1 36); do
+            if gh release view "$tag" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+              echo "Release $tag is ready"
+              exit 0
+            fi
+            echo "Waiting for release $tag ($i/36)…"
+            sleep 10
+          done
+          echo "Release not found after wait; softprops will create one if needed"
+
+      - name: Upload assets to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            dist/Louis-*.dmg
+            dist/Louis-Setup-*.exe
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

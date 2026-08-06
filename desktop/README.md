@@ -34,12 +34,12 @@ npm run desktop:build        # full matrix DMGs + Louis-Setup-<ver>.exe (needs W
 npm run desktop:dir          # unpackaged .app only
 ```
 
-Signing secrets for CI: [DESKTOP_SIGNING.md](../docs/DESKTOP_SIGNING.md). Ship checklist: [DESKTOP_SHIP.md](../docs/DESKTOP_SHIP.md). Overview: [DESKTOP.md](../docs/DESKTOP.md).
+Signing secrets for CI: [DESKTOP_SIGNING.md](../docs/DESKTOP_SIGNING.md). Release pipeline (GHCR + Assets): [RELEASE.md](../docs/RELEASE.md). Ship checklist: [DESKTOP_SHIP.md](../docs/DESKTOP_SHIP.md).
 
 ## Still not shippable (later phases)
 
 | Area | Current behavior |
 |------|------------------|
-| CI upload | Phase 5 attaches installers to the GitHub Release |
-| Code signing | Unsigned locally; see DESKTOP_SIGNING.md |
+| Code signing | Unsigned in CI until secrets + config overrides |
+| README Download links | Phase 6 |
 | Port | Fixed `127.0.0.1:4010` |

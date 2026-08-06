@@ -1,5 +1,8 @@
 {
   "$schema": "https://unpkg.com/release-it/schema/release-it.json",
+  "hooks": {
+    "after:bump": "npm run desktop:sync-version"
+  },
   "git": {
     "commitMessage": "chore(release): v${version}",
     "tagName": "v${version}",
