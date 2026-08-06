@@ -9,6 +9,12 @@ import {
   readPersistedSaves,
   removePersistedSave,
 } from './saveJobPersistence'
+import {
+  readPersistedDrafts,
+  readPodcastCardIds,
+  writePersistedDrafts,
+  writePodcastCardIds,
+} from './draftPersistence'
 import type { SaveJobState, YotoCardDetail } from './types'
 import { getPlaylistPreflightLimitError } from '#shared/myo-editor/yotoMyoLimits'
 
@@ -47,10 +53,16 @@ export interface MyoEditorContext {
   loading: Ref<boolean>
   updating: ComputedRef<boolean>
   isPlaylistLocked: ComputedRef<boolean>
+  /** True while any card save job is still running (not just the selected card). */
+  hasActiveSaves: ComputedRef<boolean>
+  /** Overall % of the most relevant in-flight save (selected first, else max). */
+  activeSaveProgress: ComputedRef<number | null>
   saveProgress: ComputedRef<SaveProgress | null>
   errorMessage: Ref<string>
   isDirty: ComputedRef<boolean>
+  pendingPlaylistUpdateCount: ComputedRef<number>
   isCardSaving: (cardId: string) => boolean
+  isKnownPodcast: (cardId: string) => boolean
   selectCard: (card: YotoMyoCard) => Promise<void>
   clearSelection: (force?: boolean) => boolean
   resetChanges: () => void
@@ -137,9 +149,80 @@ export function useMyoEditor() {
   const loading = ref(false)
   const errorMessage = ref('')
   const activeSaves = ref(new Map<string, CardSaveState>())
+  const pendingDrafts = ref(new Map<string, CardSaveSnapshot>())
+  const podcastCardIds = ref(new Set<string>(readPodcastCardIds()))
 
   function touchActiveSaves() {
     activeSaves.value = new Map(activeSaves.value)
+  }
+
+  function persistPodcastCardIds() {
+    writePodcastCardIds([...podcastCardIds.value])
+  }
+
+  function rememberPodcastStatus(cardId: string, podcast: boolean) {
+    const known = podcastCardIds.value.has(cardId)
+    if (podcast && !known) {
+      podcastCardIds.value.add(cardId)
+      podcastCardIds.value = new Set(podcastCardIds.value)
+      persistPodcastCardIds()
+    }
+    else if (!podcast && known) {
+      podcastCardIds.value.delete(cardId)
+      podcastCardIds.value = new Set(podcastCardIds.value)
+      persistPodcastCardIds()
+    }
+  }
+
+  function isKnownPodcast(cardId: string): boolean {
+    return podcastCardIds.value.has(cardId)
+  }
+
+  function buildPersistedDrafts(): Record<string, CardSaveSnapshot> {
+    const out: Record<string, CardSaveSnapshot> = {}
+    for (const [cardId, snapshot] of pendingDrafts.value) {
+      out[cardId] = {
+        playlist: clonePlaylist(snapshot.playlist),
+        baseline: clonePlaylist(snapshot.baseline),
+        cardTitle: snapshot.cardTitle,
+      }
+    }
+    const selectedId = selectedCardId.value
+    if (selectedId && isDirty.value && !isPodcast.value) {
+      out[selectedId] = {
+        playlist: clonePlaylist(playlist.value),
+        baseline: clonePlaylist(baselinePlaylist.value),
+        cardTitle: cardTitle.value,
+      }
+    }
+    return out
+  }
+
+  const DRAFT_PERSIST_DEBOUNCE_MS = 400
+  let draftPersistTimer: ReturnType<typeof setTimeout> | null = null
+
+  /** Immediate localStorage write — cancel any pending debounced persist first. */
+  function persistPendingDrafts() {
+    if (draftPersistTimer) {
+      clearTimeout(draftPersistTimer)
+      draftPersistTimer = null
+    }
+    writePersistedDrafts(buildPersistedDrafts())
+  }
+
+  /** Coalesce rapid playlist edits (drag-reorder, batch adds) into one write. */
+  function schedulePersistPendingDrafts() {
+    if (import.meta.server) return
+    if (draftPersistTimer) clearTimeout(draftPersistTimer)
+    draftPersistTimer = setTimeout(() => {
+      draftPersistTimer = null
+      writePersistedDrafts(buildPersistedDrafts())
+    }, DRAFT_PERSIST_DEBOUNCE_MS)
+  }
+
+  function touchPendingDrafts() {
+    pendingDrafts.value = new Map(pendingDrafts.value)
+    persistPendingDrafts()
   }
 
   function getSaveState(cardId: string): CardSaveState | undefined {
@@ -158,9 +241,44 @@ export function useMyoEditor() {
     touchActiveSaves()
   }
 
+  function clearPendingDraft(cardId: string) {
+    if (!pendingDrafts.value.has(cardId)) {
+      persistPendingDrafts()
+      return
+    }
+    pendingDrafts.value.delete(cardId)
+    touchPendingDrafts()
+  }
+
+  function stashCurrentDraft(cardId: string) {
+    if (!isDirty.value || isPodcast.value) {
+      clearPendingDraft(cardId)
+      return
+    }
+    pendingDrafts.value.set(cardId, {
+      playlist: clonePlaylist(playlist.value),
+      baseline: clonePlaylist(baselinePlaylist.value),
+      cardTitle: cardTitle.value,
+    })
+    touchPendingDrafts()
+  }
+
   function isCardSaving(cardId: string): boolean {
     const state = getSaveState(cardId)
     return Boolean(state && !isTerminalStatus(state.status))
+  }
+
+  function hydratePersistedDrafts() {
+    const stored = readPersistedDrafts()
+    const next = new Map<string, CardSaveSnapshot>()
+    for (const [cardId, snapshot] of Object.entries(stored)) {
+      next.set(cardId, {
+        playlist: clonePlaylist(snapshot.playlist),
+        baseline: clonePlaylist(snapshot.baseline),
+        cardTitle: snapshot.cardTitle,
+      })
+    }
+    pendingDrafts.value = next
   }
 
   const isEditing = computed(() => Boolean(selectedCardId.value))
@@ -168,6 +286,15 @@ export function useMyoEditor() {
   const isDirty = computed(
     () => playlistSnapshot(playlist.value) !== playlistSnapshot(baselinePlaylist.value),
   )
+
+  const pendingPlaylistUpdateCount = computed(() => {
+    const draftCount = pendingDrafts.value.size
+    const selectedId = selectedCardId.value
+    const selectedIsDirty = Boolean(selectedId && isDirty.value)
+    if (!selectedIsDirty) return draftCount
+    // Live dirty selection isn't in the draft map while being edited.
+    return draftCount + (pendingDrafts.value.has(selectedId!) ? 0 : 1)
+  })
 
   const selectedSaveState = computed(() => {
     const cardId = selectedCardId.value
@@ -178,6 +305,32 @@ export function useMyoEditor() {
   const isPlaylistLocked = computed(() => {
     const state = selectedSaveState.value
     return Boolean(state && !isTerminalStatus(state.status))
+  })
+
+  const hasActiveSaves = computed(() => {
+    for (const state of activeSaves.value.values()) {
+      if (!isTerminalStatus(state.status)) return true
+    }
+    return false
+  })
+
+  const activeSaveProgress = computed(() => {
+    const selectedId = selectedCardId.value
+    if (selectedId) {
+      const selected = getSaveState(selectedId)
+      if (selected && !isTerminalStatus(selected.status)) {
+        return selected.progress
+      }
+    }
+    let max = 0
+    let any = false
+    for (const state of activeSaves.value.values()) {
+      if (!isTerminalStatus(state.status)) {
+        any = true
+        max = Math.max(max, state.progress)
+      }
+    }
+    return any ? max : null
   })
 
   const updating = computed(() => isPlaylistLocked.value)
@@ -199,6 +352,7 @@ export function useMyoEditor() {
     originalCardDetail.value = detail
     const result = await cardToPlaylist(detail)
     isPodcast.value = result.isPodcast
+    rememberPodcastStatus(cardId, result.isPodcast)
     playlist.value = result.tracks
     baselinePlaylist.value = clonePlaylist(playlist.value)
     cardTitle.value = titleFallback || detail.title
@@ -250,6 +404,7 @@ export function useMyoEditor() {
 
     deleteSaveState(cardId)
     removePersistedSave(cardId)
+    clearPendingDraft(cardId)
   }
 
   function handleSaveFailed(cardId: string, message: string) {
@@ -412,18 +567,20 @@ export function useMyoEditor() {
   async function selectCard(card: YotoMyoCard) {
     if (loading.value) return
 
+    if (selectedCardId.value === card.cardId && !errorMessage.value) {
+      return
+    }
+
     const currentCardId = selectedCardId.value
     const currentCardSaving = currentCardId ? isCardSaving(currentCardId) : false
 
-    if (currentCardId && isDirty.value && !currentCardSaving) {
-      const confirmed = window.confirm(
-        'You have unsaved playlist changes. Switch cards anyway?',
-      )
-      if (!confirmed) return
-    }
-
-    if (selectedCardId.value === card.cardId && !errorMessage.value) {
-      return
+    if (currentCardId && currentCardId !== card.cardId) {
+      if (isDirty.value && !currentCardSaving) {
+        stashCurrentDraft(currentCardId)
+      }
+      else if (!isDirty.value) {
+        clearPendingDraft(currentCardId)
+      }
     }
 
     loading.value = true
@@ -435,13 +592,15 @@ export function useMyoEditor() {
     if (inFlightSave && !isTerminalStatus(inFlightSave.status)) {
       if (inFlightSave.snapshot.playlist.length > 0) {
         restoreSnapshot(inFlightSave.snapshot)
-        isPodcast.value = false
+        clearPendingDraft(card.cardId)
+        isPodcast.value = isKnownPodcast(card.cardId)
         loading.value = false
         return
       }
 
       try {
         await reloadCardFromApi(card.cardId, card.title)
+        clearPendingDraft(card.cardId)
       }
       catch (err: unknown) {
         const e = err as { statusMessage?: string; message?: string }
@@ -454,6 +613,16 @@ export function useMyoEditor() {
       finally {
         loading.value = false
       }
+      return
+    }
+
+    const draft = pendingDrafts.value.get(card.cardId)
+    if (draft) {
+      restoreSnapshot(draft)
+      clearPendingDraft(card.cardId)
+      isPodcast.value = isKnownPodcast(card.cardId)
+      originalCardDetail.value = null
+      loading.value = false
       return
     }
 
@@ -477,11 +646,13 @@ export function useMyoEditor() {
     const currentCardId = selectedCardId.value
     const currentCardSaving = currentCardId ? isCardSaving(currentCardId) : false
 
-    if (!force && isDirty.value && !currentCardSaving) {
-      const confirmed = window.confirm(
-        'You have unsaved playlist changes. Clear selection anyway?',
-      )
-      if (!confirmed) return false
+    if (currentCardId && isDirty.value && !currentCardSaving) {
+      if (force) {
+        clearPendingDraft(currentCardId)
+      }
+      else {
+        stashCurrentDraft(currentCardId)
+      }
     }
 
     selectedCardId.value = null
@@ -496,8 +667,10 @@ export function useMyoEditor() {
 
   function resetChanges() {
     if (!isDirty.value || isPlaylistLocked.value) return
+    const cardId = selectedCardId.value
     playlist.value = clonePlaylist(baselinePlaylist.value)
     errorMessage.value = ''
+    if (cardId) clearPendingDraft(cardId)
   }
 
   async function updateCard(options?: { acknowledgeCapacityRisk?: boolean }) {
@@ -538,8 +711,29 @@ export function useMyoEditor() {
   }
 
   onMounted(() => {
+    hydratePersistedDrafts()
     void hydratePersistedSaves()
+    window.addEventListener('pagehide', persistPendingDrafts)
+    document.addEventListener('visibilitychange', flushDraftsOnHide)
   })
+
+  onBeforeUnmount(() => {
+    window.removeEventListener('pagehide', persistPendingDrafts)
+    document.removeEventListener('visibilitychange', flushDraftsOnHide)
+    persistPendingDrafts()
+  })
+
+  function flushDraftsOnHide() {
+    if (document.visibilityState === 'hidden') persistPendingDrafts()
+  }
+
+  // Keep durable drafts in sync while editing — debounced; flushed on hide/unmount.
+  watch(
+    [playlist, baselinePlaylist, cardTitle, selectedCardId, isDirty, isPodcast],
+    () => {
+      schedulePersistPendingDrafts()
+    },
+  )
 
   return {
     selectedCardId,
@@ -550,10 +744,14 @@ export function useMyoEditor() {
     loading,
     updating,
     isPlaylistLocked,
+    hasActiveSaves,
+    activeSaveProgress,
     saveProgress,
     errorMessage,
     isDirty,
+    pendingPlaylistUpdateCount,
     isCardSaving,
+    isKnownPodcast,
     selectCard,
     clearSelection,
     resetChanges,

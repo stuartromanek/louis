@@ -1,0 +1,109 @@
+/* ─── Named type roles (prefer these over one-off font-size) ─── */
+
+@utility type-nav {
+  font-size: var(--text-maru-nav);
+  line-height: var(--text-maru-nav--line-height);
+  letter-spacing: 0.02em;
+  font-weight: 500;
+}
+
+@utility type-meter-title {
+  font-family: var(--font-maru-mono);
+  font-size: var(--text-maru-meter-title);
+  line-height: var(--text-maru-meter-title--line-height);
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  font-weight: 400;
+}
+
+@utility type-window-meta {
+  font-family: var(--font-maru-mono);
+  font-size: var(--text-maru-window-meta);
+  line-height: var(--text-maru-window-meta--line-height);
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+}
+
+@utility type-caption {
+  font-size: var(--text-maru-caption);
+  line-height: var(--text-maru-caption--line-height);
+  font-weight: 400;
+}
+
+@utility type-label {
+  font-size: var(--text-maru-label);
+  line-height: var(--text-maru-label--line-height);
+  letter-spacing: 0.01em;
+  font-weight: 500;
+}
+
+@utility type-body {
+  font-size: var(--text-maru-body);
+  line-height: var(--text-maru-body--line-height);
+  text-wrap: pretty;
+  font-weight: 400;
+}
+
+@utility type-meta {
+  font-family: var(--font-maru-mono);
+  font-size: var(--text-maru-meta);
+  line-height: var(--text-maru-meta--line-height);
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+}
+
+@utility type-meta-sm {
+  font-family: var(--font-maru-mono);
+  font-size: var(--text-maru-meta-sm);
+  line-height: var(--text-maru-meta-sm--line-height);
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+}
+
+@utility type-button {
+  font-size: var(--text-maru-button);
+  line-height: var(--text-maru-button--line-height);
+}
+
+@utility type-button-secondary {
+  font-size: var(--text-maru-button-secondary);
+  line-height: var(--text-maru-button-secondary--line-height);
+  font-weight: 400;
+}
+
+@utility type-title {
+  font-size: var(--text-maru-title);
+  line-height: var(--text-maru-title--line-height);
+  text-wrap: pretty;
+}
+
+@utility type-title-sm {
+  font-size: var(--text-maru-title-sm);
+  line-height: var(--text-maru-title-sm--line-height);
+  text-wrap: pretty;
+}
+
+@utility type-empty-title {
+  font-size: var(--text-maru-empty-title);
+  line-height: var(--text-maru-empty-title--line-height);
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+@utility type-empty-body {
+  font-size: var(--text-maru-empty-body);
+  line-height: var(--text-maru-empty-body--line-height);
+  text-wrap: pretty;
+  font-weight: 400;
+}
+
+@utility type-search-placeholder {
+  font-size: var(--text-maru-search-placeholder);
+  line-height: var(--text-maru-search-placeholder--line-height);
+}
+
+@utility type-display {
+  font-size: var(--text-maru-display);
+  line-height: var(--text-maru-display--line-height);
+  text-wrap: balance;
+}

@@ -19,20 +19,37 @@ function updatePosition() {
 
   const rect = el.getBoundingClientRect()
   const gap = 8
-  const left = `${rect.left + rect.width / 2}px`
+  const margin = 12
+  const vw = window.innerWidth
+  // Prefer a wide bubble on narrow screens; keep a soft cap on desktop.
+  const maxBubble = Math.min(22 * 16, vw - margin * 2)
+  const triggerCenter = rect.left + rect.width / 2
+  // Clamp so a max-width bubble centered on `left` stays on-screen.
+  const half = maxBubble / 2
+  const minCenter = margin + half
+  const maxCenter = vw - margin - half
+  const left = minCenter >= maxCenter
+    ? vw / 2
+    : Math.min(maxCenter, Math.max(minCenter, triggerCenter))
+
+  const base: Record<string, string> = {
+    left: `${left}px`,
+    maxWidth: `${maxBubble}px`,
+    width: 'max-content',
+  }
 
   if (props.placement === 'bottom') {
     bubbleStyle.value = {
+      ...base,
       top: `${rect.bottom + gap}px`,
-      left,
       transform: 'translateX(-50%)',
     }
     return
   }
 
   bubbleStyle.value = {
+    ...base,
     top: `${rect.top - gap}px`,
-    left,
     transform: 'translate(-50%, -100%)',
   }
 }

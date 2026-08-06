@@ -4,9 +4,9 @@ The application source code is licensed under the MIT License (see [LICENSE](LIC
 
 ## Fonts
 
-[Dongle](https://fonts.google.com/specimen/Dongle) is bundled in `public/fonts/` under the [SIL Open Font License](https://openfontlicense.org). See [public/fonts/LICENSE.txt](public/fonts/LICENSE.txt).
+**LT Saeada** (LyonsType) is self-hosted under `public/fonts/saeada/` and licensed under the [SIL Open Font License](https://openfontlicense.org). See [public/fonts/LICENSE.txt](public/fonts/LICENSE.txt) and [public/fonts/saeada/OFL.txt](public/fonts/saeada/OFL.txt).
 
-- **Dongle** — UI, display, and secondary text (`font-maru`, `font-maru-mega`, `font-maru-mono`)
+- **LT Saeada** (Regular 400, Medium 500, Bold 700) — UI, display, and secondary text (`font-maru`, `font-maru-mega`, `font-maru-mono`)
 
 ## Emoji icons
 

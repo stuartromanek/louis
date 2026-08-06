@@ -1,0 +1,441 @@
+/* ─── House mobile tray (reusable bottom sheet) ─── */
+
+.mobile-tray {
+  --ease-tray-out: cubic-bezier(0.23, 1, 0.32, 1);
+  /* No overshoot — keep end value at 1 so the sheet can't sail past the dock. */
+  --ease-tray-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-tray-enter: 320ms;
+  --dur-tray-exit: 220ms;
+  --dur-tray-backdrop-enter: 260ms;
+  --dur-tray-backdrop-exit: 180ms;
+  --dur-tray-stagger: 420ms;
+  --dur-tray-stagger-exit: 150ms;
+  /* Layering reveal: sheet first, then chunks ~100ms apart (top → bottom). */
+  --tray-stagger-base: 180ms;
+  --tray-stagger-step: 100ms;
+  --tray-stagger-0: var(--tray-stagger-base);
+  --tray-stagger-1: calc(var(--tray-stagger-base) + var(--tray-stagger-step));
+  --tray-stagger-2: calc(var(--tray-stagger-base) + var(--tray-stagger-step) * 2);
+  --tray-stagger-3: calc(var(--tray-stagger-base) + var(--tray-stagger-step) * 3);
+  --tray-stagger-4: calc(var(--tray-stagger-base) + var(--tray-stagger-step) * 4);
+  --tray-stagger-5: calc(var(--tray-stagger-base) + var(--tray-stagger-step) * 5);
+  --tray-stagger-6: calc(var(--tray-stagger-base) + var(--tray-stagger-step) * 6);
+  --tray-stagger-7: calc(var(--tray-stagger-base) + var(--tray-stagger-step) * 7);
+  /* Extra travel past the origin edge (margins + hard shadow). */
+  --tray-offscreen-pad: 1.75rem;
+  --tray-edge-gap: 0.65rem;
+
+  position: fixed;
+  inset: 0;
+  z-index: 85;
+  /* Sheet is absolutely docked; overflow visible so transform layers
+     don't flash the untransformed dock mid-enter. */
+  display: block;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.mobile-tray--entering,
+.mobile-tray--open,
+.mobile-tray--exiting,
+.mobile-tray--preenter {
+  pointer-events: auto;
+}
+
+.mobile-tray--toast.mobile-tray--entering,
+.mobile-tray--toast.mobile-tray--open,
+.mobile-tray--toast.mobile-tray--exiting,
+.mobile-tray--toast.mobile-tray--preenter {
+  /* Toast sheet is interactive; rest of viewport stays usable. */
+  pointer-events: none;
+}
+
+.mobile-tray--toast .mobile-tray__sheet {
+  pointer-events: auto;
+}
+
+.mobile-tray__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--color-maru-green) 58%, transparent);
+  opacity: 0;
+  transition: opacity var(--dur-tray-backdrop-enter) var(--ease-tray-out);
+}
+
+/* Closed / preenter: stay at rest opacity 0 — entering/open fade up */
+.mobile-tray--entering .mobile-tray__backdrop,
+.mobile-tray--open .mobile-tray__backdrop {
+  opacity: 1;
+}
+
+.mobile-tray--exiting .mobile-tray__backdrop {
+  opacity: 0;
+  transition-duration: var(--dur-tray-backdrop-exit);
+}
+
+.mobile-tray__sheet {
+  position: absolute;
+  z-index: 1;
+  left: var(--tray-edge-gap);
+  right: var(--tray-edge-gap);
+  bottom: calc(var(--tray-edge-gap) + env(safe-area-inset-bottom, 0px));
+  top: auto;
+  display: flex;
+  flex-direction: column;
+  width: auto;
+  min-height: 0;
+  margin: 0;
+  border-radius: var(--radius-maru);
+  box-shadow:
+    4px 4px 0 var(--color-maru-black),
+    8px 8px 0 var(--color-maru-black);
+  padding-bottom: 0.35rem;
+  box-sizing: border-box;
+  /* Layer from first paint; slide distance set inline / WAAPI. */
+  will-change: transform;
+  transform: translate3d(0, 110%, 0);
+  transition: none;
+}
+
+/* Slide is WAAPI-owned — no CSS transform transitions on the sheet. */
+.mobile-tray--preenter .mobile-tray__sheet,
+.mobile-tray--entering .mobile-tray__sheet,
+.mobile-tray--open .mobile-tray__sheet,
+.mobile-tray--exiting .mobile-tray__sheet {
+  transition: none;
+}
+
+/* Top placement — slide down from above the viewport */
+.mobile-tray--top .mobile-tray__sheet {
+  top: calc(var(--tray-edge-gap) + env(safe-area-inset-top, 0px));
+  bottom: auto;
+  transform: translate3d(0, -110%, 0);
+}
+
+/* Toast: compact sheet, faster stagger, green accent fill */
+.mobile-tray--toast {
+  --tray-stagger-base: 40ms;
+  --tray-stagger-step: 60ms;
+  --dur-tray-stagger: 320ms;
+  --dur-tray-enter: 280ms;
+  z-index: 95;
+}
+
+.mobile-tray--toast .mobile-tray__sheet {
+  background: var(--color-maru-green-lighter);
+  padding-bottom: 0.15rem;
+}
+
+.mobile-tray--toast .mobile-tray__body {
+  padding: 0.15rem 0.85rem 0.75rem;
+}
+
+.mobile-tray--toast .mobile-tray__handle {
+  background: var(--color-maru-white);
+}
+
+.mobile-toast__message {
+  text-wrap: pretty;
+  color: var(--color-maru-black);
+}
+
+.mobile-toast__emphasis {
+  word-break: break-word;
+}
+
+.mobile-toast__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.mobile-toast__stack--error {
+  gap: 0;
+}
+
+.mobile-tray--toast:has(.mobile-toast__stack--error) .mobile-tray__sheet {
+  background: var(--color-maru-red-lighter);
+}
+
+.mobile-toast__stack--error .mobile-toast__message {
+  font-weight: 500;
+}
+
+.mobile-toast__update {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 3.25rem;
+  padding: 0.7rem 1rem;
+  border: 3px solid var(--color-maru-black);
+  border-radius: var(--radius-maru);
+  background: var(--color-maru-blue);
+  color: var(--color-maru-white);
+  font-family: var(--font-maru);
+  font-size: var(--text-maru-button-sm);
+  font-weight: 700;
+  line-height: var(--text-maru-button-sm--line-height);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--color-maru-red);
+  transition:
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 150ms ease,
+    box-shadow 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.mobile-toast__update-label {
+  position: relative;
+  top: 0.08em;
+}
+
+.mobile-toast__update:active:not(:disabled) {
+  transform: translate(2px, 2px) scale(0.98);
+  box-shadow: 0 0 0 var(--color-maru-red);
+}
+
+.mobile-toast__update:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mobile-toast__update:hover:not(:disabled) {
+    background: var(--color-maru-blue-lighter);
+    color: var(--color-maru-black);
+    box-shadow: 4px 4px 0 var(--color-maru-red);
+  }
+}
+
+/* Backdrop only — sheet slide is driven by JS-pinned `top`, not transform. */
+@starting-style {
+  .mobile-tray--entering .mobile-tray__backdrop {
+    opacity: 0;
+  }
+}
+
+/* ─── Shell + content stagger (layering reveal, top → bottom) ───
+   Travel while still invisible, then opacity + unblur lockstep
+   so chunks never sit around as blurred ghosts. */
+
+@keyframes mobile-tray-chunk-in {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(4px);
+  }
+
+  /* Still fully hidden while easing into place */
+  50% {
+    opacity: 0;
+    transform: translateY(5px);
+    filter: blur(4px);
+  }
+
+  /* Reveal: opacity and unblur happen together */
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.mobile-tray__handle,
+.mobile-tray__header,
+.mobile-tray__stagger > *,
+.mobile-tray__stagger > .mobile-overflow-menu__list > * {
+  opacity: 0;
+  transform: translateY(12px);
+  filter: blur(4px);
+}
+
+.mobile-tray__handle {
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 0.35rem;
+  margin: 0.55rem auto 0.35rem;
+  border: 2px solid var(--color-maru-black);
+  border-radius: 999px;
+  background: var(--color-maru-gray-light);
+}
+
+.mobile-tray__header {
+  flex-shrink: 0;
+  padding: 0.35rem 1rem 0.55rem;
+}
+
+.mobile-tray__title {
+  display: block;
+  color: var(--color-maru-black);
+  line-height: var(--text-maru-body--line-height);
+}
+
+.mobile-tray__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0.25rem 0.75rem 0.85rem;
+}
+
+/* Auto-height sheets grow with content; scroll only if they hit max-height. */
+.mobile-tray__sheet--auto .mobile-tray__body {
+  flex: 0 1 auto;
+}
+
+/* One-shot enter while --entering (keeps running through stagger delays). */
+.mobile-tray--entering .mobile-tray__handle,
+.mobile-tray--entering .mobile-tray__header,
+.mobile-tray--entering .mobile-tray__stagger > *,
+.mobile-tray--entering .mobile-tray__stagger > .mobile-overflow-menu__list > * {
+  animation: mobile-tray-chunk-in var(--dur-tray-stagger) var(--ease-tray-out) both;
+}
+
+.mobile-tray--entering .mobile-tray__handle {
+  animation-delay: var(--tray-stagger-0);
+}
+
+.mobile-tray--entering .mobile-tray__header {
+  animation-delay: var(--tray-stagger-1);
+}
+
+.mobile-tray--entering .mobile-tray__stagger > *:nth-child(1),
+.mobile-tray--entering .mobile-tray__stagger > .mobile-overflow-menu__list > *:nth-child(1) {
+  animation-delay: var(--tray-stagger-0);
+}
+
+.mobile-tray--entering .mobile-tray__stagger > *:nth-child(2),
+.mobile-tray--entering .mobile-tray__stagger > .mobile-overflow-menu__list > *:nth-child(2) {
+  animation-delay: var(--tray-stagger-1);
+}
+
+.mobile-tray--entering .mobile-tray__stagger > *:nth-child(3),
+.mobile-tray--entering .mobile-tray__stagger > .mobile-overflow-menu__list > *:nth-child(3) {
+  animation-delay: var(--tray-stagger-2);
+}
+
+.mobile-tray--entering .mobile-tray__stagger > *:nth-child(4),
+.mobile-tray--entering .mobile-tray__stagger > .mobile-overflow-menu__list > *:nth-child(4) {
+  animation-delay: var(--tray-stagger-3);
+}
+
+.mobile-tray--entering .mobile-tray__stagger > *:nth-child(5),
+.mobile-tray--entering .mobile-tray__stagger > .mobile-overflow-menu__list > *:nth-child(5) {
+  animation-delay: var(--tray-stagger-4);
+}
+
+.mobile-tray--entering .mobile-tray__stagger > *:nth-child(6),
+.mobile-tray--entering .mobile-tray__stagger > .mobile-overflow-menu__list > *:nth-child(6) {
+  animation-delay: var(--tray-stagger-5);
+}
+
+.mobile-tray--entering .mobile-tray__stagger > *:nth-child(7),
+.mobile-tray--entering .mobile-tray__stagger > .mobile-overflow-menu__list > *:nth-child(7) {
+  animation-delay: var(--tray-stagger-6);
+}
+
+.mobile-tray--entering .mobile-tray__stagger > *:nth-child(n + 8),
+.mobile-tray--entering .mobile-tray__stagger > .mobile-overflow-menu__list > *:nth-child(n + 8) {
+  animation-delay: var(--tray-stagger-7);
+}
+
+/* Settled open state after enter sequence completes */
+.mobile-tray--open .mobile-tray__handle,
+.mobile-tray--open .mobile-tray__header,
+.mobile-tray--open .mobile-tray__stagger > *,
+.mobile-tray--open .mobile-tray__stagger > .mobile-overflow-menu__list > * {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+  animation: none;
+}
+
+/* Soft exit — interruptible transition, small travel only */
+.mobile-tray--exiting .mobile-tray__handle,
+.mobile-tray--exiting .mobile-tray__header,
+.mobile-tray--exiting .mobile-tray__stagger > *,
+.mobile-tray--exiting .mobile-tray__stagger > .mobile-overflow-menu__list > * {
+  opacity: 0;
+  transform: translateY(8px);
+  filter: blur(4px);
+  animation: none;
+  transition:
+    opacity var(--dur-tray-stagger-exit) ease-in,
+    transform var(--dur-tray-stagger-exit) ease-in,
+    filter var(--dur-tray-stagger-exit) ease-in;
+  transition-delay: 0ms;
+}
+
+/* When the only body child is the menu list, don't fade the list shell itself —
+   stagger its items instead (avoids double-opacity nesting). */
+.mobile-tray__stagger > .mobile-overflow-menu__list {
+  opacity: 1;
+  transform: none;
+  filter: none;
+  animation: none;
+  transition: none;
+}
+
+.mobile-tray--entering .mobile-tray__stagger > .mobile-overflow-menu__list,
+.mobile-tray--open .mobile-tray__stagger > .mobile-overflow-menu__list,
+.mobile-tray--exiting .mobile-tray__stagger > .mobile-overflow-menu__list {
+  opacity: 1;
+  transform: none;
+  filter: none;
+  animation: none;
+}
+
+/* ─── Reduced motion: opacity only, no travel ─── */
+
+.mobile-tray--reduced .mobile-tray__sheet {
+  opacity: 0;
+  transition: opacity var(--dur-tray-exit) var(--ease-tray-out);
+}
+
+.mobile-tray--reduced.mobile-tray--entering .mobile-tray__sheet,
+.mobile-tray--reduced.mobile-tray--open .mobile-tray__sheet {
+  opacity: 1;
+}
+
+.mobile-tray--reduced.mobile-tray--preenter .mobile-tray__sheet,
+.mobile-tray--reduced.mobile-tray--exiting .mobile-tray__sheet {
+  opacity: 0;
+}
+
+.mobile-tray--reduced .mobile-tray__backdrop {
+  transition: opacity 160ms var(--ease-tray-out);
+}
+
+.mobile-tray--reduced .mobile-tray__handle,
+.mobile-tray--reduced .mobile-tray__header,
+.mobile-tray--reduced .mobile-tray__stagger > *,
+.mobile-tray--reduced .mobile-tray__stagger > .mobile-overflow-menu__list > * {
+  transform: none;
+  filter: none;
+  animation: none;
+  transition: opacity 160ms var(--ease-tray-out);
+  transition-delay: 0ms;
+}
+
+.mobile-tray--reduced.mobile-tray--entering .mobile-tray__handle,
+.mobile-tray--reduced.mobile-tray--entering .mobile-tray__header,
+.mobile-tray--reduced.mobile-tray--entering .mobile-tray__stagger > *,
+.mobile-tray--reduced.mobile-tray--entering .mobile-tray__stagger > .mobile-overflow-menu__list > *,
+.mobile-tray--reduced.mobile-tray--open .mobile-tray__handle,
+.mobile-tray--reduced.mobile-tray--open .mobile-tray__header,
+.mobile-tray--reduced.mobile-tray--open .mobile-tray__stagger > *,
+.mobile-tray--reduced.mobile-tray--open .mobile-tray__stagger > .mobile-overflow-menu__list > * {
+  opacity: 1;
+}
+
+.mobile-tray--reduced .mobile-tray__stagger > .mobile-overflow-menu__list {
+  opacity: 1;
+}

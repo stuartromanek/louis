@@ -1,68 +1,102 @@
 <script setup lang="ts">
+import MaruHeading from '~/components/layout/MaruHeading.vue'
+
 const weights = [
-  { label: 'Light', class: 'font-maru-light', wght: '300' },
   { label: 'Regular', class: 'font-maru-regular', wght: '400' },
-  { label: 'Medium', class: 'font-maru-medium', wght: '400' },
+  { label: 'Medium', class: 'font-maru-medium', wght: '500' },
   { label: 'Bold', class: 'font-maru-bold', wght: '700' },
-  { label: 'Black', class: 'font-maru-black', wght: '700' },
 ]
 
-const displaySizes = [
-  { label: 'Small', class: 'text-3xl sm:text-4xl' },
-  { label: 'Medium', class: 'text-4xl sm:text-6xl' },
-  { label: 'Large', class: 'text-[10vw] sm:text-[8vw]' },
+const roles = [
+  { label: 'nav', class: 'type-nav', sample: 'Connected to Yoto' },
+  { label: 'meter-title', class: 'type-meter-title', sample: 'tracks' },
+  { label: 'window-meta', class: 'type-window-meta', sample: '8 cards' },
+  { label: 'caption', class: 'type-caption', sample: 'Footer lip / tip' },
+  { label: 'label', class: 'type-label', sample: 'Sounds' },
+  { label: 'body', class: 'type-body', sample: 'Modal and page prose sits here.' },
+  { label: 'meta', class: 'type-meta', sample: 'Channel · 3 min' },
+  { label: 'meta-sm', class: 'type-meta-sm', sample: 'Taylor Swift · 3 min' },
+  { label: 'button', class: 'type-button', sample: 'Connect to Yoto' },
+  { label: 'button-secondary', class: 'type-button-secondary', sample: 'Reset' },
+  { label: 'title', class: 'type-title font-maru-medium', sample: 'Cube Card' },
+  { label: 'title-sm', class: 'type-title-sm font-maru-medium', sample: 'Playlist row title' },
+  { label: 'search-placeholder', class: 'type-search-placeholder', sample: 'K Pop Demon Hunters' },
+  { label: 'empty-title', class: 'type-empty-title', sample: 'Search YouTube' },
+  { label: 'empty-body', class: 'type-empty-body', sample: 'Type a song, show, or artist…' },
+  { label: 'display', class: 'type-display font-maru-bold', sample: 'Go Big' },
 ]
 </script>
 
 <template>
   <section class="px-maru-gutter py-12 sm:py-16 border-maru-bottom">
-    <h2 class="font-maru-mega font-maru-mega-midi text-maru-orange text-[11vw] sm:text-[8vw] leading-none text-balance mb-8">
+    <h2 class="type-display font-maru-bold text-maru-orange text-balance mb-8">
       Typography
     </h2>
 
     <div class="mb-maru-m">
-      <h3 class="font-maru-mono font-maru-medium text-maru-gray mb-4">Dongle — Weight Scale</h3>
+      <h3 class="type-label text-maru-gray mb-4">Do not invent one-off sizes</h3>
+      <p class="type-body text-pretty max-w-2xl mb-4">
+        Map UI copy to a named role below (or <code class="font-maru-mono">MaruHeading</code> sm/md).
+        Approximate the closest fit, or ask how a new role should be named before adding tokens.
+        Preferences title is the only approved product one-off.
+      </p>
+    </div>
+
+    <div class="mb-maru-m">
+      <h3 class="type-label text-maru-gray mb-4">Saeada — Weight Scale</h3>
       <div class="border-maru">
         <div
           v-for="w in weights"
           :key="w.label"
           class="flex items-baseline justify-between border-maru-bottom last:border-b-0 px-4 py-3"
         >
-          <span class="font-maru-mono font-maru-regular text-sm text-maru-gray w-20">{{ w.label }}</span>
+          <span class="type-caption text-maru-gray w-20">{{ w.label }}</span>
           <span
-            class="font-maru text-2xl sm:text-4xl lg:text-5xl inline-flex items-center gap-2"
+            class="type-title inline-flex items-center gap-2"
             :class="w.class"
           >
             Futomaki
             <MaruEmoji name="PotOfFood" size="sm" />
           </span>
-          <span class="font-maru-mono font-maru-regular text-xs text-maru-gray w-16 text-right">{{ w.wght }}</span>
+          <span class="type-caption text-maru-gray w-16 text-right">{{ w.wght }}</span>
         </div>
       </div>
     </div>
 
     <div class="mb-maru-m">
-      <h3 class="font-maru-mono font-maru-medium text-maru-gray mb-4">Dongle — Secondary</h3>
-      <p class="font-maru-mono text-base sm:text-lg lg:text-xl border-maru rounded-maru p-4 text-pretty leading-relaxed">
-        Sometimes also called Maki Sushi. The diameter is about 5–6cm with lotus root, unagi, and anago.
-      </p>
+      <h3 class="type-label text-maru-gray mb-4">Named type roles</h3>
+      <div class="border-maru">
+        <div
+          v-for="role in roles"
+          :key="role.label"
+          class="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-6 border-maru-bottom last:border-b-0 px-4 py-3"
+        >
+          <code class="type-caption text-maru-gray shrink-0 sm:w-44">type-{{ role.label }}</code>
+          <span :class="role.class">{{ role.sample }}</span>
+        </div>
+      </div>
     </div>
 
     <div>
-      <h3 class="font-maru-mono font-maru-medium text-maru-gray mb-4">Dongle — Display Sizes</h3>
+      <h3 class="type-label text-maru-gray mb-4">MaruHeading sizes</h3>
       <div class="space-y-4">
-        <div
-          v-for="size in displaySizes"
-          :key="size.label"
-          class="border-maru rounded-maru p-4 bg-maru-yellow-light"
-        >
-          <span class="font-maru-mono font-maru-regular text-xs text-maru-gray">{{ size.label }}</span>
-          <p
-            class="font-maru-mega leading-none"
-            :class="size.class"
-          >
-            Go Big
-          </p>
+        <div class="border-maru rounded-maru p-4 bg-maru-yellow-light">
+          <span class="type-caption text-maru-gray">sm — window title</span>
+          <MaruHeading
+            text="YouTube Search"
+            tone="black"
+            size="sm"
+            class="mt-2"
+          />
+        </div>
+        <div class="border-maru rounded-maru p-4 bg-maru-blue-lighter">
+          <span class="type-caption text-maru-gray">md — modal title</span>
+          <MaruHeading
+            text="Connect Louis to Yoto"
+            tone="black"
+            size="md"
+            class="mt-2"
+          />
         </div>
       </div>
     </div>

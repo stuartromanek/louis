@@ -7,7 +7,6 @@ dist
 .env
 .env.*
 !.env.example
-!.env.demo.example
 .git
 .cursor
 .agents

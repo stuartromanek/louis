@@ -123,7 +123,7 @@ watch(
     <div class="panel-footer-content flex flex-col gap-2 px-3 sm:px-4 py-[0.375rem] sm:py-[0.4375rem]">
       <p
         v-if="footerHint"
-        class="w-full text-[1.25rem] sm:text-[1.45rem] font-maru-mono text-maru-black leading-tight text-pretty"
+        class="w-full type-body text-maru-black text-pretty"
         role="alert"
       >
         {{ footerHint }}

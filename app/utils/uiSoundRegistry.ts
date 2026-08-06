@@ -21,6 +21,8 @@ export type UiSoundEvent =
   | 'playlistReveal'
   | 'playlistConceal'
   | 'reorderSwipe'
+  | 'pagePrev'
+  | 'pageNext'
   | 'loadMoreClick'
   | 'loadMoreComplete'
   | 'authGateShow'
@@ -55,6 +57,8 @@ export const UI_SOUND_REGISTRY: Record<UiSoundEvent, UiSoundRegistryConfig> = {
   playlistReveal: { sounds: 'transition_up', volume: 0.85 },
   playlistConceal: { sounds: 'transition_down', volume: 0.85 },
   reorderSwipe: { sounds: uiSoundVariants('swipe'), volume: 0.35 },
+  pagePrev: { sounds: 'transition_down', volume: 0.6 },
+  pageNext: { sounds: 'transition_up', volume: 0.6 },
   loadMoreClick: { sounds: 'button', volume: 0.85 },
   loadMoreComplete: { sounds: 'ringtone_loop', volume: 0.8, oneShot: true },
   authGateShow: { sounds: 'ringtone_loop', volume: 0.8, oneShot: true },

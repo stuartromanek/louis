@@ -24,7 +24,7 @@ import { mergeContentMetadata } from './yoto-metadata'
 import { fetchYotoCardDetail } from './yoto-card-detail'
 import { getYotoAccessToken } from './yoto'
 
-/** Process-local only — cleared on every container restart/redeploy. See docs/DEMO.md §4b. */
+/** Process-local only — cleared on every container restart/redeploy. */
 const jobs = new Map<string, SaveJobState>()
 
 function createTrackProgress(playlist: PlaylistTrack[]): SaveJobTrackProgress[] {

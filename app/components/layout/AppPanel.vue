@@ -40,7 +40,7 @@ const footerTextClass = computed(() => props.footerTextClass ?? props.headerText
     :class="bodyBg"
   >
     <header
-      class="border-maru-bottom shrink-0 flex items-center justify-between gap-3 px-3 py-1.5 sm:px-4 sm:py-2"
+      class="app-panel__header border-maru-bottom shrink-0 flex items-center justify-between gap-3 px-3 py-1.5 sm:px-4 sm:py-2"
       :class="headerBg"
     >
       <MaruHeading
@@ -54,7 +54,7 @@ const footerTextClass = computed(() => props.footerTextClass ?? props.headerText
         <slot name="header-actions" />
         <p
           v-if="count"
-          class="font-maru-mono font-maru-regular text-[1.45rem] leading-none tabular-nums"
+          class="type-window-meta"
           :class="headerTextClass"
         >
           {{ count }}
@@ -79,7 +79,7 @@ const footerTextClass = computed(() => props.footerTextClass ?? props.headerText
     </div>
     <div
       v-else
-      class="flex-1 min-h-0"
+      class="app-panel__body flex-1 min-h-0"
       :class="[
         bodyPadding ? 'p-3 sm:p-4' : '',
         fillBody

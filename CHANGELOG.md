@@ -10,13 +10,22 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 ## [Unreleased]
 
 ### Added
+- Phone editor IA below 600px: Search / Library tabs, nested card detail, Add-to-card drawer, Menu tray, toasts, and denser YouTube results (desktop/tablet two-column layout unchanged at `sm+`).
+- Mobile Menu update affordances: Bell + light pink when a save is pending; IndexPointingUp + left-to-right pink progress fill while updating.
+- How-to empty state and How To modal with beat art; Search Clear after submit; phone-friendly over-limit / long-track controls.
+- Dirty MYO playlist draft persistence in `localStorage` (restored when the card is opened again).
 - yt-dlp download outcome logs (`ok` / `fail` / `escalate` / `coalesce`) so Railway logs show whether cookies recovered after bot checks.
 - In-process singleflight for concurrent downloads of the same YouTube id (preview stampede protection).
 
 ### Changed
+- UI typeface is self-hosted **LT Saeada** (Regular / Medium / Bold) instead of Dongle.
+- Phone chrome polish for narrow viewports (densify ≤360px / ≤310px): tab icons, result art, howto mocks, tray open animation.
 - Expected anon→cookies escalate and retries log at info level (not warn/error).
 - Long API errors use h3 `message` instead of `statusMessage` (avoids future sanitization warnings).
-- Demo runbook: cookies required on cloud IPs, `YTDLP_CACHE_BUST`, restart/job-loss notes, how to read yt-dlp logs.
+
+### Removed
+- Public demo documentation and maintainer demo template (`docs/DEMO.md`, `.env.demo.example`, and related README / SECURITY notes).
+- Bundled Dongle font files (replaced by LT Saeada).
 
 ## [1.0.0] - 2026-07-22
 

@@ -69,7 +69,7 @@ watch(cardCountLabel, value => emit('update:count', value), { immediate: true })
       <MaruHeading text="My Yoto Cards" size="md" />
       <p
         v-if="cardCountLabel"
-        class="font-maru-mono font-maru-regular text-sm text-maru-gray tabular-nums"
+        class="type-meta text-maru-gray"
       >
         {{ cardCountLabel }}
       </p>
@@ -85,7 +85,7 @@ watch(cardCountLabel, value => emit('update:count', value), { immediate: true })
 
       <p
         v-else-if="status === 'unconfigured' || status === 'error'"
-        class="font-maru-mono font-maru-regular text-sm text-maru-red py-4 border-maru rounded-maru bg-maru-red-lighter px-4"
+        class="type-meta text-maru-red py-4 border-maru rounded-maru bg-maru-red-lighter px-4"
       >
         {{ errorMessage }}
       </p>
@@ -177,7 +177,7 @@ watch(cardCountLabel, value => emit('update:count', value), { immediate: true })
 
       <p
         v-else-if="status === 'unconfigured' || status === 'error'"
-        class="font-maru-mono font-maru-regular text-sm text-maru-red py-4 border-maru rounded-maru bg-maru-red-lighter px-4"
+        class="type-meta text-maru-red py-4 border-maru rounded-maru bg-maru-red-lighter px-4"
       >
         {{ errorMessage }}
       </p>

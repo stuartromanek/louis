@@ -1,0 +1,106 @@
+/* ─── Design Tokens (canonical source of truth) ─── */
+
+@theme {
+  /* Typography */
+  --font-maru: "Saeada", ui-sans-serif, system-ui, sans-serif;
+  --font-maru-mono: "Saeada", ui-sans-serif, system-ui, sans-serif;
+  --font-maru-mega: "Saeada", ui-sans-serif, system-ui, sans-serif;
+  --default-font-family: var(--font-maru);
+
+  /* Type scale — named roles (clamp between phone and desktop) */
+  --text-maru-nav: clamp(0.7rem, 0.55rem + 0.45vw, 0.9rem);
+  --text-maru-nav--line-height: 1;
+  --text-maru-meter-title: clamp(0.65rem, 0.55rem + 0.3vw, 0.8rem);
+  --text-maru-meter-title--line-height: 1;
+  --text-maru-window-meta: clamp(0.8rem, 0.65rem + 0.45vw, 1rem);
+  --text-maru-window-meta--line-height: 1;
+  --text-maru-caption: clamp(0.625rem, 0.5rem + 0.4vw, 0.75rem);
+  --text-maru-caption--line-height: 1.15;
+  --text-maru-label: clamp(0.85rem, 0.7rem + 0.45vw, 1rem);
+  --text-maru-label--line-height: 1;
+  --text-maru-body: clamp(1.1rem, 0.85rem + 0.9vw, 1.35rem);
+  --text-maru-body--line-height: 1.15;
+  --text-maru-meta: clamp(0.8rem, 0.65rem + 0.5vw, 1rem);
+  --text-maru-meta--line-height: 1;
+  --text-maru-meta-sm: clamp(0.6rem, 0.5rem + 0.3vw, 0.75rem);
+  --text-maru-meta-sm--line-height: 1;
+  --text-maru-button: clamp(1.25rem, 0.95rem + 0.9vw, 1.5rem);
+  --text-maru-button--line-height: 1;
+  --text-maru-button-sm: clamp(1.05rem, 0.85rem + 0.6vw, 1.25rem);
+  --text-maru-button-sm--line-height: 1;
+  --text-maru-button-secondary: clamp(0.8rem, 0.65rem + 0.45vw, 1rem);
+  --text-maru-button-secondary--line-height: 1;
+  --text-maru-search-placeholder: clamp(0.95rem, 0.75rem + 0.55vw, 1.15rem);
+  --text-maru-search-placeholder--line-height: 1;
+  --text-maru-title: clamp(0.85rem, 0.7rem + 0.55vw, 1.05rem);
+  --text-maru-title--line-height: 1.1;
+  --text-maru-title-sm: clamp(0.8rem, 0.65rem + 0.5vw, 1rem);
+  --text-maru-title-sm--line-height: 0.9;
+  --text-maru-empty-title: clamp(1.1rem, 5.5cqw, 1.75rem);
+  --text-maru-empty-title--line-height: 1.15;
+  --text-maru-empty-body: clamp(1.05rem, 4cqw, 1.35rem);
+  --text-maru-empty-body--line-height: 1.25;
+  --text-maru-display: clamp(2.5rem, 1rem + 5vw, 4.5rem);
+  --text-maru-display--line-height: 0.85;
+
+  --tracking-maru-tight: -0.02em;
+  --tracking-maru-ui: 0.01em;
+  --tracking-maru-wide: 0.04em;
+
+  /* Breakpoints — overrides Tailwind defaults to match gt-maru.com */
+  --breakpoint-sm: 600px;
+  --breakpoint-lg: 1100px;
+
+  /* Neutrals */
+  --color-maru-white: #ffffff;
+  --color-maru-black: #000000;
+  --color-maru-gray: #666660;
+  --color-maru-gray-light: #cbccbe;
+  --color-maru-brown: #ac4300;
+
+  /* Red */
+  --color-maru-red: #ff0000;
+  --color-maru-red-light: #ff8080;
+  --color-maru-red-lighter: #ffcccc;
+
+  /* Orange */
+  --color-maru-orange: #ff9400;
+
+  /* Yellow */
+  --color-maru-yellow: #ffc800;
+  --color-maru-yellow-light: #ffff55;
+
+  /* Green */
+  --color-maru-green: #007403;
+  --color-maru-green-light: #00bf3a;
+  --color-maru-green-lighter: #55ff55;
+
+  /* Turquoise */
+  --color-maru-turquoise: #007f5b;
+  --color-maru-turquoise-light: #05cf9c;
+  --color-maru-turquoise-lighter: #00f4b4;
+
+  /* Blue */
+  --color-maru-blue: #0068ff;
+  --color-maru-blue-light: #83bbff;
+  --color-maru-blue-lighter: #b3d9ff;
+
+  /* Magenta */
+  --color-maru-magenta: #ec00ff;
+  --color-maru-magenta-light: #fa97ff;
+  --color-maru-magenta-lighter: #f9ccff;
+
+  /* Shape */
+  --radius-maru: 10px;
+
+  /* Spacing — viewport-relative scale from gt-maru.com */
+  --spacing-maru-xs: calc(100vmax / 56);
+  --spacing-maru-s: calc(100vmax / 42);
+  --spacing-maru-m: calc(100vmax / 28);
+  --spacing-maru-l: calc(100vmax / 14);
+
+  /* Horizontal page gutters */
+  --spacing-maru-gutter: 15px;
+  --spacing-maru-gutter-sm: 20px;
+  --spacing-maru-gutter-lg: 60px;
+}

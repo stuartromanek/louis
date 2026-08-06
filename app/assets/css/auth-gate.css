@@ -1,0 +1,548 @@
+/* ─── Yoto auth gate (TV boot) ─── */
+
+.yoto-auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  pointer-events: none;
+}
+
+.yoto-auth-gate--animating .yoto-auth-gate__screen {
+  pointer-events: auto;
+  overflow: visible;
+}
+
+.yoto-auth-gate--visible .yoto-auth-gate__screen {
+  overflow: visible;
+}
+
+.yoto-auth-gate--visible {
+  pointer-events: auto;
+}
+
+.yoto-auth-gate__backdrop {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-maru-black) 42%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.4s ease-out;
+}
+
+.yoto-auth-gate--visible .yoto-auth-gate__backdrop {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.yoto-auth-gate__stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 28rem);
+}
+
+.yoto-auth-gate__screen {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 640 / 620;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  transform-origin: center center;
+  animation: yoto-auth-tv-boot 1.1s cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+
+.yoto-auth-gate__frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+
+.yoto-auth-gate__content {
+  position: absolute;
+  /* Screen well inset from public/images/yoto-on.svg (640×620). */
+  top: 12%;
+  right: 13.5%;
+  bottom: 11%;
+  left: 13.5%;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 0;
+  padding: 0.75rem 0.85rem;
+  text-align: center;
+  overflow: hidden;
+}
+
+.yoto-auth-gate__emoji,
+.yoto-auth-gate__heading,
+.yoto-auth-gate__body,
+.yoto-auth-gate__cta {
+  opacity: 0;
+  scale: 0.88;
+  animation: yoto-auth-gate-content-in 0.4s cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+
+.yoto-auth-gate__emoji {
+  animation-delay: 0.98s;
+  object-fit: contain;
+  margin-bottom: 0.5rem;
+}
+
+.yoto-auth-gate__heading {
+  animation-delay: 1.08s;
+  letter-spacing: 0.04em;
+  word-spacing: 0.02em;
+  font-weight: 400;
+}
+
+.yoto-auth-gate__heading .maru-heading__label::before {
+  -webkit-text-stroke-width: 0.55px;
+}
+
+.yoto-auth-gate__body {
+  font-family: var(--font-maru);
+  font-size: var(--text-maru-search-placeholder);
+  line-height: var(--text-maru-body--line-height);
+  letter-spacing: 0.01em;
+  color: var(--color-maru-black);
+  max-width: none;
+  white-space: normal;
+  text-wrap: pretty;
+  margin-top: 0.35rem;
+  margin-bottom: 0.85rem;
+  animation-delay: 1.18s;
+}
+
+.yoto-auth-gate__body--wrap {
+  max-width: 100%;
+  line-height: var(--text-maru-empty-body--line-height);
+}
+
+.yoto-auth-gate__features {
+  width: 100%;
+  margin: 0.15rem 0 0.5rem;
+  padding: 0 0 0 1.1rem;
+  list-style: disc;
+  text-align: left;
+  font-family: var(--font-maru);
+  font-size: var(--text-maru-title);
+  line-height: var(--text-maru-title--line-height);
+  color: var(--color-maru-black);
+  opacity: 0;
+  scale: 0.88;
+  animation: yoto-auth-gate-content-in 0.4s cubic-bezier(0.2, 0, 0, 1) forwards;
+  animation-delay: 1.22s;
+}
+
+.yoto-auth-gate__features li {
+  margin: 0;
+  padding: 0;
+}
+
+.yoto-auth-gate--welcome .yoto-auth-gate__content {
+  gap: 0.25rem;
+  padding: 0.55rem 0.7rem;
+  justify-content: center;
+  padding-top: 0.55rem;
+}
+
+.yoto-auth-gate--welcome .yoto-auth-gate__heading {
+  margin-bottom: 0.5rem;
+}
+
+.yoto-auth-gate--welcome .yoto-auth-gate__body {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.yoto-auth-gate--welcome .yoto-auth-gate__cta {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.yoto-auth-gate__cta {
+  position: relative;
+  z-index: 1;
+  animation-delay: 1.28s;
+  box-shadow: 3px 3px 0 var(--color-maru-black);
+  transition:
+    scale 0.25s cubic-bezier(0.34, 1.45, 0.64, 1),
+    translate 0.25s cubic-bezier(0.34, 1.45, 0.64, 1),
+    box-shadow 0.25s ease-out,
+    background-color 0.2s ease-out,
+    color 0.2s ease-out;
+}
+
+/* Invisible slop: keeps hover stable when the button lifts and rainbow shadow extends. */
+.yoto-auth-gate__cta::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: -12px;
+  right: -36px;
+  bottom: -36px;
+}
+
+.yoto-auth-gate__cta:hover {
+  scale: 1.05;
+  translate: -4px -5px;
+  background: var(--color-maru-blue-light);
+  color: var(--color-maru-black);
+  box-shadow:
+    4px 4px 0 var(--color-maru-black),
+    12px 12px 0 var(--color-maru-magenta-light),
+    20px 20px 0 var(--color-maru-orange),
+    28px 28px 0 var(--color-maru-yellow),
+    36px 36px 0 var(--color-maru-green-light),
+    44px 44px 0 var(--color-maru-turquoise-light),
+    52px 52px 0 var(--color-maru-blue),
+    60px 60px 0 var(--color-maru-black);
+}
+
+.yoto-auth-gate__cta:active {
+  scale: 0.96;
+  translate: 1px 2px;
+  box-shadow: 2px 2px 0 var(--color-maru-black);
+  transition-duration: 0.1s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yoto-auth-gate__cta {
+    transition: background-color 0.2s ease-out, color 0.2s ease-out, box-shadow 0.2s ease-out;
+  }
+
+  .yoto-auth-gate__cta:hover {
+    scale: 1;
+    translate: 0 0;
+    box-shadow: 6px 6px 0 var(--color-maru-black);
+  }
+}
+
+@keyframes yoto-auth-tv-boot {
+  0%,
+  7% {
+    scale: 0.07 0.07;
+    opacity: 0.85;
+  }
+
+  39% {
+    scale: 0.007 0.82;
+    opacity: 1;
+  }
+
+  47% {
+    scale: 0.007 1;
+  }
+
+  100% {
+    scale: 1 1;
+  }
+}
+
+@keyframes yoto-auth-gate-content-in {
+  from {
+    opacity: 0;
+    scale: 0.88;
+  }
+
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@media (min-width: 600px) {
+  .yoto-auth-gate__stage {
+    width: min(100%, 32rem);
+  }
+
+  .yoto-auth-gate__heading {
+    letter-spacing: 0.06em;
+    word-spacing: 0.03em;
+  }
+
+  .yoto-auth-gate__heading .maru-heading__label::before {
+    -webkit-text-stroke-width: 0.7px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yoto-auth-gate__screen {
+    animation: none;
+    scale: 1 1;
+  }
+
+  .yoto-auth-gate__emoji,
+  .yoto-auth-gate__heading,
+  .yoto-auth-gate__body,
+  .yoto-auth-gate__features,
+  .yoto-auth-gate__cta {
+    animation: yoto-auth-gate-content-in-reduced 0.35s ease-out forwards;
+    animation-delay: 0s;
+  }
+
+  .yoto-auth-gate__heading {
+    animation-delay: 0.05s;
+  }
+
+  .yoto-auth-gate__body {
+    animation-delay: 0.1s;
+  }
+
+  .yoto-auth-gate__features {
+    animation-delay: 0.12s;
+  }
+
+  .yoto-auth-gate__cta {
+    animation-delay: 0.15s;
+  }
+}
+
+.yoto-auth-gate--reduced .yoto-auth-gate__screen {
+  animation: none;
+  scale: 1 1;
+}
+
+.yoto-auth-gate--reduced .yoto-auth-gate__emoji,
+.yoto-auth-gate--reduced .yoto-auth-gate__heading,
+.yoto-auth-gate--reduced .yoto-auth-gate__body,
+.yoto-auth-gate--reduced .yoto-auth-gate__features,
+.yoto-auth-gate--reduced .yoto-auth-gate__cta {
+  animation: yoto-auth-gate-content-in-reduced 0.35s ease-out forwards;
+  animation-delay: 0s;
+}
+
+.yoto-auth-gate--reduced .yoto-auth-gate__heading {
+  animation-delay: 0.05s;
+}
+
+.yoto-auth-gate--reduced .yoto-auth-gate__body {
+  animation-delay: 0.1s;
+}
+
+.yoto-auth-gate--reduced .yoto-auth-gate__features {
+  animation-delay: 0.12s;
+}
+
+.yoto-auth-gate--reduced .yoto-auth-gate__cta {
+  animation-delay: 0.15s;
+}
+
+@keyframes yoto-auth-gate-content-in-reduced {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+/* ─── Phone auth gate (mobile tray + Louis in Yoto frame) ─── */
+
+.mobile-tray__body:has(.yoto-auth-gate-phone__player) {
+  /* Size queries so the decorative player can track tray width *and* height. */
+  container-type: size;
+  container-name: auth-phone-tray;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  gap: 0.85rem;
+  padding: 0.85rem 1.25rem 1.5rem;
+  box-sizing: border-box;
+}
+
+.yoto-auth-gate-phone__player {
+  /* Superfluous art: prefer ~half the viewport width (reads well at
+     common phone widths), but yield to tray height so short viewports
+     shrink the graphic before copy/CTA. Near-square aspect ≈ height cap. */
+  --auth-phone-player-max: 14.5rem;
+  position: relative;
+  width: min(50vw, 30cqh, var(--auth-phone-player-max));
+  max-width: 100%;
+  aspect-ratio: 640 / 620;
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+}
+
+.yoto-auth-gate-phone__frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+
+.yoto-auth-gate-phone__screen {
+  position: absolute;
+  /* Match desktop well inset from public/images/yoto-on.svg (640×620). */
+  top: 12%;
+  right: 13.5%;
+  bottom: 11%;
+  left: 13.5%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.yoto-auth-gate-phone__louis {
+  display: block;
+  width: 72%;
+  height: auto;
+  max-height: 78%;
+  object-fit: contain;
+  margin: 0;
+}
+
+.yoto-auth-gate-phone__copy {
+  container-type: inline-size;
+  container-name: auth-phone-copy;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 22rem;
+}
+
+.yoto-auth-gate-phone__heading-wrap {
+  width: 100%;
+  text-align: center;
+  margin: 0;
+}
+
+.yoto-auth-gate-phone__heading {
+  margin: 0;
+  /* lg reads well ~360px wide; cqi eases down on narrower trays. */
+  font-size: clamp(1.05rem, 7.2cqi, 1.35rem);
+  text-transform: none;
+}
+
+.yoto-auth-gate-phone__heading .maru-heading__label::before {
+  text-transform: none;
+}
+
+.mobile-tray .yoto-auth-gate-phone__heading {
+  opacity: 1;
+  scale: 1;
+  animation: none;
+}
+
+.yoto-auth-gate-phone__body {
+  width: 100%;
+  max-width: 22rem;
+  text-align: center;
+  margin: 0;
+  font-size: clamp(0.9rem, 6.1cqi, var(--text-maru-body));
+  line-height: var(--text-maru-empty-body--line-height);
+  letter-spacing: var(--tracking-maru-ui);
+  opacity: 1;
+  scale: 1;
+  animation: none;
+}
+
+.yoto-auth-gate-phone__cta {
+  display: flex;
+  width: 100%;
+  max-width: 22rem;
+  margin: 0;
+  animation: none;
+  justify-content: center;
+}
+
+/* Press feedback only after the tray has finished layering in —
+   avoid clobbering stagger opacity / blur / transform transitions. */
+.mobile-tray--open .yoto-auth-gate-phone__cta {
+  transition:
+    scale 0.12s ease-out,
+    translate 0.12s ease-out,
+    box-shadow 0.12s ease-out;
+}
+
+.mobile-tray--open .yoto-auth-gate-phone__cta:active,
+.mobile-tray--open .maru-button.yoto-auth-gate-phone__cta:active {
+  scale: 0.96;
+  translate: 1px 2px;
+  transition: none;
+}
+
+.yoto-auth-gate-phone__features {
+  width: 100%;
+  max-width: 22rem;
+  margin: 0;
+  padding: 0 0 0 1.15rem;
+  text-align: left;
+  /* Phone welcome one-off: tighter than modal body */
+  font-size: var(--text-maru-meta);
+  line-height: var(--text-maru-meta--line-height);
+  opacity: 1;
+  scale: 1;
+  animation: none;
+}
+
+.yoto-auth-gate-phone__features li {
+  margin: 0;
+  padding: 0;
+}
+
+.yoto-auth-gate-phone__features li + li {
+  margin-top: 0.5rem;
+}
+
+.mobile-tray__body:has(.yoto-auth-gate-phone__features) {
+  justify-content: center;
+  gap: 1.25rem;
+  padding-top: 0.85rem;
+  padding-bottom: 1.5rem;
+  /* Denser welcome copy — keep a slightly smaller art ceiling. */
+  --auth-phone-player-max: 11.5rem;
+}
+
+.mobile-tray__body:has(.yoto-auth-gate-phone__features) .yoto-auth-gate-phone__copy {
+  gap: 0.9rem;
+}
+
+/* Candy stripe — taller phone local variant + YouTube salmon fill */
+.yoto-auth-gate-phone__cta--candy {
+  min-height: 4.25rem;
+  padding-block: 1.15rem;
+  padding-inline: 1.75rem;
+  font-size: calc(var(--text-maru-button) * 1.12);
+  line-height: 1;
+  font-weight: 500;
+  background: var(--color-maru-red-lighter);
+  color: var(--color-maru-black);
+  box-shadow:
+    4px 4px 0 var(--color-maru-magenta-light),
+    8px 8px 0 var(--color-maru-black);
+}
+
+.yoto-auth-gate-phone__cta--candy:active {
+  box-shadow:
+    1px 1px 0 var(--color-maru-magenta-light),
+    3px 3px 0 var(--color-maru-black);
+}

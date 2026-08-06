@@ -1,0 +1,707 @@
+/* ─── Preferences projector modal ─── */
+
+.prefs-projector {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0 1rem;
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.prefs-projector__backdrop {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-maru-black) 55%, transparent);
+  opacity: 0;
+  transition: opacity 0.45s ease-out;
+}
+
+.prefs-projector--entering .prefs-projector__backdrop,
+.prefs-projector--open .prefs-projector__backdrop {
+  opacity: 1;
+}
+
+.prefs-projector--exiting .prefs-projector__backdrop {
+  opacity: 0;
+  transition-duration: 0.28s;
+}
+
+.prefs-projector__stage {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 36rem);
+  margin-top: 0;
+  pointer-events: none;
+}
+
+.prefs-projector__screen {
+  position: relative;
+  width: 100%;
+  margin-inline: auto;
+  border: 3px solid var(--color-maru-black);
+  border-radius: 0 0 var(--radius-maru) var(--radius-maru);
+  border-top: none;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-maru-yellow-light) 35%, var(--color-maru-white)) 0%,
+      var(--color-maru-white) 40%
+    );
+  box-shadow: 6px 6px 0 var(--color-maru-black);
+  transform: translateY(-105%);
+  transform-origin: top center;
+  pointer-events: auto;
+}
+
+.prefs-projector__screen::before {
+  content: '';
+  position: absolute;
+  top: -14px;
+  left: -3px;
+  right: -3px;
+  height: 14px;
+  background: var(--color-maru-black);
+  border-radius: 0;
+  /* Sits under the viewport top; clipped by .prefs-projector overflow */
+}
+
+.prefs-projector__screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-maru-black) 5%, transparent) 0,
+    color-mix(in srgb, var(--color-maru-black) 5%, transparent) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  opacity: 0.25;
+  mix-blend-mode: multiply;
+}
+
+.prefs-projector--entering .prefs-projector__screen {
+  animation: prefs-screen-drop 0.6s cubic-bezier(0.33, 0.1, 0.25, 1) 0.1s both;
+}
+
+.prefs-projector--open .prefs-projector__screen {
+  transform: translateY(0);
+}
+
+.prefs-projector--exiting .prefs-projector__screen {
+  /* Keep seated until raise animation owns transform — avoids snap to -105% */
+  transform: translateY(0);
+  animation: prefs-screen-raise 0.28s cubic-bezier(0.55, 0.05, 0.9, 0.35) forwards;
+}
+
+.prefs-projector__projected {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.375rem;
+  padding: 2.25rem 1.25rem 2.25rem;
+  opacity: 0;
+  filter: brightness(2.2) contrast(1.4);
+}
+
+.prefs-projector--entering .prefs-projector__projected {
+  animation: prefs-projector-flicker 0.6s steps(2, end) 0.65s both;
+}
+
+.prefs-projector--open .prefs-projector__projected,
+.prefs-projector__projected--live {
+  opacity: 1;
+  filter: none;
+}
+
+.prefs-projector--exiting .prefs-projector__projected {
+  opacity: 1;
+  filter: none;
+  /* Slight fade as shade rises so cut isn't a hard flash */
+  animation: prefs-projected-exit 0.2s ease-in forwards;
+}
+
+.prefs-projector__title {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.08em;
+  /* Intentional one-off — not a shared type role */
+  font-size: clamp(1.35rem, 1rem + 1.2vw, 1.85rem);
+  line-height: 0.85;
+  letter-spacing: 0.04em;
+  color: var(--color-maru-black);
+}
+
+.prefs-projector__title-char {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+  display: inline-block;
+  line-height: 0.85;
+  text-transform: uppercase;
+}
+
+.prefs-projector__title-char::before {
+  content: attr(data-outline-duplicate-text) / "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  color: transparent;
+  -webkit-text-stroke: 6px var(--color-maru-black);
+  text-transform: uppercase;
+  line-height: inherit;
+  letter-spacing: inherit;
+  pointer-events: none;
+}
+
+.prefs-projector__title-char:nth-child(6n + 1) {
+  color: var(--color-maru-yellow);
+  rotate: -3deg;
+}
+
+.prefs-projector__title-char:nth-child(6n + 2) {
+  color: var(--color-maru-magenta-light);
+  rotate: 2.5deg;
+}
+
+.prefs-projector__title-char:nth-child(6n + 3) {
+  color: var(--color-maru-blue-light);
+  rotate: -1.5deg;
+}
+
+.prefs-projector__title-char:nth-child(6n + 4) {
+  color: var(--color-maru-green-light);
+  rotate: 3deg;
+}
+
+.prefs-projector__title-char:nth-child(6n + 5) {
+  color: var(--color-maru-orange);
+  rotate: -2deg;
+}
+
+.prefs-projector__title-char:nth-child(6n + 6) {
+  color: var(--color-maru-turquoise-light);
+  rotate: 1.5deg;
+}
+
+@media (min-width: 600px) {
+  .prefs-projector__title-char::before {
+    -webkit-text-stroke-width: 7px;
+  }
+}
+
+.prefs-projector__field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  width: 100%;
+}
+
+.prefs-projector__field--row {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.65rem;
+  cursor: pointer;
+}
+
+.prefs-projector__field--switch {
+  justify-content: space-between;
+  width: 100%;
+  cursor: default;
+}
+
+.prefs-projector__label {
+  font-family: var(--font-maru);
+  font-size: var(--text-maru-label);
+  line-height: var(--text-maru-label--line-height);
+  letter-spacing: 0.01em;
+  font-weight: 500;
+  color: var(--color-maru-black);
+}
+
+@media (max-width: 599px) {
+  .prefs-projector__label {
+    font-size: var(--text-maru-body);
+    line-height: var(--text-maru-body--line-height);
+  }
+}
+
+/* Chunky Maru switch */
+.maru-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 5.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 3px solid var(--color-maru-black);
+  border-radius: var(--radius-maru);
+  background: var(--color-maru-gray-light);
+  box-shadow: 4px 4px 0 var(--color-maru-black);
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    background-color 0.2s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.15s ease-out,
+    scale 0.15s ease-out;
+}
+
+.maru-switch--on {
+  background: var(--color-maru-green-light);
+}
+
+.maru-switch--off {
+  background: var(--color-maru-gray-light);
+}
+
+.maru-switch:hover:not(:disabled) {
+  box-shadow: 5px 5px 0 var(--color-maru-black);
+  translate: -1px -1px;
+}
+
+.maru-switch:active:not(:disabled) {
+  scale: 0.97;
+  box-shadow: 2px 2px 0 var(--color-maru-black);
+  translate: 1px 1px;
+}
+
+.maru-switch:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.maru-switch__track {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.55rem 0 0.65rem;
+  pointer-events: none;
+}
+
+.maru-switch__label {
+  font-family: var(--font-maru);
+  font-size: var(--text-maru-meta);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-maru-black);
+  /* Optical: ink sits high in the em box */
+  translate: 0 0.12em;
+  transition: opacity 0.18s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.maru-switch--on .maru-switch__label--on,
+.maru-switch--off .maru-switch__label--off {
+  opacity: 1;
+}
+
+.maru-switch--on .maru-switch__label--off,
+.maru-switch--off .maru-switch__label--on {
+  /* Fully hide — Saeada metrics let a 0.28 ghost peek past the thumb */
+  opacity: 0;
+}
+
+.maru-switch__thumb {
+  position: absolute;
+  top: 0.2rem;
+  left: 0.2rem;
+  z-index: 1;
+  width: 1.7rem;
+  height: 1.7rem;
+  border: 3px solid var(--color-maru-black);
+  border-radius: calc(var(--radius-maru) - 2px);
+  background: var(--color-maru-white);
+  box-shadow:
+    2px 2px 0 var(--color-maru-black),
+    inset 0 -2px 0 color-mix(in srgb, var(--color-maru-black) 12%, transparent);
+  transition: translate 0.22s cubic-bezier(0.34, 1.4, 0.64, 1);
+  pointer-events: none;
+}
+
+.maru-switch--on .maru-switch__thumb {
+  translate: 2.7rem 0;
+  background: var(--color-maru-yellow);
+}
+
+.maru-switch--off .maru-switch__thumb {
+  translate: 0 0;
+  background: var(--color-maru-white);
+}
+
+.prefs-projector__checkbox {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--color-maru-blue);
+  cursor: pointer;
+}
+
+.maru-checkbox {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.maru-checkbox__input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.maru-checkbox__input:disabled {
+  cursor: default;
+}
+
+.maru-checkbox__box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 3px solid var(--color-maru-black);
+  border-radius: calc(var(--radius-maru) - 1px);
+  background: var(--color-maru-white);
+  box-shadow: 3px 3px 0 var(--color-maru-black);
+  transition:
+    background-color 0.18s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.15s ease-out,
+    translate 0.15s ease-out,
+    scale 0.15s ease-out;
+}
+
+.maru-checkbox__mark {
+  width: 0.55rem;
+  height: 0.95rem;
+  margin-top: -0.15rem;
+  border-right: 3px solid var(--color-maru-black);
+  border-bottom: 3px solid var(--color-maru-black);
+  opacity: 0;
+  scale: 0.25;
+  rotate: 40deg;
+  filter: blur(4px);
+  transition:
+    opacity 0.2s cubic-bezier(0.2, 0, 0, 1),
+    scale 0.2s cubic-bezier(0.2, 0, 0, 1),
+    filter 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.maru-checkbox__input:checked + .maru-checkbox__box {
+  background: var(--color-maru-yellow);
+}
+
+.maru-checkbox__input:checked + .maru-checkbox__box .maru-checkbox__mark {
+  opacity: 1;
+  scale: 1;
+  filter: blur(0);
+}
+
+.maru-checkbox__input:hover:not(:disabled) + .maru-checkbox__box {
+  box-shadow: 4px 4px 0 var(--color-maru-black);
+  translate: -1px -1px;
+}
+
+.maru-checkbox__input:active:not(:disabled) + .maru-checkbox__box {
+  scale: 0.94;
+  box-shadow: 1px 1px 0 var(--color-maru-black);
+  translate: 1px 1px;
+}
+
+.maru-checkbox__input:focus-visible + .maru-checkbox__box {
+  outline: 3px solid var(--color-maru-blue);
+  outline-offset: 2px;
+}
+
+.maru-checkbox__input:disabled + .maru-checkbox__box {
+  opacity: 0.7;
+}
+
+.maru-legal-pad {
+  position: relative;
+  width: 100%;
+  border: 3px solid var(--color-maru-black);
+  border-radius: var(--radius-maru);
+  background: var(--color-maru-yellow-light);
+  box-shadow: 4px 4px 0 var(--color-maru-black);
+  overflow: hidden;
+}
+
+.maru-legal-pad__head {
+  height: 0.85rem;
+  border-bottom: 3px solid var(--color-maru-black);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      var(--color-maru-black) 0 0.35rem,
+      transparent 0.35rem 0.85rem
+    ),
+    var(--color-maru-yellow);
+  background-size: 0.85rem 100%, auto;
+  background-position: 0.55rem center, 0 0;
+  background-repeat: repeat-x, no-repeat;
+}
+
+.maru-legal-pad__sheet {
+  display: block;
+  width: 100%;
+  min-height: 8.5rem;
+  margin: 0;
+  padding: 0.15rem 0.85rem 0.75rem 1.85rem;
+  border: none;
+  border-radius: 0;
+  outline: none;
+  resize: vertical;
+  background-color: var(--color-maru-yellow-light);
+  background-image:
+    linear-gradient(
+      to right,
+      transparent 1.35rem,
+      var(--color-maru-red-light) 1.35rem,
+      var(--color-maru-red-light) calc(1.35rem + 3px),
+      transparent calc(1.35rem + 3px)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(1.7rem - 1px),
+      color-mix(in srgb, var(--color-maru-blue) 35%, transparent) calc(1.7rem - 1px),
+      color-mix(in srgb, var(--color-maru-blue) 35%, transparent) 1.7rem
+    );
+  background-attachment: local;
+  font-size: var(--text-maru-body);
+  line-height: 1.7rem;
+  color: var(--color-maru-black);
+  caret-color: var(--color-maru-blue);
+}
+
+.maru-legal-pad__sheet::placeholder {
+  color: color-mix(in srgb, var(--color-maru-black) 35%, transparent);
+}
+
+.maru-legal-pad__sheet:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.maru-legal-pad__sheet:focus-visible {
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--color-maru-blue) 45%, transparent);
+}
+
+.prefs-projector__done:disabled,
+.prefs-projector__pull:disabled {
+  cursor: default;
+}
+
+.prefs-projector__hint {
+  margin: 0.65rem 0 0;
+  font-size: var(--text-maru-label);
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  font-weight: 500;
+  color: var(--color-maru-gray);
+}
+
+.prefs-projector__done {
+  align-self: flex-end;
+  padding: 0.35rem 1.1rem !important;
+}
+
+.prefs-projector__meta {
+  margin-top: 1.25rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-maru-black) 18%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.prefs-projector__meta-line {
+  margin: 0;
+  font-size: var(--text-maru-label);
+  line-height: var(--text-maru-label--line-height);
+  letter-spacing: 0.01em;
+  font-weight: 500;
+  color: var(--color-maru-gray);
+  text-wrap: pretty;
+}
+
+.prefs-projector__pull {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 2.5rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  transform: translate(-50%, 100%);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.prefs-projector__string {
+  display: block;
+  width: 2px;
+  height: 1.75rem;
+  background: var(--color-maru-black);
+}
+
+.prefs-projector__ring {
+  display: block;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: -2px;
+  border: 3px solid var(--color-maru-black);
+  border-radius: 999px;
+  background: var(--color-maru-yellow);
+  box-shadow: 2px 2px 0 var(--color-maru-black);
+}
+
+.prefs-projector__burn-in {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0 1rem;
+  pointer-events: none;
+  animation: prefs-burn-in 0.35s ease-out forwards;
+}
+
+.prefs-projector__burn-in-panel {
+  width: min(100%, 36rem);
+  margin-top: 0;
+  padding: 1.5rem 1.25rem;
+  border: 3px solid var(--color-maru-black);
+  border-radius: 0 0 var(--radius-maru) var(--radius-maru);
+  background: color-mix(in srgb, var(--color-maru-white) 70%, transparent);
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--color-maru-black) 35%, transparent);
+  filter: saturate(0.35) brightness(1.15);
+  mix-blend-mode: screen;
+}
+
+.prefs-projector__burn-in-title {
+  margin: 0;
+  font-size: clamp(1.35rem, 1rem + 1.2vw, 1.85rem);
+  line-height: 0.9;
+  text-transform: uppercase;
+  color: var(--color-maru-black);
+}
+
+/* Reduced motion: simple fade */
+.prefs-projector--reduced .prefs-projector__screen {
+  animation: none;
+  transform: translateY(0);
+  opacity: 0;
+}
+
+.prefs-projector--reduced.prefs-projector--entering .prefs-projector__screen,
+.prefs-projector--reduced.prefs-projector--open .prefs-projector__screen {
+  opacity: 1;
+  /* transition: opacity 0.28s ease-out; */
+}
+
+.prefs-projector--reduced.prefs-projector--exiting .prefs-projector__screen {
+  opacity: 0;
+  /* transition: opacity 0.28s ease-out; */
+}
+
+.prefs-projector--reduced .prefs-projector__projected {
+  animation: none;
+  opacity: 1;
+  filter: none;
+}
+
+.prefs-projector--reduced .prefs-projector__burn-in {
+  display: none;
+}
+
+@keyframes prefs-screen-drop {
+  from {
+    transform: translateY(-105%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes prefs-screen-raise {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-105%);
+  }
+}
+
+@keyframes prefs-projected-exit {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes prefs-projector-flicker {
+  0% {
+    opacity: 0;
+    filter: brightness(2.4);
+  }
+
+  25% {
+    opacity: 0.55;
+    filter: brightness(1.6);
+  }
+
+  45% {
+    opacity: 0.15;
+  }
+
+  70% {
+    opacity: 1;
+    filter: brightness(1.1);
+  }
+
+  100% {
+    opacity: 1;
+    filter: none;
+  }
+}
+
+@keyframes prefs-burn-in {
+  0% {
+    opacity: 0.85;
+  }
+
+  55% {
+    opacity: 0.55;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}

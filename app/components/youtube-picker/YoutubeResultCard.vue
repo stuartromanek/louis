@@ -4,6 +4,7 @@ import MaruTooltip from '~/components/ui/MaruTooltip.vue'
 import type { ResultsLayout, YoutubeVideoSummary } from './types'
 import YoutubePickerAudioControls from './YoutubePickerAudioControls.vue'
 import { resultDragId, type ResultDragData } from '../playlist/dnd'
+import { MOBILE_EDITOR_CHROME_KEY } from '~/composables/useMobileEditorChrome'
 import {
   formatDurationSeconds,
   formatYoutubeDurationIso,
@@ -28,6 +29,8 @@ const emit = defineEmits<{
 }>()
 
 const { allowLongTracks } = useUserPreferences()
+const { playEvent } = useUiSound()
+const mobileChrome = inject(MOBILE_EDITOR_CHROME_KEY, null)
 
 const element = ref<HTMLElement | null>(null)
 const handle = ref<HTMLElement | null>(null)
@@ -37,10 +40,8 @@ const overLimit = computed(() => {
   return typeof seconds === 'number' && isOverMyoTrackDuration(seconds)
 })
 
-/** Over-limit until the user enables long tracks for this session. */
 const restricted = computed(() => overLimit.value && !allowLongTracks.value)
 
-/** Unlocked over-hour tracks get a status chip under the thumbnail. */
 const showLongTrackChip = computed(() => overLimit.value && allowLongTracks.value)
 
 const durationLabel = computed(() => {
@@ -74,6 +75,16 @@ function onEnableLongTracks(event: Event) {
   event.stopPropagation()
   emit('enableLongTracks')
 }
+
+function onAdd(event: Event) {
+  event.stopPropagation()
+  if (restricted.value) {
+    playEvent('disabled')
+    return
+  }
+  playEvent('buttonClick')
+  mobileChrome?.openAddDrawer(props.video)
+}
 </script>
 
 <template>
@@ -86,17 +97,17 @@ function onEnableLongTracks(event: Event) {
     :title="restricted ? YOTO_MYO_OVER_TRACK_DURATION_MESSAGE : undefined"
     :aria-disabled="restricted || undefined"
   >
-    <div class="yt-result-card__main flex items-start gap-3 p-2 pr-3">
-      <div class="yt-result-card__thumb relative shrink-0 flex flex-col items-stretch gap-1.5">
+    <div class="yt-result-card__main yt-result-card__main--list">
+      <div class="yt-result-card__thumb">
         <button
           type="button"
-          class="relative block overflow-hidden rounded-[calc(var(--radius-maru)-2px)]"
+          class="yt-result-card__thumb-btn"
           @click="emit('select', video.id)"
         >
           <img
             :src="video.thumbnailUrl"
             :alt="video.title"
-            class="yt-result-card__thumb-img w-28 sm:w-36 aspect-video object-cover"
+            class="yt-result-card__thumb-img"
             loading="lazy"
           >
           <span
@@ -108,7 +119,7 @@ function onEnableLongTracks(event: Event) {
           v-if="!restricted"
           ref="handle"
           type="button"
-          class="playlist-handle absolute top-1.5 left-1.5 z-10 bg-maru-yellow"
+          class="playlist-handle yt-result-card__drag-handle"
           aria-label="Drag to playlist"
         >
           <span /><span /><span />
@@ -119,22 +130,32 @@ function onEnableLongTracks(event: Event) {
         >{{ YOTO_MYO_LONG_TRACK_CHIP }}</span>
       </div>
 
-      <div class="yt-result-card__body flex min-w-0 flex-1 flex-col gap-2 py-0.5">
+      <div class="yt-result-card__copy">
         <button
           type="button"
-          class="min-w-0 w-full text-left"
+          class="yt-result-card__copy-btn"
           @click="emit('select', video.id)"
         >
-          <p class="yt-result-card__title font-maru-medium text-3xl sm:text-[2rem] leading-[0.8] line-clamp-2 text-pretty">{{ video.title }}</p>
-          <p class="yt-result-card__meta font-maru-mono font-maru-regular text-[1.75rem] leading-[0.8] text-maru-black/75 mt-0">{{ video.channelTitle }}</p>
+          <p class="yt-result-card__title type-title font-maru-medium line-clamp-2">{{ video.title }}</p>
+          <p class="yt-result-card__meta type-meta text-maru-black/75">{{ video.channelTitle }}</p>
         </button>
+      </div>
 
-        <div
-          v-if="!restricted"
-          class="w-full min-w-0"
-        >
+      <div
+        v-if="!restricted"
+        class="yt-result-card__actions"
+      >
+        <div class="yt-result-card__audio">
           <YoutubePickerAudioControls :video-id="video.id" />
         </div>
+        <button
+          type="button"
+          class="yt-result-card__add"
+          aria-label="Add to a card"
+          @click="onAdd"
+        >
+          Add to…
+        </button>
       </div>
     </div>
 
@@ -143,7 +164,16 @@ function onEnableLongTracks(event: Event) {
       class="yt-result-card__footer"
     >
       <p class="yt-result-card__footer-label font-maru-mono text-maru-black">
-        <span>{{ YOTO_MYO_OVER_TRACK_DURATION_FOOTER }}</span>
+        <span class="yt-result-card__footer-text">{{ YOTO_MYO_OVER_TRACK_DURATION_FOOTER }}</span>
+      </p>
+      <div class="yt-result-card__footer-actions">
+        <button
+          type="button"
+          class="yt-result-card__enable font-maru-mono text-maru-black"
+          @click="onEnableLongTracks"
+        >
+          Enable long tracks
+        </button>
         <MaruTooltip
           :text="YOTO_MYO_OVER_TRACK_DURATION_TOOLTIP"
           placement="top"
@@ -157,14 +187,7 @@ function onEnableLongTracks(event: Event) {
             ?
           </button>
         </MaruTooltip>
-      </p>
-      <button
-        type="button"
-        class="yt-result-card__enable font-maru-mono text-maru-black"
-        @click="onEnableLongTracks"
-      >
-        Enable long tracks
-      </button>
+      </div>
     </div>
   </div>
 
@@ -215,8 +238,8 @@ function onEnableLongTracks(event: Event) {
           class="w-full text-left"
           @click="emit('select', video.id)"
         >
-          <p class="yt-result-card__title font-maru-medium text-3xl sm:text-[2rem] leading-[0.8] line-clamp-2 text-pretty">{{ video.title }}</p>
-          <p class="yt-result-card__meta font-maru-mono font-maru-regular text-[1.75rem] leading-[0.8] text-maru-black/75 mt-0">{{ video.channelTitle }}</p>
+          <p class="yt-result-card__title type-title font-maru-medium line-clamp-2">{{ video.title }}</p>
+          <p class="yt-result-card__meta type-meta text-maru-black/75 mt-1.5">{{ video.channelTitle }}</p>
         </button>
         <div
           v-if="!restricted"
@@ -232,7 +255,16 @@ function onEnableLongTracks(event: Event) {
       class="yt-result-card__footer"
     >
       <p class="yt-result-card__footer-label font-maru-mono text-maru-black">
-        <span>{{ YOTO_MYO_OVER_TRACK_DURATION_FOOTER }}</span>
+        <span class="yt-result-card__footer-text">{{ YOTO_MYO_OVER_TRACK_DURATION_FOOTER }}</span>
+      </p>
+      <div class="yt-result-card__footer-actions">
+        <button
+          type="button"
+          class="yt-result-card__enable font-maru-mono text-maru-black"
+          @click="onEnableLongTracks"
+        >
+          Enable long tracks
+        </button>
         <MaruTooltip
           :text="YOTO_MYO_OVER_TRACK_DURATION_TOOLTIP"
           placement="top"
@@ -246,14 +278,7 @@ function onEnableLongTracks(event: Event) {
             ?
           </button>
         </MaruTooltip>
-      </p>
-      <button
-        type="button"
-        class="yt-result-card__enable font-maru-mono text-maru-black"
-        @click="onEnableLongTracks"
-      >
-        Enable long tracks
-      </button>
+      </div>
     </div>
   </div>
 </template>

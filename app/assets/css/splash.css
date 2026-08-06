@@ -1,0 +1,79 @@
+/* ─── App splash (Lottie intro) ─── */
+
+.app-splash-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 115;
+  background: #fff5f0;
+  pointer-events: none;
+}
+
+.app-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff5f0;
+  opacity: 1;
+  transition: opacity 200ms ease-out;
+}
+
+.app-splash--debug {
+  cursor: pointer;
+}
+
+.app-splash--leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.app-splash__stage {
+  width: min(80vmin, 512px);
+  height: min(80vmin, 512px);
+  pointer-events: none;
+}
+
+.app-splash__stage svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.app-splash__debug {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  margin: 0;
+  color: color-mix(in srgb, var(--color-maru-black) 55%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--text-maru-caption);
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+
+.app-splash__debug-toggle {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-maru-black);
+  font: inherit;
+  letter-spacing: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+.app-splash__debug-toggle:hover {
+  color: var(--color-maru-black);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-splash {
+    transition: none;
+  }
+}

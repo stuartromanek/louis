@@ -1,0 +1,25 @@
+/* ─── Typography (LT Saeada subset: Regular / Medium / Bold) ─── */
+
+@font-face {
+  font-family: "Saeada";
+  src: url("/fonts/saeada/LTSaeada-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Saeada";
+  src: url("/fonts/saeada/LTSaeada-Medium.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Saeada";
+  src: url("/fonts/saeada/LTSaeada-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}

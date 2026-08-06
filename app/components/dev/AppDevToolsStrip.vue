@@ -97,14 +97,8 @@ function onRefreshCards() {
 
 <style scoped>
 .dev-tools-strip__text {
-  font-size: 1.25rem;
-  line-height: 1.2;
+  font-size: var(--text-maru-meta);
+  line-height: var(--text-maru-meta--line-height);
   letter-spacing: 0.01em;
-}
-
-@media (min-width: 600px) {
-  .dev-tools-strip__text {
-    font-size: 1.45rem;
-  }
 }
 </style>

@@ -1,5 +1,9 @@
+<script setup lang="ts">
+useAppViewportHeight()
+</script>
+
 <template>
-  <div class="min-h-screen flex flex-col">
+  <div class="app-root flex flex-col">
     <NuxtPage />
   </div>
 </template>
