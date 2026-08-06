@@ -8,7 +8,7 @@ Self-hosted **Nuxt** server app. Yoto OAuth token exchange and YouTube audio dow
 
 https://github.com/user-attachments/assets/6083e578-a0ba-4047-8d44-d2c4efad511d
 
-[Self-host](#self-host) · [Native development](#native-development) · [Contributing](CONTRIBUTING.md) · [Releases](docs/RELEASE.md) · [Desktop](docs/DESKTOP.md)
+[Self-host](#self-host) · [Download (desktop)](#download-desktop) · [Native development](#native-development) · [Contributing](CONTRIBUTING.md) · [Releases](docs/RELEASE.md) · [Desktop](docs/DESKTOP.md)
 
 **Personal use only.** You are responsible for complying with [YouTube’s Terms of Service](https://www.youtube.com/t/terms) and applicable law when downloading audio.
 
@@ -16,8 +16,36 @@ https://github.com/user-attachments/assets/6083e578-a0ba-4047-8d44-d2c4efad511d
 
 - Search YouTube and preview audio (server-side via yt-dlp)
 - Browse and select your Yoto MYO cards
-- Drag-and-drop playlist editing (desktop); phone Search / Library flow with Add-to-card
+- Drag-and-drop playlist editing (desktop browser); phone Search / Library flow with Add-to-card
 - Save playlists to Yoto with download / transcode progress
+- Optional **desktop app** (macOS / Windows) — same app, no Docker required
+
+## Download (desktop)
+
+Installers ship as **Assets** on each GitHub Release (same `vX.Y.Z` as Docker):
+
+**[Latest release](https://github.com/stuartromanek/louis/releases/latest)**
+
+| Platform | Asset |
+|----------|--------|
+| macOS Apple Silicon | `Louis-<version>-arm64.dmg` |
+| macOS Intel | `Louis-<version>-x64.dmg` |
+| Windows | `Louis-Setup-<version>.exe` |
+
+After install, open **Preferences → Desktop API keys** and add your Yoto client ID + YouTube Data API key. Register OAuth redirect `http://127.0.0.1:4010/api/yoto/auth/callback` on [yoto.dev](https://yoto.dev/get-started/start-here/). Details: [docs/DESKTOP.md](docs/DESKTOP.md).
+
+Installers are currently **unsigned** (Gatekeeper / SmartScreen may warn). Signing notes: [docs/DESKTOP_SIGNING.md](docs/DESKTOP_SIGNING.md).
+
+## Docker (same version)
+
+Self-host the **same** release via GHCR:
+
+```bash
+docker pull ghcr.io/stuartromanek/louis:latest
+# or pin: ghcr.io/stuartromanek/louis:vX.Y.Z
+```
+
+Compose / env setup below. Cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## Quick start (Docker)
 

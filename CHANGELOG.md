@@ -10,7 +10,10 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 ## [Unreleased]
 
 ### Added
-- Electron desktop spike (`npm run desktop:spike`): spawns Nitro on `127.0.0.1:4010` in a BrowserWindow — maintainer checkout only; see [docs/DESKTOP.md](docs/DESKTOP.md) and ship checklist [docs/DESKTOP_SHIP.md](docs/DESKTOP_SHIP.md).
+- **Desktop app (Electron):** macOS DMG (arm64 + x64) and Windows NSIS installers built on `v*` tags and attached to the same GitHub Release as GHCR — [docs/DESKTOP.md](docs/DESKTOP.md), [docs/RELEASE.md](docs/RELEASE.md), checklist [docs/DESKTOP_SHIP.md](docs/DESKTOP_SHIP.md).
+- Bundled yt-dlp + ffmpeg in the desktop package (`npm run desktop:fetch-binaries`); no Homebrew required for consumers.
+- Desktop Preferences → **Desktop API keys** (Yoto client ID, YouTube API key, optional cookies path) stored under Application Support `config.json` — not baked into the binary. Fixed OAuth redirect `http://127.0.0.1:4010/api/yoto/auth/callback`.
+- Maintainer scripts: `desktop:spike`, `desktop:dir`, `desktop:build:host` / `:mac` / `:win` / `:build`.
 - Phone editor IA below 600px: Search / Library tabs, nested card detail, Add-to-card drawer, Menu tray, toasts, and denser YouTube results (desktop/tablet two-column layout unchanged at `sm+`).
 - Mobile Menu update affordances: Bell + light pink when a save is pending; IndexPointingUp + left-to-right pink progress fill while updating.
 - How-to empty state and How To modal with beat art; Search Clear after submit; phone-friendly over-limit / long-track controls.
@@ -23,6 +26,7 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - Phone chrome polish for narrow viewports (densify ≤360px / ≤310px): tab icons, result art, howto mocks, tray open animation.
 - Expected anon→cookies escalate and retries log at info level (not warn/error).
 - Long API errors use h3 `message` instead of `statusMessage` (avoids future sanitization warnings).
+- Release workflow uploads desktop installers alongside GHCR on each `v*` tag.
 
 ### Removed
 - Public demo documentation and maintainer demo template (`docs/DEMO.md`, `.env.demo.example`, and related README / SECURITY notes).

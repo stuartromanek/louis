@@ -23,6 +23,8 @@ Include:
 - Self-hosters must use HTTPS in production
 - Do not commit `.env`, API keys, refresh tokens, or YouTube `cookies.txt`
 - `NUXT_YTDLP_COOKIES_FILE` (when set on any deploy) is a server secret — never expose path or contents via debug routes or API responses; prefer a throwaway Google account
+- **Desktop installers** do not embed Yoto/YouTube API keys or cookies. Credentials live in user-writable app data (`config.json` under Application Support / equivalent) via Preferences. Optional yt-dlp cookies are a **user-chosen file path**, never shipped inside the DMG/NSIS
+- Treat unsigned desktop builds like any other downloaded binary until release signing is enabled ([docs/DESKTOP_SIGNING.md](docs/DESKTOP_SIGNING.md))
 
 ## Out of scope
 

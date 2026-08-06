@@ -61,7 +61,7 @@ For tag `v1.2.0`, open `…/releases/tag/v1.2.0`:
 
 1. **One version** — `package.json` = Preferences “Louis v…” = Docker tag = installer filenames on the Release page.
 2. **One command** — maintainers only run `npm run release` on `main` (see [RELEASE.md](RELEASE.md)). No desktop-only version ritual.
-3. **One GitHub Release page** — release-it creates it; CI attaches DMG/NSIS as Assets. Workflow needs `contents: write` (today: `contents: read` + Docker only).
+3. **One GitHub Release page** — release-it creates it; CI attaches DMG/NSIS as Assets. Workflow needs `contents: write` + `packages: write` (see [`.github/workflows/release.yml`](../.github/workflows/release.yml)).
 4. **One workflow trigger** — extend existing `on: push: tags: v*`. No second tag scheme.
 5. **Same changelog** — desktop bullets under the same version section that backs Release notes.
 6. **Complementary channels** — Release Assets = desktop; GHCR = self-host.
@@ -193,12 +193,12 @@ For tag `v1.2.0`, open `…/releases/tag/v1.2.0`:
 
 **Do:**
 
-- [ ] README: “Download” → latest Release Assets; “Docker” → GHCR for the same version
-- [ ] CHANGELOG Unreleased (then versioned) desktop feature bullets
-- [ ] Security: no API keys / cookies in binaries; cookies path is user-controlled
-- [ ] Mark Phases 0–5 complete in this checklist
+- [x] README: “Download” → latest Release Assets; “Docker” → GHCR for the same version
+- [x] CHANGELOG Unreleased (then versioned) desktop feature bullets
+- [x] Security: no API keys / cookies in binaries; cookies path is user-controlled
+- [x] Mark Phases 0–5 complete in this checklist
 
-**Acceptance:** Phases 0–5 done on `desktop-electron`; open PR to merge into `main` for the first desktop-bearing release.
+**Acceptance:** Phases 0–5 done on `desktop-electron`; open PR to merge into `main` for the first desktop-bearing release. ✅ Docs ready — next: PR → `main`, then `npm run release`.
 
 **Exit →** Phase 7 (stretch) or stop at first public desktop release
 

@@ -54,9 +54,7 @@ Optional per-result toggle to expand YouTube chapters into separate playlist tra
 
 ### Desktop app wrapper (Electron)
 
-Package Louis as a cross-OS executable so less technical users can run it without Docker/GitHub CLI — consumer-friendly install alongside the one-click hosting work.
-
-**Direction:** Electron shell around the existing Nitro `.output` (spawn Node server → `BrowserWindow`). Deno Desktop was spiked successfully but dropped for dual-runtime risk. See [docs/DESKTOP.md](docs/DESKTOP.md). Ship checklist (merge → Release Assets + GHCR): [docs/DESKTOP_SHIP.md](docs/DESKTOP_SHIP.md).
+~~Package Louis as a cross-OS executable~~ — **ready to merge**: Electron host, bundled yt-dlp/ffmpeg, Preferences credentials, DMG/NSIS on the same `v*` Release as GHCR. See [docs/DESKTOP.md](docs/DESKTOP.md) and [docs/DESKTOP_SHIP.md](docs/DESKTOP_SHIP.md). Stretch (Phase 7): Linux AppImage, auto-update, signed builds.
 
 ### Experiment with yt-dlp search backend
 
