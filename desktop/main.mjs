@@ -37,6 +37,37 @@ function resolveNitroEntry() {
   return path.join(resolveAppRoot(), '.output', 'server', 'index.mjs')
 }
 
+/** Platform folder under resources/bin (e.g. darwin-arm64). */
+function platformBinId() {
+  return `${process.platform}-${process.arch}`
+}
+
+/**
+ * Bundled yt-dlp + ffmpeg dir.
+ * Packaged: resources/bin/<platform>
+ * Dev: desktop/resources/bin/<platform>
+ */
+function resolveBundledBinDir() {
+  const id = platformBinId()
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'bin', id)
+  }
+  return path.join(__dirname, 'resources', 'bin', id)
+}
+
+function resolveBundledTools() {
+  const binDir = resolveBundledBinDir()
+  const ytdlpName = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp'
+  const ffmpegName = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'
+  const ytdlpPath = path.join(binDir, ytdlpName)
+  const ffmpegPath = path.join(binDir, ffmpegName)
+  return {
+    binDir,
+    ytdlpPath: fs.existsSync(ytdlpPath) ? ytdlpPath : null,
+    ffmpegPath: fs.existsSync(ffmpegPath) ? ffmpegPath : null,
+  }
+}
+
 function loadDotEnv() {
   if (app.isPackaged) return
   const envPath = path.join(resolveAppRoot(), '.env')
@@ -91,6 +122,13 @@ function startNitro() {
   const audioWorkDir = path.join(app.getPath('userData'), 'audio')
   fs.mkdirSync(audioWorkDir, { recursive: true })
 
+  const tools = resolveBundledTools()
+  const pathParts = []
+  if (tools.ffmpegPath || tools.ytdlpPath) {
+    pathParts.push(tools.binDir)
+  }
+  if (process.env.PATH) pathParts.push(process.env.PATH)
+
   const env = {
     ...process.env,
     ELECTRON_RUN_AS_NODE: '1',
@@ -98,7 +136,19 @@ function startNitro() {
     HOST,
     PORT: String(PORT),
     NUXT_AUDIO_WORK_DIR: process.env.NUXT_AUDIO_WORK_DIR || audioWorkDir,
+    PATH: pathParts.join(path.delimiter),
   }
+
+  // Prefer bundled yt-dlp when present (overrides shell / Homebrew).
+  if (tools.ytdlpPath) {
+    env.NUXT_YTDLP_PATH = tools.ytdlpPath
+  }
+
+  console.log('[louis-desktop] tools', {
+    binDir: tools.binDir,
+    ytdlp: tools.ytdlpPath,
+    ffmpeg: tools.ffmpegPath,
+  })
 
   // Use Electron binary as Node — no separate Node runtime in the package.
   nitroChild = spawn(process.execPath, [nitroEntry], {
@@ -195,8 +245,8 @@ async function showLoadingThenApp() {
   console.log('[louis-desktop] health ok', {
     packaged: app.isPackaged,
     appRoot: resolveAppRoot(),
-    ytdlp: health?.checks?.ytdlp?.available,
-    ffmpeg: health?.checks?.ffmpeg?.available,
+    ytdlp: health?.checks?.ytdlp,
+    ffmpeg: health?.checks?.ffmpeg,
     userData: app.getPath('userData'),
   })
   await win.loadURL(BASE_URL)

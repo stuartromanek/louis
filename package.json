@@ -14,7 +14,8 @@
     "preview": "nuxt preview",
     "start": "node .output/server/index.mjs",
     "desktop:spike": "electron desktop/main.mjs",
-    "desktop:dir": "npm run build && electron-builder --dir",
+    "desktop:fetch-binaries": "node desktop/scripts/fetch-binaries.mjs",
+    "desktop:dir": "npm run desktop:fetch-binaries && npm run build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir",
     "test": "node --experimental-strip-types --test shared/**/*.test.ts",
     "postinstall": "nuxt prepare",
     "release": "release-it"

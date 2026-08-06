@@ -28,14 +28,14 @@ Electron main
 
 Spike host lives under [`desktop/`](../desktop/) (`main.mjs`, `preload.cjs`, `loading.html`). Scripts: `npm run desktop:spike` (dev), `npm run desktop:dir` (unpackaged electron-builder smoke).
 
-### Defaults (spike + Phase 1 host)
+### Defaults (spike + Phase 1–2 host)
 
 | Setting | Value |
 |---------|--------|
 | Port | **4010** (avoids clash with `npm run dev` on 4000) |
 | Audio dir | `app.getPath('userData')/audio` (userData forced to `…/Louis`) |
 | Secrets | Dev: load repo `.env` into Electron process — **do not** bake into the binary |
-| yt-dlp / ffmpeg | System `PATH` until Phase 2 |
+| yt-dlp / ffmpeg | Bundled under `desktop/resources/bin/<platform>/` (`npm run desktop:fetch-binaries`); spawn sets `NUXT_YTDLP_PATH` and prepends bin dir to `PATH` |
 | Packaged Nitro | `process.resourcesPath/.output` via electron-builder `extraResources` |
 
 ```bash
@@ -67,16 +67,16 @@ Host: [`desktop/main.mjs`](../desktop/main.mjs) + [`desktop/preload.cjs`](../des
 - **Layout:** requires checkout + `npm run build` (`.output/`)
 - **No installers** yet — see [DESKTOP_SHIP.md](DESKTOP_SHIP.md)
 
-## Shipping yt-dlp + ffmpeg (next pass)
+## Shipping yt-dlp + ffmpeg
 
-Consumers will not have Homebrew.
+Consumers do not need Homebrew.
 
-1. CI downloads platform binaries into e.g. `desktop/bin/<os-arch>/`.
-2. Package via Electron `extraResources` → runtime under `process.resourcesPath`.
-3. At launch set `NUXT_YTDLP_PATH` and prepend ffmpeg’s directory to `PATH` (Louis resolves `ffmpeg` via PATH in `server/utils/system-deps.ts`; yt-dlp via `NUXT_YTDLP_PATH` in `server/utils/youtube-download.ts`).
+1. `npm run desktop:fetch-binaries` downloads platform binaries into `desktop/resources/bin/<os-arch>/` (yt-dlp onedir zip + ffmpeg).
+2. electron-builder `extraResources` copies `bin/` → `process.resourcesPath/bin`.
+3. At launch: `NUXT_YTDLP_PATH` + prepend bin dir to `PATH` (`system-deps` / `youtube-download` resolve via env + PATH).
 4. `NUXT_AUDIO_WORK_DIR` stays under Electron `userData`.
 
-Alternatives: download-on-first-run into Application Support; or document system installs (devs only).
+See Phase 2 in [DESKTOP_SHIP.md](DESKTOP_SHIP.md).
 
 ## Historical: Deno Desktop probe (2026-08-06, macOS arm64)
 

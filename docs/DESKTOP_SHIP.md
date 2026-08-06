@@ -114,12 +114,12 @@ For tag `v1.2.0`, open `…/releases/tag/v1.2.0`:
 
 **Do:**
 
-- [ ] CI/script downloads platform binaries into `desktop/resources/bin/<platform>/`
-- [ ] Ship via electron-builder `extraResources`
-- [ ] At spawn: set `NUXT_YTDLP_PATH`; prepend ffmpeg dir to `PATH`
-- [ ] Keep `NUXT_AUDIO_WORK_DIR` under Electron `userData`
+- [x] CI/script downloads platform binaries into `desktop/resources/bin/<platform>/`
+- [x] Ship via electron-builder `extraResources`
+- [x] At spawn: set `NUXT_YTDLP_PATH`; prepend ffmpeg dir to `PATH`
+- [x] Keep `NUXT_AUDIO_WORK_DIR` under Electron `userData`
 
-**Acceptance:** On a machine **without** Homebrew yt-dlp/ffmpeg, `/api/health` reports both available via bundled paths; preview download works.
+**Acceptance:** On a machine **without** Homebrew yt-dlp/ffmpeg, `/api/health` reports both available via bundled paths; preview download works. ✅ (2026-08-06, macOS arm64 — spike + packaged `Louis.app` health under `…/Resources/bin/darwin-arm64/`; preview `jNQXAC9IVRw` → 200 WebM)
 
 **Exit →** Phase 3
 

@@ -41,6 +41,9 @@ desktop/out/
 desktop/dist/
 desktop/icons/*.icns
 desktop/icons/*.ico
+desktop/resources/bin/**
+!desktop/resources/bin/README.md
+!desktop/resources/bin/.gitkeep
 out/
 release/
 

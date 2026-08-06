@@ -20,13 +20,19 @@
     {
       "from": ".output",
       "to": ".output"
+    },
+    {
+      "from": "desktop/resources/bin",
+      "to": "bin",
+      "filter": ["**/*", "!README.md"]
     }
   ],
   "asar": true,
   "mac": {
     "category": "public.app-category.entertainment",
     "target": ["dir"],
-    "icon": "icon.png"
+    "icon": "icon.png",
+    "identity": null
   },
   "win": {
     "target": ["dir"],
