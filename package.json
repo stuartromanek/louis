@@ -12,6 +12,7 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "start": "node .output/server/index.mjs",
+    "desktop:spike": "electron desktop/main.mjs",
     "test": "node --experimental-strip-types --test shared/**/*.test.ts",
     "postinstall": "nuxt prepare",
     "release": "release-it"
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "@release-it/keep-a-changelog": "^7.1.0",
+    "electron": "^37.10.3",
     "release-it": "^20.2.1"
   }
 }

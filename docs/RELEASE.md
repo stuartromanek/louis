@@ -6,6 +6,10 @@ The app version shown in Preferences (`Louis v…`) comes from `package.json` vi
 
 Pushing a tag matching `v*` runs [`.github/workflows/release.yml`](../.github/workflows/release.yml), which publishes a Docker image to GHCR (`:latest` and `:{tag}`).
 
+### Desktop artifacts (target)
+
+Desktop installers (macOS DMG, Windows Setup) will attach as **Assets on the same GitHub Release** created by `npm run release` — same `vX.Y.Z`, no second release command. See the publish story and Phase 5 in [DESKTOP_SHIP.md](DESKTOP_SHIP.md). Until that phase lands, Releases are notes + GHCR only.
+
 ## Day to day
 
 1. Land changes on `main` through PRs as usual.
@@ -59,6 +63,7 @@ Example: splash + welcome modal + auth gate redesign → **minor** (e.g. `0.1.0`
 ## After release
 
 - Confirm the GitHub Action **Release** succeeded and the image `ghcr.io/<org>/louis:vX.Y.Z` (or your repo name) exists
+- When desktop CI is enabled ([DESKTOP_SHIP.md](DESKTOP_SHIP.md) Phase 5): confirm the Release page lists DMG / Setup.exe under **Assets**
 - Deploy that tag on Railway (or your host) when you want a pinned version; `:latest` tracks the newest tagged release
 - Start the next cycle by writing new bullets under `[Unreleased]` again
 
