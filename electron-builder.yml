@@ -31,16 +31,36 @@
   "asar": true,
   "mac": {
     "category": "public.app-category.entertainment",
-    "target": ["dir"],
     "icon": "icon.png",
-    "identity": null
+    "identity": null,
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["arm64", "x64"]
+      }
+    ],
+    "artifactName": "Louis-${version}-${arch}.${ext}"
+  },
+  "dmg": {
+    "artifactName": "Louis-${version}-${arch}.${ext}"
   },
   "win": {
-    "target": ["dir"],
-    "icon": "icon.png"
+    "icon": "icon.png",
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "artifactName": "Louis-Setup-${version}.${ext}"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "artifactName": "Louis-Setup-${version}.${ext}"
   },
   "linux": {
-    "target": ["dir"],
-    "icon": "icon.png"
+    "icon": "icon.png",
+    "target": ["dir"]
   }
 }

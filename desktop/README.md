@@ -10,7 +10,7 @@ Electron host for Louis. Spawns production Nitro on `127.0.0.1:4010`, waits for 
 | `loading.html` | Shown until health succeeds |
 | `icons/` | App icon (`icon.png`) |
 | `resources/bin/<platform>/` | Bundled `yt-dlp` (onedir + `_internal/`) + `ffmpeg` |
-| `scripts/fetch-binaries.mjs` | Downloads those binaries |
+| `scripts/` | `fetch-binaries`, `sync-version`, `build-host` |
 
 ## Dev (repo checkout)
 
@@ -26,19 +26,20 @@ Register this redirect URI on your Yoto developer app:
 
 `http://127.0.0.1:4010/api/yoto/auth/callback`
 
-## Unpackaged build smoke
+## Installers
 
 ```bash
-npm run desktop:dir
+npm run desktop:build:host   # unsigned host-arch DMG → desktop/out/Louis-<ver>-<arch>.dmg
+npm run desktop:build        # full matrix DMGs + Louis-Setup-<ver>.exe (needs Wine/cross tools for win on mac — prefer CI)
+npm run desktop:dir          # unpackaged .app only
 ```
 
-Fetches host-platform binaries, builds Nuxt, then electron-builder `--dir` → `desktop/out/`.
-
-Config: [`electron-builder.yml`](../electron-builder.yml). Ship checklist: [DESKTOP_SHIP.md](../docs/DESKTOP_SHIP.md). Overview: [DESKTOP.md](../docs/DESKTOP.md).
+Signing secrets for CI: [DESKTOP_SIGNING.md](../docs/DESKTOP_SIGNING.md). Ship checklist: [DESKTOP_SHIP.md](../docs/DESKTOP_SHIP.md). Overview: [DESKTOP.md](../docs/DESKTOP.md).
 
 ## Still not shippable (later phases)
 
 | Area | Current behavior |
 |------|------------------|
-| Installers | `--dir` only — no DMG/NSIS yet (Phase 4+) |
+| CI upload | Phase 5 attaches installers to the GitHub Release |
+| Code signing | Unsigned locally; see DESKTOP_SIGNING.md |
 | Port | Fixed `127.0.0.1:4010` |

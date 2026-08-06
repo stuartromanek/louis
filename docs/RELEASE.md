@@ -6,9 +6,16 @@ The app version shown in Preferences (`Louis v…`) comes from `package.json` vi
 
 Pushing a tag matching `v*` runs [`.github/workflows/release.yml`](../.github/workflows/release.yml), which publishes a Docker image to GHCR (`:latest` and `:{tag}`).
 
-### Desktop artifacts (target)
+### Desktop artifacts (Phase 4+)
 
-Desktop installers (macOS DMG, Windows Setup) will attach as **Assets on the same GitHub Release** created by `npm run release` — same `vX.Y.Z`, no second release command. See the publish story and Phase 5 in [DESKTOP_SHIP.md](DESKTOP_SHIP.md). Until that phase lands, Releases are notes + GHCR only.
+Installer filenames (from `electron-builder.yml`):
+
+- `Louis-<version>-arm64.dmg` / `Louis-<version>-x64.dmg`
+- `Louis-Setup-<version>.exe`
+
+Local: `npm run desktop:build:host` or `npm run desktop:build`. Signing: [DESKTOP_SIGNING.md](DESKTOP_SIGNING.md).
+
+Attaching those files as **Assets on the same GitHub Release** as GHCR is Phase 5 in [DESKTOP_SHIP.md](DESKTOP_SHIP.md). Until then, Releases are notes + GHCR only; maintainers can still produce unsigned installers locally.
 
 ## Day to day
 
@@ -63,10 +70,9 @@ Example: splash + welcome modal + auth gate redesign → **minor** (e.g. `0.1.0`
 ## After release
 
 - Confirm the GitHub Action **Release** succeeded and the image `ghcr.io/<org>/louis:vX.Y.Z` (or your repo name) exists
-- When desktop CI is enabled ([DESKTOP_SHIP.md](DESKTOP_SHIP.md) Phase 5): confirm the Release page lists DMG / Setup.exe under **Assets**
+- When desktop CI is enabled ([DESKTOP_SHIP.md](DESKTOP_SHIP.md) Phase 5): confirm the Release page lists `Louis-*-*.dmg` / `Louis-Setup-*.exe` under **Assets** (see [DESKTOP_SIGNING.md](DESKTOP_SIGNING.md))
 - Deploy that tag on Railway (or your host) when you want a pinned version; `:latest` tracks the newest tagged release
 - Start the next cycle by writing new bullets under `[Unreleased]` again
-
 ## Config
 
 See [`.release-it.json`](../.release-it.json). Notable choices:

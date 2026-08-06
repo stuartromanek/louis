@@ -91,6 +91,21 @@ Do **not** bake secrets into the app binary.
 
 First launch without keys opens Preferences (`?desktopSetup=1`). Spike checkouts may still use a repo `.env` when prefs fields are empty.
 
+## Installers (Phase 4)
+
+| Artifact | Name pattern |
+|----------|--------------|
+| macOS DMG | `Louis-<version>-arm64.dmg`, `Louis-<version>-x64.dmg` |
+| Windows NSIS | `Louis-Setup-<version>.exe` |
+
+```bash
+npm run desktop:build:host   # unsigned DMG for this Mac
+npm run desktop:build        # fetch darwin-arm64/x64 + win32-x64 bins, then DMG + NSIS
+npm run desktop:dir          # unpackaged app only (fast smoke)
+```
+
+Output under `desktop/out/`. Signing / notarization for CI: [DESKTOP_SIGNING.md](DESKTOP_SIGNING.md). Uploading to GitHub Release Assets is Phase 5.
+
 ## Historical: Deno Desktop probe (2026-08-06, macOS arm64)
 
 Kept for research continuity — **not** the shipping path.

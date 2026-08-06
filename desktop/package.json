@@ -4,5 +4,6 @@
   "private": true,
   "main": "main.mjs",
   "type": "module",
-  "description": "Louis desktop host (Electron)"
+  "description": "Louis desktop host (Electron)",
+  "author": "Louis contributors"
 }

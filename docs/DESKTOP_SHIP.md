@@ -152,11 +152,13 @@ For tag `v1.2.0`, open `…/releases/tag/v1.2.0`:
 
 **Do:**
 
-- [ ] Targets: macOS DMG (arm64 + x64), Windows NSIS x64
-- [ ] Document code signing / notarization secrets for CI (unsigned `--dir` OK for local smoke)
-- [ ] Filenames include version: `Louis-<version>-*.dmg`, `Louis-Setup-<version>.exe`
+- [x] Targets: macOS DMG (arm64 + x64), Windows NSIS x64
+- [x] Document code signing / notarization secrets for CI (unsigned `--dir` OK for local smoke)
+- [x] Filenames include version: `Louis-<version>-*.dmg`, `Louis-Setup-<version>.exe`
 
-**Acceptance:** Install on clean macOS + Windows VMs; app launches; Phases 2–3 still work.
+**Acceptance:** Install on clean macOS + Windows VMs; app launches; Phases 2–3 still work. ✅ Host unsigned DMG smoke 2026-08-06 (`Louis-1.0.0-arm64.dmg` mounts; `.output` + `bin/darwin-arm64` present). Full clean-VM + Windows NSIS matrix → Phase 5/6 CI.
+
+**Local:** `npm run desktop:build:host` (unsigned host DMG) · `npm run desktop:build` (full matrix, unsigned) · signing notes: [DESKTOP_SIGNING.md](DESKTOP_SIGNING.md)
 
 **Exit →** Phase 5
 
