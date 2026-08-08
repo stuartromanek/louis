@@ -14,7 +14,7 @@ const steps = [
   ['npm', ['run', 'desktop:sync-version']],
   ['npm', ['run', 'desktop:fetch-binaries']],
   ['npm', ['run', 'build']],
-  ['npx', ['electron-builder', '--mac', 'dmg', `--${arch}`]],
+  ['npx', ['electron-builder', '--mac', 'dmg', `--${arch}`, '--publish', 'never']],
 ]
 
 for (const [cmd, args] of steps) {

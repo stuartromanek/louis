@@ -1,5 +1,5 @@
 import tailwindcss from '@tailwindcss/vite'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { LOUIS_ENV_BINDINGS, louisRuntimeConfigDefaults } from './shared/louis-env.mjs'
@@ -15,6 +15,28 @@ const louisEnvAliasPreamble = `(()=>{try{const b=${JSON.stringify(
   LOUIS_ENV_BINDINGS.map(({ louis, nuxt }) => [louis, nuxt]),
 )};for(const[l,n]of b){const v=process.env[l];if(v!=null&&String(v).trim()!=="")process.env[n]=String(v).trim()}}catch(_){}})();\n`
 
+/**
+ * Nitro emits the server bundle under chunks/nitro/ on macOS/Linux, but often
+ * chunks/_/ on Windows (Rollup getChunkName path-separator mismatch).
+ */
+function resolveNitroBundlePath(outputDir: string): string | null {
+  const chunksDir = join(outputDir, 'server/chunks')
+  const preferred = [
+    join(chunksDir, 'nitro/nitro.mjs'),
+    join(chunksDir, '_/nitro.mjs'),
+  ]
+  for (const candidate of preferred) {
+    if (existsSync(candidate)) return candidate
+  }
+  if (!existsSync(chunksDir)) return null
+  for (const entry of readdirSync(chunksDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const candidate = join(chunksDir, entry.name, 'nitro.mjs')
+    if (existsSync(candidate)) return candidate
+  }
+  return null
+}
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
@@ -23,7 +45,11 @@ export default defineNuxtConfig({
     hooks: {
       compiled(nitro) {
         // Must patch the nitro chunk: index.mjs import hoisting would run freeze before a preamble.
-        const nitroPath = join(nitro.options.output.dir, 'server/chunks/nitro/nitro.mjs')
+        const nitroPath = resolveNitroBundlePath(nitro.options.output.dir)
+        if (!nitroPath) {
+          nitro.logger.warn('[louis-env] could not find nitro.mjs to inject LOUIS_* alias')
+          return
+        }
         const source = readFileSync(nitroPath, 'utf8')
         const marker = 'const _sharedRuntimeConfig'
         if (source.includes('/*louis-env-alias*/')) return

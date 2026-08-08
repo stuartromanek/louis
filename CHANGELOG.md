@@ -9,6 +9,9 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [Unreleased]
 
+### Fixed
+- Release desktop jobs: electron-builder no longer tries to publish on tagged CI runs (`--publish never` / `publish: null`); Nitro LOUIS_* alias injection finds `nitro.mjs` on Windows (`chunks/_/` vs `chunks/nitro/`).
+
 ## [1.1.0] - 2026-08-08
 
 ### Added

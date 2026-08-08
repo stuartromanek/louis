@@ -33,6 +33,7 @@
     }
   ],
   "asar": true,
+  "publish": null,
   "mac": {
     "category": "public.app-category.entertainment",
     "icon": "icon.png",
