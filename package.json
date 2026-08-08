@@ -21,7 +21,7 @@
     "desktop:build:mac": "npm run desktop:sync-version && npm run desktop:fetch-binaries -- darwin-arm64 darwin-x64 && npm run build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg",
     "desktop:build:win": "npm run desktop:sync-version && npm run desktop:fetch-binaries -- win32-x64 && npm run build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win nsis",
     "desktop:build:host": "node desktop/scripts/build-host.mjs",
-    "test": "node --experimental-strip-types --test shared/**/*.test.ts",
+    "test": "node --experimental-strip-types --test shared/*.test.ts shared/**/*.test.ts desktop/**/*.test.mjs",
     "postinstall": "nuxt prepare",
     "release": "release-it"
   },
@@ -43,6 +43,7 @@
     "@release-it/keep-a-changelog": "^7.1.0",
     "electron": "^37.10.3",
     "electron-builder": "^26.15.3",
+    "extract-zip": "^2.0.1",
     "release-it": "^20.2.1"
   }
 }

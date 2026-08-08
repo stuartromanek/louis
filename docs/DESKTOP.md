@@ -1,105 +1,105 @@
-# Desktop wrapper
+# Louis desktop app
 
-Louis is a **Nuxt/Nitro server** app (`node .output/server/index.mjs`) that needs **yt-dlp**, **ffmpeg**, a writable audio work dir, and Yoto/YouTube credentials. A static SPA shell cannot replace that.
+Louis for macOS and Windows — the same Make Your Own (MYO) experience as self-hosting, without Docker. The app runs a local server on your machine and opens it in a window. yt-dlp and ffmpeg are included.
 
-**Docker** remains the primary self-host path (GHCR). **Desktop** is the consumer convenience track: same `.output`, installers on the GitHub Release for the same `vX.Y.Z`.
+**Personal use only.** You are responsible for complying with [YouTube’s Terms of Service](https://www.youtube.com/t/terms) and applicable law when downloading audio.
 
-Download: [latest Release Assets](https://github.com/stuartromanek/louis/releases/latest). Docker: `ghcr.io/stuartromanek/louis:vX.Y.Z`. Cut releases: [RELEASE.md](RELEASE.md). Ship checklist: [DESKTOP_SHIP.md](DESKTOP_SHIP.md).
+Prefer containers? Use [Docker / GHCR](../README.md#docker-same-version) for the same release version.
 
-## Decision: Electron long-term
+## Download
 
-| Option | Verdict for Louis |
-|--------|-------------------|
-| **Electron** | **Chosen track** — same Node stack as Nitro; spawn `.output/server/index.mjs`, open `BrowserWindow` |
-| Deno Desktop | Spike **passed** functionally (2026-08-06) but rejected long-term: dual runtime (Deno Node-compat over Nitro), experimental CLI, permission/`--no-check` friction |
-| Tauri 2 | Distant third — Nuxt docs push SSG; would still need a Node sidecar for Louis |
+Installers are attached to each GitHub Release (same `vX.Y.Z` as the Docker image):
 
-### Why not Deno despite a green spike
+**[Latest release](https://github.com/stuartromanek/louis/releases/latest)**
 
-Deno Desktop auto-detects Nuxt and ran health + yt-dlp preview successfully, but Louis would ship under a second runtime forever. Electron main is Node: spawn the identical server Docker/`npm run start` already use.
+| Platform | File |
+|----------|------|
+| macOS Apple Silicon | `Louis-<version>-arm64.dmg` |
+| macOS Intel | `Louis-<version>-x64.dmg` |
+| Windows | `Louis-Setup-<version>.exe` |
 
-## Architecture
+Builds are currently **unsigned**. macOS Gatekeeper or Windows SmartScreen may warn the first time you open the app — that is expected until release signing is enabled.
 
-```text
-Electron main
-  → spawn: Electron-as-Node → .output/server/index.mjs  (HOST=127.0.0.1 PORT=4010 …)
-  → wait:  GET /api/health
-  → BrowserWindow → http://127.0.0.1:4010/
-  → on quit: SIGTERM Nitro child
-```
+## First-time setup
 
-Host lives under [`desktop/`](../desktop/). Packaged apps ship `.output` + platform `bin/` via electron-builder `extraResources`.
+On first launch (or whenever required keys are missing), Louis plays the splash, then walks through a **setup wizard** on the same background — one question at a time. Use **Back** to go to the previous step. The last screen confirms you’re ready; **Let’s go** saves and opens the app. The main app stays blocked until you finish.
 
-### Runtime defaults
+### 1. Yoto developer app
 
-| Setting | Value |
-|---------|--------|
-| Port | **4010** (avoids clash with `npm run dev` on 4000) |
-| Audio dir | `app.getPath('userData')/audio` (userData forced to `…/Louis`) |
-| Secrets | Preferences → Desktop API keys → `userData/config.json` (never baked into the binary). Spike may load checkout `.env` when prefs empty. |
-| yt-dlp / ffmpeg | Bundled under `resources/bin/<platform>/` |
-| OAuth redirect | Always `http://127.0.0.1:4010/api/yoto/auth/callback` (register in Yoto developer portal) |
+1. Create a **public** (PKCE) client at [yoto.dev](https://yoto.dev/get-started/start-here/).
+2. Register this redirect URI **exactly**:
 
-```bash
-npm run build
-npm run desktop:fetch-binaries
-npm run desktop:spike          # maintainer checkout
-npm run desktop:build:host     # unsigned host DMG
-```
-
-## Credentials (desktop)
-
-Do **not** bake secrets into the app binary.
-
-1. Create a **public** (PKCE) Yoto app at [yoto.dev](https://yoto.dev/get-started/start-here/).
-2. Register redirect URI exactly:
    `http://127.0.0.1:4010/api/yoto/auth/callback`
-3. In Louis → **Preferences** → **Desktop API keys**, paste Yoto client ID + YouTube Data API v3 key (optional cookies.txt path).
-4. **Save & restart** writes Application Support `Louis/config.json` (macOS) and restarts Nitro with `NUXT_*` env.
 
-First launch without keys opens Preferences (`?desktopSetup=1`). Spike checkouts may still use a repo `.env` when prefs fields are empty.
+3. Paste the **client ID** into the setup form. Leave the client secret empty (public PKCE).
 
-## Installers
+### 2. YouTube Data API
 
-| Artifact | Name pattern |
-|----------|--------------|
-| macOS DMG | `Louis-<version>-arm64.dmg`, `Louis-<version>-x64.dmg` |
-| Windows NSIS | `Louis-Setup-<version>.exe` |
+Enable **YouTube Data API v3** in Google Cloud Console, create an API key, and paste it into the setup form.
 
-```bash
-npm run desktop:build:host   # unsigned DMG for this Mac
-npm run desktop:build:mac    # both mac DMGs (CI parity)
-npm run desktop:build:win    # NSIS (CI parity; run on Windows)
-npm run desktop:build        # full matrix locally when possible
-npm run desktop:dir          # unpackaged app only (fast smoke)
+### 3. Ready
+
+After the redirect URI step, confirm you’re ready. Press **Let’s go** — Louis saves keys to app data and restarts the local server (in the desktop app). Then use **Connect** to sign in with Yoto — Louis opens your **system browser** (password managers work; a bad client ID leaves Louis usable so you can fix Settings).
+
+You can change keys later under **Settings → Advanced**.
+
+### Optional: yt-dlp cookies
+
+Not part of first-run setup. If YouTube blocks anonymous downloads (bot check / age gate), open **Settings → Advanced** and set a Netscape `cookies.txt` path (throwaway Google account preferred; never share or commit that file).
+
+Keys are **not** stored inside the installer. They live only in your user data folder (see below).
+
+## Using the app
+
+- Louis listens on **`http://127.0.0.1:4010`** (not the Docker/dev port 4000).
+- Search YouTube, build a playlist, and save to your MYO cards as usual.
+- Open **Settings → Advanced** anytime to update API keys or the optional cookies path.
+
+## Where settings are stored
+
+| OS | Folder |
+|----|--------|
+| macOS | `~/Library/Application Support/Louis/` |
+| Windows | `%APPDATA%\Louis\` |
+
+Important files:
+
+- `config.json` — API keys and optional cookies path (written by Settings)
+- `yoto-session.json` — Yoto OAuth tokens after Connect (system-browser flow)
+- `audio/` — download / transcode work directory
+
+You normally do not need to edit `config.json` by hand. Shape if you inspect it:
+
+```json
+{
+  "yotoClientId": "",
+  "yotoClientSecret": "",
+  "youtubeApiKey": "",
+  "ytdlpCookiesFile": ""
+}
 ```
 
-Output under `desktop/out/`. Signing / notarization: [DESKTOP_SIGNING.md](DESKTOP_SIGNING.md). On each `v*` tag, CI publishes GHCR **and** uploads these files to the GitHub Release ([RELEASE.md](RELEASE.md)).
+`yotoClientSecret` is unused for the recommended public PKCE flow and is not shown in Settings.
 
-## Shipping yt-dlp + ffmpeg
+## Troubleshooting
 
-Consumers do not need Homebrew.
+**Gatekeeper / SmartScreen blocks the app**  
+Unsigned builds: open via system “Open anyway” / “More info → Run anyway”, or wait for signed releases.
 
-1. `npm run desktop:fetch-binaries` downloads platform binaries into `desktop/resources/bin/<os-arch>/`.
-2. electron-builder `extraResources` copies `bin/` → `process.resourcesPath/bin`.
-3. At launch: `NUXT_YTDLP_PATH` + prepend bin dir to `PATH`.
-4. `NUXT_AUDIO_WORK_DIR` stays under Electron `userData`.
+**Settings has no Desktop API keys section**  
+That section appears in the desktop app (**Settings → Advanced**). In local `npm run dev`, open `http://localhost:4000/?desktopPrefs=1` to preview Advanced prefs (and `?desktopPrefs=1&desktopSetup=1` for the first-run setup screen). Mock saves use sessionStorage. Self-host / Docker still use `.env` with `LOUIS_*` keys (legacy `NUXT_*` still works). The Electron host sets `LOUIS_PUBLIC_DESKTOP=1` when spawning Nitro.
 
-## Historical: Electron spike (2026-08-06, macOS arm64)
+**Still logged into Yoto after clearing the client ID**  
+Sign-in uses browser cookies for `127.0.0.1:4010`. Clearing Settings does not clear those cookies. Disconnect in the app or clear site data for that origin if you need a full reset.
 
-Early spike used system `PATH` yt-dlp/ffmpeg and repo `.env`. Those limits are lifted for packaged builds (bundled bins + Preferences). Spike command remains useful for maintainers: `npm run desktop:spike`.
+**OAuth redirect errors**  
+Confirm the Yoto portal redirect URI is exactly `http://127.0.0.1:4010/api/yoto/auth/callback` (loopback `127.0.0.1`, port **4010**). Desktop Connect uses your system browser; after success, close that tab and return to Louis (the app polls until signed in).
 
-## Historical: Deno Desktop probe (2026-08-06, macOS arm64)
+**Search or download failures**  
+Check the YouTube API key, quota, and (if needed) cookies path. Keep Louis updated — releases refresh the bundled download tools.
 
-Kept for research continuity — **not** the shipping path.
+## More
 
-```bash
-npm run build
-deno desktop -A --backend webview --no-check --node-modules-dir=manual --output ./yoto-cards.app .
-```
-
-## References
-
-- [Electron](https://www.electronjs.org/docs/latest/)
-- [Deno Desktop](https://docs.deno.com/runtime/desktop/) (rejected long-term)
-- [Deno vs Electron comparison](https://docs.deno.com/runtime/desktop/comparison/)
+- Self-host / Docker: [README](../README.md)
+- Security reports: [SECURITY.md](../SECURITY.md)
+- Maintainer shipping / signing: [DESKTOP_SHIP.md](DESKTOP_SHIP.md), [DESKTOP_SIGNING.md](DESKTOP_SIGNING.md), [RELEASE.md](RELEASE.md)

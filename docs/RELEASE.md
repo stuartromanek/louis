@@ -2,7 +2,7 @@
 
 Versioning uses [SemVer](https://semver.org/), [Keep a Changelog](https://keepachangelog.com/), and [`release-it`](https://github.com/release-it/release-it) with the [`@release-it/keep-a-changelog`](https://github.com/release-it/keep-a-changelog) plugin.
 
-The app version shown in Preferences (`Louis v…`) comes from `package.json` via `runtimeConfig.public.appVersion`.
+The app version shown in Settings (`Louis v…`) comes from `package.json` via `runtimeConfig.public.appVersion`.
 
 Pushing a tag matching `v*` runs [`.github/workflows/release.yml`](../.github/workflows/release.yml), which:
 
@@ -41,6 +41,7 @@ Prerequisites:
 - Clean working tree on `main`, up to date with `origin/main`
 - `[Unreleased]` in `CHANGELOG.md` has the notes for this release (can be empty only if you intend a no-notes bump)
 - `gh` authenticated if you want the GitHub Release created automatically (`gh auth status`)
+- **Desktop pins:** consider bumping `YTDLP_TAG` / ffmpeg pins + SHA-256 in [`desktop/scripts/fetch-binaries.mjs`](../desktop/scripts/fetch-binaries.mjs) before cutting. Not required every release if current pins still work.
 
 ```bash
 git checkout main

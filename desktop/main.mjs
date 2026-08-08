@@ -3,22 +3,41 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
+import { homedir } from 'node:os'
 import { createInterface } from 'node:readline'
 import {
   applyDesktopConfigToEnv,
   createConfigStore,
   DESKTOP_REDIRECT_URI,
   desktopConfigNeedsSetup,
+  effectiveDesktopConfig,
+  mergeDesktopConfig,
 } from './configStore.mjs'
+import { pickLouisEnv, setLouisAndNuxtEnv } from '../shared/louis-env.mjs'
 
 const require = createRequire(import.meta.url)
-const { app, BrowserWindow, dialog, ipcMain } = require('electron')
+const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron')
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+/**
+ * Electron’s usual appData dir without `app.getPath` (unsafe before ready).
+ * `app.setPath` itself must still run *before* ready — so we compute the path
+ * manually instead of moving setPath into whenReady().
+ */
+function resolveAppDataDir() {
+  if (process.platform === 'darwin') {
+    return path.join(homedir(), 'Library', 'Application Support')
+  }
+  if (process.platform === 'win32') {
+    return process.env.APPDATA || path.join(homedir(), 'AppData', 'Roaming')
+  }
+  return process.env.XDG_CONFIG_HOME || path.join(homedir(), '.config')
+}
+
 app.setName('Louis')
-// Force userData before ready so paths are not "Electron/…"
-app.setPath('userData', path.join(app.getPath('appData'), 'Louis'))
+const louisUserData = path.join(resolveAppDataDir(), 'Louis')
+app.setPath('userData', louisUserData)
 
 const HOST = '127.0.0.1'
 const PORT = 4010
@@ -33,7 +52,7 @@ let quitting = false
 let nitroExitNotified = false
 let restartingNitro = false
 
-const configStore = createConfigStore(fs, path, app.getPath('userData'))
+const configStore = createConfigStore(fs, path, louisUserData)
 
 function resolveAppRoot() {
   // Packaged: .output is shipped via extraResources → resources/.output
@@ -117,7 +136,7 @@ async function waitForHealth(timeoutMs = 60_000) {
 }
 
 function buildNitroEnv() {
-  const audioWorkDir = path.join(app.getPath('userData'), 'audio')
+  const audioWorkDir = path.join(louisUserData, 'audio')
   fs.mkdirSync(audioWorkDir, { recursive: true })
 
   const tools = resolveBundledTools()
@@ -134,12 +153,20 @@ function buildNitroEnv() {
     NODE_ENV: 'production',
     HOST,
     PORT: String(PORT),
-    NUXT_AUDIO_WORK_DIR: process.env.NUXT_AUDIO_WORK_DIR || audioWorkDir,
     PATH: pathParts.join(path.delimiter),
   }
 
+  const audioDir = pickLouisEnv('LOUIS_AUDIO_WORK_DIR', 'NUXT_AUDIO_WORK_DIR') || audioWorkDir
+  setLouisAndNuxtEnv(env, 'LOUIS_AUDIO_WORK_DIR', 'NUXT_AUDIO_WORK_DIR', audioDir)
+  setLouisAndNuxtEnv(
+    env,
+    'LOUIS_YOTO_SESSION_FILE',
+    'NUXT_YOTO_SESSION_FILE',
+    path.join(louisUserData, 'yoto-session.json'),
+  )
+
   if (tools.ytdlpPath) {
-    env.NUXT_YTDLP_PATH = tools.ytdlpPath
+    setLouisAndNuxtEnv(env, 'LOUIS_YTDLP_PATH', 'NUXT_YTDLP_PATH', tools.ytdlpPath)
   }
 
   const desktopConfig = configStore.read()
@@ -152,16 +179,11 @@ function buildNitroEnv() {
   })
   console.log('[louis-desktop] config', {
     path: configStore.configPath,
-    hasYotoClientId: Boolean(desktopConfig.yotoClientId || env.NUXT_YOTO_CLIENT_ID),
-    hasYoutubeApiKey: Boolean(desktopConfig.youtubeApiKey || env.NUXT_YOUTUBE_API_KEY),
-    hasCookies: Boolean(desktopConfig.ytdlpCookiesFile || env.NUXT_YTDLP_COOKIES_FILE),
+    hasYotoClientId: Boolean(desktopConfig.yotoClientId || pickLouisEnv('LOUIS_YOTO_CLIENT_ID', 'NUXT_YOTO_CLIENT_ID', env)),
+    hasYoutubeApiKey: Boolean(desktopConfig.youtubeApiKey || pickLouisEnv('LOUIS_YOUTUBE_API_KEY', 'NUXT_YOUTUBE_API_KEY', env)),
+    hasCookies: Boolean(desktopConfig.ytdlpCookiesFile || pickLouisEnv('LOUIS_YTDLP_COOKIES_FILE', 'NUXT_YTDLP_COOKIES_FILE', env)),
     redirectUri: DESKTOP_REDIRECT_URI,
-    needsSetup: desktopConfigNeedsSetup({
-      yotoClientId: desktopConfig.yotoClientId || env.NUXT_YOTO_CLIENT_ID || '',
-      youtubeApiKey: desktopConfig.youtubeApiKey || env.NUXT_YOUTUBE_API_KEY || '',
-      yotoClientSecret: '',
-      ytdlpCookiesFile: '',
-    }),
+    needsSetup: desktopConfigNeedsSetup(effectiveDesktopConfig(desktopConfig, env)),
   })
 
   return env
@@ -277,7 +299,9 @@ async function restartNitroAndReload() {
     startNitro()
     await waitForHealth()
     if (mainWindow && !mainWindow.isDestroyed()) {
-      await mainWindow.loadURL(BASE_URL)
+      const needsSetup = desktopConfigNeedsSetup(effectiveConfigForSetupCheck())
+      const url = needsSetup ? `${BASE_URL}/?desktopSetup=1` : BASE_URL
+      await mainWindow.loadURL(url)
     }
   }
   finally {
@@ -315,13 +339,7 @@ function createWindow() {
 }
 
 function effectiveConfigForSetupCheck() {
-  const stored = configStore.read()
-  return {
-    yotoClientId: stored.yotoClientId || process.env.NUXT_YOTO_CLIENT_ID || '',
-    youtubeApiKey: stored.youtubeApiKey || process.env.NUXT_YOUTUBE_API_KEY || '',
-    yotoClientSecret: stored.yotoClientSecret || '',
-    ytdlpCookiesFile: stored.ytdlpCookiesFile || '',
-  }
+  return effectiveDesktopConfig(configStore.read())
 }
 
 async function showLoadingThenApp() {
@@ -336,7 +354,7 @@ async function showLoadingThenApp() {
     appRoot: resolveAppRoot(),
     ytdlp: health?.checks?.ytdlp,
     ffmpeg: health?.checks?.ffmpeg,
-    userData: app.getPath('userData'),
+    userData: louisUserData,
   })
 
   const needsSetup = desktopConfigNeedsSetup(effectiveConfigForSetupCheck())
@@ -345,11 +363,29 @@ async function showLoadingThenApp() {
 }
 
 function registerIpc() {
-  ipcMain.handle('louis:get-config', () => configStore.read())
+  // Return effective config so empty config.json + spike .env matches setup gating.
+  ipcMain.handle('louis:get-config', () => effectiveConfigForSetupCheck())
   ipcMain.handle('louis:get-redirect-uri', () => DESKTOP_REDIRECT_URI)
 
+  ipcMain.handle('louis:open-external', async (_event, url) => {
+    const raw = String(url || '').trim()
+    if (!raw.startsWith('https://') && !raw.startsWith('http://')) {
+      throw new Error('Only http(s) URLs can be opened externally')
+    }
+    await shell.openExternal(raw)
+  })
+
+  ipcMain.handle('louis:focus-main-window', () => {
+    if (!mainWindow) return false
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+    return true
+  })
+
   ipcMain.handle('louis:set-config', async (_event, next) => {
-    const saved = configStore.write(next || {})
+    // Merge so UI saves that omit optional fields (e.g. yotoClientSecret) do not wipe them.
+    const saved = configStore.write(mergeDesktopConfig(configStore.read(), next))
     await restartNitroAndReload()
     return saved
   })

@@ -36,3 +36,8 @@ body {
   overflow: hidden;
   min-height: 0;
 }
+
+.app-shell__main {
+  height: 100%;
+  min-height: 0;
+}

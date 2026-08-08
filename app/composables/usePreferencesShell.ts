@@ -1,5 +1,5 @@
 /**
- * Shared Preferences open state so status bar, mobile header, auth gate,
+ * Shared Settings open state so status bar, mobile header, auth gate,
  * and desktop first-run can open the same modal.
  */
 export function usePreferencesShell() {

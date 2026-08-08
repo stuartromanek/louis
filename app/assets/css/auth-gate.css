@@ -93,7 +93,8 @@
 .yoto-auth-gate__emoji,
 .yoto-auth-gate__heading,
 .yoto-auth-gate__body,
-.yoto-auth-gate__cta {
+.yoto-auth-gate__cta,
+.yoto-auth-gate__secondary {
   opacity: 0;
   scale: 0.88;
   animation: yoto-auth-gate-content-in 0.4s cubic-bezier(0.2, 0, 0, 1) forwards;
@@ -223,6 +224,34 @@
   transition-duration: 0.1s;
 }
 
+.yoto-auth-gate__secondary {
+  position: relative;
+  z-index: 1;
+  margin-top: 0.65rem;
+  padding: 0.2rem 0.4rem;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-maru);
+  font-weight: 500;
+  font-size: var(--text-maru-button-secondary);
+  line-height: var(--text-maru-button-secondary--line-height);
+  color: var(--color-maru-gray);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  animation: yoto-auth-gate-content-in 0.4s cubic-bezier(0.2, 0, 0, 1) forwards;
+  animation-delay: 1.36s;
+  opacity: 0;
+}
+
+.yoto-auth-gate__secondary:hover {
+  color: var(--color-maru-black);
+}
+
+.yoto-auth-gate__secondary:active {
+  translate: 0 1px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .yoto-auth-gate__cta {
     transition: background-color 0.2s ease-out, color 0.2s ease-out, box-shadow 0.2s ease-out;
@@ -232,6 +261,11 @@
     scale: 1;
     translate: 0 0;
     box-shadow: 6px 6px 0 var(--color-maru-black);
+  }
+
+  .yoto-auth-gate__secondary {
+    animation: yoto-auth-gate-content-in-reduced 0.35s ease-out forwards;
+    animation-delay: 0.18s;
   }
 }
 
@@ -293,7 +327,8 @@
   .yoto-auth-gate__heading,
   .yoto-auth-gate__body,
   .yoto-auth-gate__features,
-  .yoto-auth-gate__cta {
+  .yoto-auth-gate__cta,
+  .yoto-auth-gate__secondary {
     animation: yoto-auth-gate-content-in-reduced 0.35s ease-out forwards;
     animation-delay: 0s;
   }
@@ -313,6 +348,10 @@
   .yoto-auth-gate__cta {
     animation-delay: 0.15s;
   }
+
+  .yoto-auth-gate__secondary {
+    animation-delay: 0.18s;
+  }
 }
 
 .yoto-auth-gate--reduced .yoto-auth-gate__screen {
@@ -324,7 +363,8 @@
 .yoto-auth-gate--reduced .yoto-auth-gate__heading,
 .yoto-auth-gate--reduced .yoto-auth-gate__body,
 .yoto-auth-gate--reduced .yoto-auth-gate__features,
-.yoto-auth-gate--reduced .yoto-auth-gate__cta {
+.yoto-auth-gate--reduced .yoto-auth-gate__cta,
+.yoto-auth-gate--reduced .yoto-auth-gate__secondary {
   animation: yoto-auth-gate-content-in-reduced 0.35s ease-out forwards;
   animation-delay: 0s;
 }
@@ -343,6 +383,10 @@
 
 .yoto-auth-gate--reduced .yoto-auth-gate__cta {
   animation-delay: 0.15s;
+}
+
+.yoto-auth-gate--reduced .yoto-auth-gate__secondary {
+  animation-delay: 0.18s;
 }
 
 @keyframes yoto-auth-gate-content-in-reduced {
@@ -472,6 +516,16 @@
   margin: 0;
   animation: none;
   justify-content: center;
+}
+
+.mobile-tray .yoto-auth-gate__secondary {
+  display: block;
+  width: 100%;
+  max-width: 22rem;
+  margin: 0.35rem auto 0;
+  text-align: center;
+  animation: none;
+  opacity: 1;
 }
 
 /* Press feedback only after the tray has finished layering in —

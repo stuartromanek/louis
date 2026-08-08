@@ -20,7 +20,7 @@ npm run desktop:fetch-binaries   # once per machine / when bumping the pin
 npm run desktop:spike
 ```
 
-Credentials: **Preferences → Desktop API keys** (saved under Application Support). Spike may also load repo `.env` when prefs fields are empty. Packaged builds never load `.env`.
+Credentials: **Settings → Desktop API keys** (saved under Application Support). Spike may also load repo `.env` when prefs fields are empty. Packaged builds never load `.env`.
 
 Register this redirect URI on your Yoto developer app:
 

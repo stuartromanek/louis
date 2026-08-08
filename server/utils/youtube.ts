@@ -15,7 +15,7 @@ export function getYoutubeApiKey(event: H3Event): string {
   if (!key) {
     throw createError({
       statusCode: 503,
-      message: 'YouTube API key not configured. Set NUXT_YOUTUBE_API_KEY in .env',
+      message: 'YouTube API key not configured. Set LOUIS_YOUTUBE_API_KEY in .env',
     })
   }
   return key

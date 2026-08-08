@@ -26,6 +26,10 @@
       "from": "desktop/resources/bin",
       "to": "bin",
       "filter": ["**/*", "!README.md"]
+    },
+    {
+      "from": "shared/louis-env.mjs",
+      "to": "shared/louis-env.mjs"
     }
   ],
   "asar": true,

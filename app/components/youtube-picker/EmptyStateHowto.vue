@@ -634,14 +634,14 @@ function onKeydown(event: KeyboardEvent) {
 
 .empty-exp-howto__sticker {
   position: absolute;
-  top: -1.25rem;
-  left: -1.25rem;
+  top: -0.55rem;
+  left: -0.55rem;
   z-index: 2;
   display: block;
-  width: 3.85rem;
-  height: 3.85rem;
+  width: 3.25rem;
+  height: 3.25rem;
   pointer-events: none;
-  transform: scale(0.9);
+  transform: none;
   transform-origin: top left;
 }
 
@@ -872,10 +872,10 @@ function onKeydown(event: KeyboardEvent) {
   }
 
   .empty-exp-howto__sticker {
-    top: -1.1rem;
-    left: -1.1rem;
-    width: 3.4rem;
-    height: 3.4rem;
+    top: -0.45rem;
+    left: -0.45rem;
+    width: 2.85rem;
+    height: 2.85rem;
   }
 
   .empty-exp-howto__nav {

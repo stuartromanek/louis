@@ -1,9 +1,9 @@
-/* ─── Preferences projector modal ─── */
+/* ─── Settings projector modal ─── */
 
 .prefs-projector {
   position: fixed;
   inset: 0;
-  z-index: 90;
+  z-index: 130;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -33,14 +33,21 @@
 .prefs-projector__stage {
   position: relative;
   z-index: 1;
-  width: min(100%, 36rem);
+  /* Fixed shell height so General ↔ Advanced does not resize the projector */
+  width: min(100%, 44rem);
+  height: min(85dvh, calc(100dvh - 3.5rem));
+  max-height: min(85dvh, calc(100dvh - 3.5rem));
   margin-top: 0;
   pointer-events: none;
 }
 
 .prefs-projector__screen {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
+  height: 100%;
+  max-height: inherit;
   margin-inline: auto;
   border: 3px solid var(--color-maru-black);
   border-radius: 0 0 var(--radius-maru) var(--radius-maru);
@@ -55,6 +62,7 @@
   transform: translateY(-105%);
   transform-origin: top center;
   pointer-events: auto;
+  overflow: hidden;
 }
 
 .prefs-projector__screen::before {
@@ -104,8 +112,11 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 1.375rem;
-  padding: 2.25rem 1.25rem 2.25rem;
+  gap: 1rem;
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+  padding: 1.75rem 1.25rem 1.5rem;
   opacity: 0;
   filter: brightness(2.2) contrast(1.4);
 }
@@ -127,10 +138,134 @@
   animation: prefs-projected-exit 0.2s ease-in forwards;
 }
 
-.prefs-projector__title {
+.prefs-projector__layout {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 0.85rem;
+  align-items: stretch;
+}
+
+.prefs-projector__nav {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  gap: 0.35rem;
+  width: 8.75rem;
+  padding-right: 0.75rem;
+  border-right: 1px solid color-mix(in srgb, var(--color-maru-black) 18%, transparent);
+}
+
+.prefs-projector__nav-item {
+  display: block;
+  width: 100%;
   margin: 0;
+  padding: 0.55rem 0.55rem;
+  border: 3px solid transparent;
+  border-radius: var(--radius-maru);
+  background: transparent;
+  font-family: var(--font-maru);
+  font-size: var(--text-maru-label);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  text-align: left;
+  color: var(--color-maru-black);
+  cursor: pointer;
+  transition:
+    background-color 0.18s cubic-bezier(0.2, 0, 0, 1),
+    border-color 0.18s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.15s ease-out,
+    translate 0.15s ease-out;
+}
+
+.prefs-projector__nav-item:hover:not(:disabled):not(.prefs-projector__nav-item--active) {
+  border-color: var(--color-maru-black);
+  background: var(--color-maru-white);
+  box-shadow: 3px 3px 0 var(--color-maru-black);
+  translate: -1px -1px;
+}
+
+.prefs-projector__nav-item--active {
+  border-color: var(--color-maru-black);
+  background: var(--color-maru-yellow);
+  box-shadow: 3px 3px 0 var(--color-maru-black);
+}
+
+.prefs-projector__nav-item--active:hover:not(:disabled) {
+  box-shadow: 4px 4px 0 var(--color-maru-black);
+  translate: -1px -1px;
+}
+
+.prefs-projector__nav-item:focus-visible {
+  outline: 3px solid var(--color-maru-blue);
+  outline-offset: 2px;
+}
+
+.prefs-projector__nav-item:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.prefs-projector__pane {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.15rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.prefs-projector__pane-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.25rem;
+  padding-bottom: 0.25rem;
+}
+
+.prefs-projector__footer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-maru-black) 18%, transparent);
+}
+
+@media (max-width: 599px) {
+  .prefs-projector__layout {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .prefs-projector__nav {
+    flex-direction: row;
+    width: 100%;
+    padding-right: 0;
+    padding-bottom: 0.65rem;
+    border-right: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-maru-black) 18%, transparent);
+  }
+
+  .prefs-projector__nav-item {
+    flex: 1 1 0;
+    text-align: center;
+    padding: 0.45rem 0.4rem;
+    font-size: var(--text-maru-meta);
+  }
+}
+
+.prefs-projector__title {
+  margin: 0 0 0.75rem;
   display: flex;
   flex-wrap: wrap;
+  flex-shrink: 0;
   gap: 0.08em;
   /* Intentional one-off — not a shared type role */
   font-size: clamp(1.35rem, 1rem + 1.2vw, 1.85rem);
@@ -225,6 +360,54 @@
   letter-spacing: 0.01em;
   font-weight: 500;
   color: var(--color-maru-black);
+}
+
+.prefs-projector__label-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.prefs-projector__help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin: 0;
+  padding: 0;
+  border: 2px solid var(--color-maru-black);
+  border-radius: 999px;
+  background: var(--color-maru-white);
+  box-shadow: 2px 2px 0 var(--color-maru-black);
+  font-family: var(--font-maru);
+  font-size: var(--text-maru-meta);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-maru-black);
+  cursor: help;
+  transition:
+    box-shadow 0.15s ease-out,
+    translate 0.15s ease-out,
+    background-color 0.15s ease-out;
+}
+
+.prefs-projector__help:hover:not(:disabled) {
+  background: var(--color-maru-yellow);
+  box-shadow: 3px 3px 0 var(--color-maru-black);
+  translate: -1px -1px;
+}
+
+.prefs-projector__help:focus-visible {
+  outline: 3px solid var(--color-maru-blue);
+  outline-offset: 2px;
+}
+
+.prefs-projector__help:disabled {
+  opacity: 0.7;
+  cursor: default;
 }
 
 @media (max-width: 599px) {
@@ -505,7 +688,11 @@
 
 .prefs-projector__done:disabled,
 .prefs-projector__pull:disabled {
-  cursor: default;
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--color-maru-black) 28%, transparent);
+  translate: none;
+  scale: 1;
 }
 
 .prefs-projector__hint {
@@ -513,19 +700,48 @@
   font-size: var(--text-maru-label);
   line-height: 1.35;
   letter-spacing: 0.01em;
-  font-weight: 500;
-  color: var(--color-maru-gray);
+  font-weight: 400;
+  color: var(--color-maru-black);
+  text-wrap: pretty;
+}
+
+.prefs-projector__field .prefs-projector__hint {
+  margin-top: 0.4rem;
+}
+
+.prefs-projector__section > .prefs-projector__hint {
+  margin-top: 0;
+}
+
+.prefs-projector__hint-link {
+  color: var(--color-maru-blue);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.prefs-projector__hint-link:hover {
+  color: var(--color-maru-black);
+}
+
+.prefs-projector__hint-link:focus-visible {
+  outline: 3px solid var(--color-maru-blue);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 .prefs-projector__section {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.75rem;
+  gap: 1.25rem;
   width: 100%;
-  margin-bottom: 1rem;
   padding-bottom: 1rem;
   border-bottom: 1px solid color-mix(in srgb, var(--color-maru-black) 18%, transparent);
+}
+
+.prefs-projector__section .desktop-api-keys {
+  gap: 1.25rem;
 }
 
 .prefs-projector__section-title {
@@ -535,10 +751,6 @@
   font-weight: 700;
   letter-spacing: 0.01em;
   color: var(--color-maru-black);
-}
-
-.prefs-projector__section .prefs-projector__hint {
-  margin-top: 0;
 }
 
 .prefs-projector__input {
@@ -552,11 +764,14 @@
   font-size: var(--text-maru-label);
   line-height: 1.3;
   color: var(--color-maru-black);
+  transition: box-shadow 0.15s ease-out;
 }
 
 .prefs-projector__input:focus-visible {
-  outline: 3px solid var(--color-maru-blue);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow:
+    inset 0 0 0 2px var(--color-maru-blue),
+    3px 3px 0 var(--color-maru-black);
 }
 
 .prefs-projector__input:disabled {
@@ -578,7 +793,36 @@
 
 .prefs-projector__browse {
   flex-shrink: 0;
+  align-self: stretch;
   padding: 0.35rem 0.75rem !important;
+  font-size: var(--text-maru-label) !important;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.2 !important;
+  box-shadow: 3px 3px 0 var(--color-maru-black);
+  transition:
+    box-shadow 0.15s ease-out,
+    translate 0.15s ease-out,
+    scale 0.15s ease-out;
+}
+
+.prefs-projector__browse .maru-button__label,
+.prefs-projector__done .maru-button__label {
+  top: 0.08em;
+  font-weight: 700;
+}
+
+.prefs-projector__browse:hover:not(:disabled),
+.prefs-projector__done:hover:not(:disabled) {
+  box-shadow: 4px 4px 0 var(--color-maru-black);
+  translate: -1px -1px;
+}
+
+.prefs-projector__browse:active:not(:disabled),
+.prefs-projector__done:active:not(:disabled) {
+  scale: 0.97;
+  box-shadow: 2px 2px 0 var(--color-maru-black);
+  translate: 1px 1px;
 }
 
 .prefs-projector__code {
@@ -594,6 +838,58 @@
   overflow-wrap: anywhere;
 }
 
+.prefs-projector__code-row {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  align-items: stretch;
+}
+
+.prefs-projector__code-row .prefs-projector__code {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.prefs-projector__copy {
+  min-width: 4.75rem;
+}
+
+.prefs-projector__copy-label {
+  display: inline-block;
+}
+
+.prefs-copy-label-enter-active,
+.prefs-copy-label-leave-active {
+  transition:
+    opacity 0.18s cubic-bezier(0.2, 0, 0, 1),
+    translate 0.18s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.prefs-copy-label-enter-from {
+  opacity: 0;
+  translate: 0 0.3em;
+}
+
+.prefs-copy-label-leave-to {
+  opacity: 0;
+  translate: 0 -0.25em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prefs-copy-label-enter-active,
+  .prefs-copy-label-leave-active {
+    transition: none;
+  }
+
+  .prefs-copy-label-enter-from,
+  .prefs-copy-label-leave-to {
+    opacity: 1;
+    translate: none;
+  }
+}
+
 .prefs-projector__error {
   margin: 0;
   font-size: var(--text-maru-label);
@@ -604,16 +900,32 @@
 
 .prefs-projector__done {
   align-self: flex-end;
-  padding: 0.35rem 1.1rem !important;
+  padding: 0.4rem 1rem !important;
+  font-size: var(--text-maru-label) !important;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.2 !important;
+  box-shadow: 3px 3px 0 var(--color-maru-black);
+  transition:
+    box-shadow 0.15s ease-out,
+    translate 0.15s ease-out,
+    scale 0.15s ease-out;
+}
+
+.prefs-projector__footer .prefs-projector__done {
+  flex-shrink: 0;
+  align-self: center;
 }
 
 .prefs-projector__meta {
-  margin-top: 1.25rem;
-  padding-top: 0.85rem;
-  border-top: 1px solid color-mix(in srgb, var(--color-maru-black) 18%, transparent);
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .prefs-projector__meta-line {
@@ -674,7 +986,7 @@
 }
 
 .prefs-projector__burn-in-panel {
-  width: min(100%, 36rem);
+  width: min(100%, 44rem);
   margin-top: 0;
   padding: 1.5rem 1.25rem;
   border: 3px solid var(--color-maru-black);

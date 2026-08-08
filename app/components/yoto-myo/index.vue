@@ -2,8 +2,8 @@
   Yoto MYO — list user's Make Your Own cards.
 
   Requires:
-  - NUXT_YOTO_CLIENT_ID in .env (public PKCE client; secret optional)
-  - NUXT_YOTO_REDIRECT_URI registered in Yoto developer portal (production)
+  - LOUIS_YOTO_CLIENT_ID in .env (public PKCE client; secret optional)
+  - LOUIS_YOTO_REDIRECT_URI registered in Yoto developer portal (production)
   - Server routes at /api/yoto/auth/* and /api/yoto/content/mine
 -->
 <script setup lang="ts">

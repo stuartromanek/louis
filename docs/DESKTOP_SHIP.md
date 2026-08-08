@@ -10,7 +10,7 @@ Research background: [DESKTOP.md](DESKTOP.md). Cut releases: [RELEASE.md](RELEAS
 |--------|--------|
 | First public cut | macOS (arm64 + x64) + Windows x64 |
 | Linux | Phase 7 stretch (AppImage on the same Release) |
-| Credentials | userData config + Preferences / first-run UI (never baked into the binary) |
+| Credentials | userData config + Settings / first-run UI (never baked into the binary) |
 | Packager | electron-builder |
 | Port | `127.0.0.1:4010` |
 | Yoto redirect | `http://127.0.0.1:4010/api/yoto/auth/callback` |
@@ -59,7 +59,7 @@ For tag `v1.2.0`, open `…/releases/tag/v1.2.0`:
 
 ### Seamlessness rules
 
-1. **One version** — `package.json` = Preferences “Louis v…” = Docker tag = installer filenames on the Release page.
+1. **One version** — `package.json` = Settings “Louis v…” = Docker tag = installer filenames on the Release page.
 2. **One command** — maintainers only run `npm run release` on `main` (see [RELEASE.md](RELEASE.md)). No desktop-only version ritual.
 3. **One GitHub Release page** — release-it creates it; CI attaches DMG/NSIS as Assets. Workflow needs `contents: write` + `packages: write` (see [`.github/workflows/release.yml`](../.github/workflows/release.yml)).
 4. **One workflow trigger** — extend existing `on: push: tags: v*`. No second tag scheme.
@@ -116,8 +116,8 @@ For tag `v1.2.0`, open `…/releases/tag/v1.2.0`:
 
 - [x] CI/script downloads platform binaries into `desktop/resources/bin/<platform>/`
 - [x] Ship via electron-builder `extraResources`
-- [x] At spawn: set `NUXT_YTDLP_PATH`; prepend ffmpeg dir to `PATH`
-- [x] Keep `NUXT_AUDIO_WORK_DIR` under Electron `userData`
+- [x] At spawn: set `LOUIS_YTDLP_PATH` (and legacy `NUXT_YTDLP_PATH`); prepend ffmpeg dir to `PATH`
+- [x] Keep `LOUIS_AUDIO_WORK_DIR` under Electron `userData`
 
 **Acceptance:** On a machine **without** Homebrew yt-dlp/ffmpeg, `/api/health` reports both available via bundled paths; preview download works. ✅ (2026-08-06, macOS arm64 — spike + packaged `Louis.app` health under `…/Resources/bin/darwin-arm64/`; preview `jNQXAC9IVRw` → 200 WebM)
 
@@ -129,16 +129,16 @@ For tag `v1.2.0`, open `…/releases/tag/v1.2.0`:
 
 **Goal:** Full connect + search without a repo-root `.env`.
 
-**Touches:** userData config JSON, Preferences / first-run UI, spawn env (`NUXT_YOTO_*`, `NUXT_YOUTUBE_API_KEY`, redirect URI)
+**Touches:** userData config JSON, Settings / first-run UI, spawn env (`LOUIS_YOTO_*`, `LOUIS_YOUTUBE_API_KEY`, redirect URI; dual-write legacy `NUXT_*`)
 
 **Do:**
 
 - [x] Persist client id + YouTube API key (and optional cookies path) under `userData`
-- [x] Minimal first-run or Preferences fields (prefer existing Preferences patterns)
-- [x] Always set `NUXT_YOTO_REDIRECT_URI=http://127.0.0.1:4010/api/yoto/auth/callback` when spawning Nitro
+- [x] Minimal first-run or Settings fields (prefer existing Settings patterns)
+- [x] Always set `LOUIS_YOTO_REDIRECT_URI=http://127.0.0.1:4010/api/yoto/auth/callback` when spawning Nitro
 - [x] Document Yoto portal registration for that redirect in DESKTOP.md / README
 
-**Acceptance:** OAuth connect + YouTube search succeed with only in-app config (no checkout `.env`). ✅ (2026-08-06 — `userData/config.json` → configured auth + YouTube search 200; redirect forced to `127.0.0.1:4010`; `NUXT_PUBLIC_DESKTOP=1`. Full OAuth browser round-trip: register that URI in the Yoto portal and Connect in-app.)
+**Acceptance:** OAuth connect + YouTube search succeed with only in-app config (no checkout `.env`). ✅ (2026-08-06 — `userData/config.json` → configured auth + YouTube search 200; redirect forced to `127.0.0.1:4010`; `LOUIS_PUBLIC_DESKTOP=1`. Full OAuth browser round-trip: register that URI in the Yoto portal and Connect in-app.)
 
 **Exit →** Phase 4
 

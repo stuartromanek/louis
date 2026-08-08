@@ -2,7 +2,6 @@
 import { MYO_EDITOR_KEY } from '~/components/myo-editor/keys'
 import { YOTO_MYO_KEY } from '~/components/yoto-myo/keys'
 import HowToModal from '~/components/layout/HowToModal.vue'
-import UserPreferencesModal from '~/components/layout/UserPreferencesModal.vue'
 import MobileTray from '~/components/ui/MobileTray.vue'
 import MaruEmoji from '~/components/ui/MaruEmoji.vue'
 import { MOBILE_EDITOR_CHROME_KEY } from '~/composables/useMobileEditorChrome'
@@ -14,6 +13,7 @@ import {
 import {
   getPlaylistCapacitySnapshot,
 } from '#shared/myo-editor/yotoMyoLimits'
+import { usePreferencesShell } from '~/composables/usePreferencesShell'
 
 const yoto = inject(YOTO_MYO_KEY)
 if (!yoto) {
@@ -24,7 +24,7 @@ const editor = inject(MYO_EDITOR_KEY, null)
 const chrome = inject(MOBILE_EDITOR_CHROME_KEY, null)
 const { playEvent } = useUiSound()
 const saveProgressTestMode = useSaveProgressTestMode()
-const { open: prefsOpen, openPreferences: openPreferencesShell } = usePreferencesShell()
+const { openPreferences: openPreferencesShell } = usePreferencesShell()
 
 const { connected, status, refresh, disconnect, hasWriteScope, connect } = yoto
 
@@ -333,7 +333,7 @@ onBeforeUnmount(() => {
             size="md"
             class="mobile-overflow-menu__item-emoji"
           />
-          <span class="mobile-overflow-menu__item-label">Preferences</span>
+          <span class="mobile-overflow-menu__item-label">Settings</span>
         </button>
         <button
           v-if="status === 'disconnected' || status === 'unconfigured'"
@@ -447,6 +447,5 @@ onBeforeUnmount(() => {
     </Teleport>
 
     <HowToModal v-model:open="howToOpen" />
-    <UserPreferencesModal v-model:open="prefsOpen" />
   </div>
 </template>

@@ -1,3 +1,5 @@
+import { pickLouisEnv, setLouisAndNuxtEnv } from '../shared/louis-env.mjs'
+
 /**
  * Desktop credentials stored under Electron userData (not the git checkout .env).
  * @typedef {object} LouisDesktopConfig
@@ -12,7 +14,7 @@ export const CONFIG_FILE_NAME = 'config.json'
 
 /**
  * @param {unknown} raw
- * @returns {LouisDesktopConfig}
+ * @returns {Required<LouisDesktopConfig>}
  */
 export function normalizeDesktopConfig(raw) {
   const src = raw && typeof raw === 'object' ? /** @type {Record<string, unknown>} */ (raw) : {}
@@ -25,10 +27,36 @@ export function normalizeDesktopConfig(raw) {
 }
 
 /**
+ * Merge a partial patch onto current config without dropping omitted keys
+ * (e.g. UI saves that do not send yotoClientSecret).
+ * @param {LouisDesktopConfig} current
+ * @param {Partial<LouisDesktopConfig> | null | undefined} patch
+ */
+export function mergeDesktopConfig(current, patch) {
+  return normalizeDesktopConfig({ ...normalizeDesktopConfig(current), ...(patch || {}) })
+}
+
+/**
+ * Stored config.json values, with process env filling blank fields (spike / legacy).
+ * @param {LouisDesktopConfig} stored
+ * @param {NodeJS.ProcessEnv | Record<string, string | undefined>} [env]
+ */
+export function effectiveDesktopConfig(stored, env = process.env) {
+  const base = normalizeDesktopConfig(stored)
+  return normalizeDesktopConfig({
+    yotoClientId: base.yotoClientId || pickLouisEnv('LOUIS_YOTO_CLIENT_ID', 'NUXT_YOTO_CLIENT_ID', env),
+    yotoClientSecret: base.yotoClientSecret || pickLouisEnv('LOUIS_YOTO_CLIENT_SECRET', 'NUXT_YOTO_CLIENT_SECRET', env),
+    youtubeApiKey: base.youtubeApiKey || pickLouisEnv('LOUIS_YOUTUBE_API_KEY', 'NUXT_YOUTUBE_API_KEY', env),
+    ytdlpCookiesFile: base.ytdlpCookiesFile || pickLouisEnv('LOUIS_YTDLP_COOKIES_FILE', 'NUXT_YTDLP_COOKIES_FILE', env),
+  })
+}
+
+/**
  * @param {LouisDesktopConfig} config
  */
 export function desktopConfigNeedsSetup(config) {
-  return !config.yotoClientId || !config.youtubeApiKey
+  const normalized = normalizeDesktopConfig(config)
+  return !normalized.yotoClientId || !normalized.youtubeApiKey
 }
 
 /**
@@ -72,11 +100,20 @@ export function createConfigStore(fs, path, userDataPath) {
  * @param {LouisDesktopConfig} config
  */
 export function applyDesktopConfigToEnv(env, config) {
-  env.NUXT_PUBLIC_DESKTOP = '1'
-  env.NUXT_YOTO_REDIRECT_URI = DESKTOP_REDIRECT_URI
+  // Dual-write LOUIS_* + legacy NUXT_* for one release (belt-and-suspenders).
+  setLouisAndNuxtEnv(env, 'LOUIS_PUBLIC_DESKTOP', 'NUXT_PUBLIC_DESKTOP', '1')
+  setLouisAndNuxtEnv(env, 'LOUIS_YOTO_REDIRECT_URI', 'NUXT_YOTO_REDIRECT_URI', DESKTOP_REDIRECT_URI)
 
-  if (config.yotoClientId) env.NUXT_YOTO_CLIENT_ID = config.yotoClientId
-  if (config.yotoClientSecret) env.NUXT_YOTO_CLIENT_SECRET = config.yotoClientSecret
-  if (config.youtubeApiKey) env.NUXT_YOUTUBE_API_KEY = config.youtubeApiKey
-  if (config.ytdlpCookiesFile) env.NUXT_YTDLP_COOKIES_FILE = config.ytdlpCookiesFile
+  if (config.yotoClientId) {
+    setLouisAndNuxtEnv(env, 'LOUIS_YOTO_CLIENT_ID', 'NUXT_YOTO_CLIENT_ID', config.yotoClientId)
+  }
+  if (config.yotoClientSecret) {
+    setLouisAndNuxtEnv(env, 'LOUIS_YOTO_CLIENT_SECRET', 'NUXT_YOTO_CLIENT_SECRET', config.yotoClientSecret)
+  }
+  if (config.youtubeApiKey) {
+    setLouisAndNuxtEnv(env, 'LOUIS_YOUTUBE_API_KEY', 'NUXT_YOUTUBE_API_KEY', config.youtubeApiKey)
+  }
+  if (config.ytdlpCookiesFile) {
+    setLouisAndNuxtEnv(env, 'LOUIS_YTDLP_COOKIES_FILE', 'NUXT_YTDLP_COOKIES_FILE', config.ytdlpCookiesFile)
+  }
 }

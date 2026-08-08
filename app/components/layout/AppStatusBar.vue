@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { YOTO_MYO_KEY } from '~/components/yoto-myo/keys'
 import HowToModal from '~/components/layout/HowToModal.vue'
-import UserPreferencesModal from '~/components/layout/UserPreferencesModal.vue'
 import { usePreferencesShell } from '~/composables/usePreferencesShell'
 import { useDesktopHost } from '~/composables/useDesktopHost'
 
@@ -11,7 +10,7 @@ if (!yoto) {
 }
 
 const { playEvent } = useUiSound()
-const { open: prefsOpen, openPreferences } = usePreferencesShell()
+const { openPreferences } = usePreferencesShell()
 const { isDesktop } = useDesktopHost()
 
 const { connected, status, refresh, disconnect, hasWriteScope, connect, errorMessage } = yoto
@@ -112,7 +111,7 @@ function onRetry() {
         class="status-bar__action"
         @click="onOpenPreferences"
       >
-        Preferences
+        Settings
       </button>
 
       <button
@@ -121,7 +120,7 @@ function onRetry() {
         class="status-bar__action status-bar__action--emphasis"
         @click="onOpenPreferences"
       >
-        {{ isDesktop ? 'Add API keys' : 'Preferences' }}
+        {{ isDesktop ? 'Add API keys' : 'Settings' }}
       </button>
 
       <button
@@ -162,6 +161,5 @@ function onRetry() {
     </div>
 
     <HowToModal v-model:open="howToOpen" />
-    <UserPreferencesModal v-model:open="prefsOpen" />
   </div>
 </template>

@@ -54,7 +54,7 @@ Optional per-result toggle to expand YouTube chapters into separate playlist tra
 
 ### Desktop app wrapper (Electron)
 
-~~Package Louis as a cross-OS executable~~ — **ready to merge**: Electron host, bundled yt-dlp/ffmpeg, Preferences credentials, DMG/NSIS on the same `v*` Release as GHCR. See [docs/DESKTOP.md](docs/DESKTOP.md) and [docs/DESKTOP_SHIP.md](docs/DESKTOP_SHIP.md). Stretch (Phase 7): Linux AppImage, auto-update, signed builds.
+~~Package Louis as a cross-OS executable~~ — **ready to merge**: Electron host, bundled yt-dlp/ffmpeg, Settings credentials, DMG/NSIS on the same `v*` Release as GHCR. See [docs/DESKTOP.md](docs/DESKTOP.md) and [docs/DESKTOP_SHIP.md](docs/DESKTOP_SHIP.md). Stretch (Phase 7): Linux AppImage, auto-update, signed builds.
 
 ### Experiment with yt-dlp search backend
 

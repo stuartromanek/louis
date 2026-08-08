@@ -79,7 +79,7 @@ function httpError(statusCode: number, message: string) {
 async function resolveYtdlpBinary(configuredPath: string): Promise<ResolvedYtdlp> {
   if (cachedYtdlp) return cachedYtdlp
 
-  // Absolute NUXT_YTDLP_PATH (desktop bundled binary) wins over newer PATH copies.
+  // Absolute LOUIS_YTDLP_PATH (desktop bundled binary) wins over newer PATH copies.
   if (configuredPath && path.isAbsolute(configuredPath)) {
     const version = await readYtdlpVersion(configuredPath)
     if (version) {
@@ -105,7 +105,7 @@ async function resolveYtdlpBinary(configuredPath: string): Promise<ResolvedYtdlp
   if (!best) {
     throw httpError(
       500,
-      'yt-dlp not found. Install it (Docker image includes it; native: apt install yt-dlp, pip install yt-dlp, or set NUXT_YTDLP_PATH).',
+      'yt-dlp not found. Install it (Docker image includes it; native: apt install yt-dlp, pip install yt-dlp, or set LOUIS_YTDLP_PATH).',
     )
   }
 

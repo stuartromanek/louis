@@ -17,4 +17,6 @@ contextBridge.exposeInMainWorld('louisDesktop', {
     ipcRenderer.invoke('louis:set-config', config),
   pickCookiesFile: () => ipcRenderer.invoke('louis:pick-cookies-file'),
   getRedirectUri: () => ipcRenderer.invoke('louis:get-redirect-uri'),
+  openExternal: (/** @type {string} */ url) => ipcRenderer.invoke('louis:open-external', url),
+  focusMainWindow: () => ipcRenderer.invoke('louis:focus-main-window'),
 })

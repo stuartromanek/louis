@@ -67,10 +67,10 @@ const copy = computed(() => {
       return {
         heading: 'Yoto not configured',
         body: isDesktop.value
-          ? 'Add your Yoto client ID in Preferences (Desktop API keys). Register the redirect URI shown there on yoto.dev.'
-          : 'This server is missing a Yoto API client ID. Ask the host to set NUXT_YOTO_CLIENT_ID.',
-        cta: isDesktop.value ? 'Open Preferences' : null,
-        action: isDesktop.value ? 'preferences' as const : null,
+          ? 'Add your Yoto client ID in Settings (Desktop API keys). Register the redirect URI shown there on yoto.dev.'
+          : 'This server is missing a Yoto API client ID. Ask the host to set LOUIS_YOTO_CLIENT_ID.',
+        cta: isDesktop.value ? 'Open Settings' : null,
+        action: isDesktop.value ? 'settings' as const : null,
       }
     case 'error':
       return {
@@ -90,6 +90,13 @@ const copy = computed(() => {
   }
 })
 
+/** Escape hatch when Connect/Retry/Reconnect is primary — always on desktop when gated. */
+const showEditSettings = computed(() => {
+  if (!blockedReason.value) return false
+  if (copy.value.action === 'settings') return false
+  return isDesktop.value || blockedReason.value === 'disconnected'
+})
+
 const showScreen = computed(
   () => phase.value === 'animating' || phase.value === 'visible',
 )
@@ -97,6 +104,11 @@ const showScreen = computed(
 const showPhoneTray = computed(() => isPhone.value && showScreen.value)
 
 const showDesktopGate = computed(() => !isPhone.value && showScreen.value)
+
+/** True only while an interactive overlay is on screen (not during TV boot). */
+const blocksApp = computed(
+  () => phase.value === 'visible' && (showDesktopGate.value || showPhoneTray.value),
+)
 
 const bodyWraps = computed(
   () => blockedReason.value === 'unconfigured' || blockedReason.value === 'error',
@@ -126,19 +138,13 @@ function clearTimers() {
   bootFallbackTimer = null
 }
 
-function setBlocking(value: boolean) {
-  emit('update:blocking', value)
-}
-
 function hideGate() {
   clearTimers()
   phase.value = 'hidden'
-  setBlocking(false)
 }
 
 function showGateWithDim() {
   phase.value = 'visible'
-  setBlocking(true)
   playEvent('authGateShow')
 }
 
@@ -159,7 +165,6 @@ function beginBoot() {
   }
 
   phase.value = 'animating'
-  setBlocking(false)
 
   bootFallbackTimer = setTimeout(() => {
     if (phase.value === 'animating') {
@@ -172,7 +177,6 @@ function beginBoot() {
 function startGateSequence() {
   clearTimers()
   phase.value = 'waiting'
-  setBlocking(false)
 
   delayTimer = setTimeout(() => {
     delayTimer = null
@@ -191,11 +195,20 @@ function onPrimaryAction() {
     refresh()
     return
   }
-  if (copy.value.action === 'preferences') {
+  if (copy.value.action === 'settings') {
     playEvent('buttonClick')
     openPreferences()
   }
 }
+
+function onEditSettings() {
+  playEvent('buttonClick')
+  openPreferences()
+}
+
+watch(blocksApp, (value) => {
+  emit('update:blocking', value)
+}, { immediate: true })
 
 watch(
   [blockedReason, () => props.paused],
@@ -210,7 +223,6 @@ watch(
         return
       }
       phase.value = 'waiting'
-      setBlocking(false)
       return
     }
     if (phase.value === 'hidden' || phase.value === 'waiting') {
@@ -222,12 +234,7 @@ watch(
 
 function onPhoneChange() {
   if (!phoneMq) return
-  const wasPhone = isPhone.value
   isPhone.value = phoneMq.matches
-  // Crossing to desktop mid-gate: finish TV path if still blocked.
-  if (wasPhone && !isPhone.value && blockedReason.value && phase.value === 'visible') {
-    setBlocking(true)
-  }
 }
 
 onMounted(() => {
@@ -303,6 +310,14 @@ onUnmounted(() => {
     >
       <span class="maru-button__label">{{ copy.cta }}</span>
     </button>
+    <button
+      v-if="showEditSettings"
+      type="button"
+      class="yoto-auth-gate__secondary"
+      @click="onEditSettings"
+    >
+      Edit Settings
+    </button>
   </MobileTray>
 
   <!-- Desktop: TV frame gate -->
@@ -364,6 +379,14 @@ onUnmounted(() => {
               @click="onPrimaryAction"
             >
               <span class="maru-button__label">{{ copy.cta }}</span>
+            </button>
+            <button
+              v-if="showEditSettings"
+              type="button"
+              class="yoto-auth-gate__secondary"
+              @click="onEditSettings"
+            >
+              Edit Settings
             </button>
           </div>
         </div>
