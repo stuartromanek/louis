@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process'
 import { access, constants } from 'node:fs/promises'
+import path from 'node:path'
 import { promisify } from 'node:util'
 import type { H3Event } from 'h3'
 import { getAudioWorkDirStats, resolveAudioWorkDirConfig } from './audio-work-dir'
@@ -36,9 +37,11 @@ export interface SystemDepsStatus {
 }
 
 async function commandVersion(binary: string): Promise<{ path: string, version: string } | null> {
+  // Desktop onedir yt-dlp can cold-start slowly; keep timeout generous.
+  const timeout = 20_000
   for (const versionFlag of ['--version', '-version']) {
     try {
-      const { stdout } = await execFileAsync(binary, [versionFlag], { timeout: 5000 })
+      const { stdout } = await execFileAsync(binary, [versionFlag], { timeout })
       const version = stdout.trim().split('\n')[0] || 'unknown'
       return { path: binary, version }
     }
@@ -50,14 +53,39 @@ async function commandVersion(binary: string): Promise<{ path: string, version: 
   return null
 }
 
+/** Expand a bare command name to absolute PATH candidates (desktop prepends bundled bin). */
+function expandBinaryCandidates(candidate: string): string[] {
+  if (candidate.includes('/') || candidate.includes('\\')) {
+    return [candidate]
+  }
+  const dirs = (process.env.PATH || '').split(path.delimiter).filter(Boolean)
+  const names = process.platform === 'win32' && !candidate.endsWith('.exe')
+    ? [`${candidate}.exe`, candidate]
+    : [candidate]
+  const out: string[] = []
+  for (const dir of dirs) {
+    for (const name of names) {
+      out.push(path.join(dir, name))
+    }
+  }
+  // Fall back to bare name (execFile PATH lookup) if PATH was empty.
+  out.push(candidate)
+  return out
+}
+
 async function resolveBinary(candidates: string[]): Promise<BinaryStatus> {
+  const tried: string[] = []
   for (const candidate of candidates) {
-    const resolved = await commandVersion(candidate)
-    if (resolved) {
-      return {
-        available: true,
-        path: resolved.path,
-        version: resolved.version,
+    for (const absolute of expandBinaryCandidates(candidate)) {
+      if (tried.includes(absolute)) continue
+      tried.push(absolute)
+      const resolved = await commandVersion(absolute)
+      if (resolved) {
+        return {
+          available: true,
+          path: resolved.path,
+          version: resolved.version,
+        }
       }
     }
   }
@@ -92,6 +120,7 @@ export async function getSystemDepsStatus(event?: H3Event): Promise<SystemDepsSt
     'yt-dlp',
   ])]
 
+  // Prefer bare `ffmpeg` so a desktop-prepended PATH bin dir wins over fixed system paths.
   const ffmpegCandidates = ['ffmpeg', '/usr/bin/ffmpeg', '/usr/local/bin/ffmpeg']
 
   const [ytdlp, ffmpeg, audioDir, audioCache, ytdlpCookies] = await Promise.all([

@@ -64,7 +64,7 @@ function parseYtdlpVersionDate(version: string): number {
 
 async function readYtdlpVersion(binaryPath: string): Promise<string | null> {
   try {
-    const { stdout } = await execFileAsync(binaryPath, ['--version'], { timeout: 5000 })
+    const { stdout } = await execFileAsync(binaryPath, ['--version'], { timeout: 20_000 })
     return stdout.trim().split('\n')[0] || null
   }
   catch {
@@ -78,6 +78,15 @@ function httpError(statusCode: number, message: string) {
 
 async function resolveYtdlpBinary(configuredPath: string): Promise<ResolvedYtdlp> {
   if (cachedYtdlp) return cachedYtdlp
+
+  // Absolute LOUIS_YTDLP_PATH (desktop bundled binary) wins over newer PATH copies.
+  if (configuredPath && path.isAbsolute(configuredPath)) {
+    const version = await readYtdlpVersion(configuredPath)
+    if (version) {
+      cachedYtdlp = { path: configuredPath, version }
+      return cachedYtdlp
+    }
+  }
 
   const candidates = [...new Set([configuredPath, ...YTDLP_FALLBACK_PATHS, 'yt-dlp'])]
   let best: ResolvedYtdlp | null = null
@@ -96,7 +105,7 @@ async function resolveYtdlpBinary(configuredPath: string): Promise<ResolvedYtdlp
   if (!best) {
     throw httpError(
       500,
-      'yt-dlp not found. Install it (Docker image includes it; native: apt install yt-dlp, pip install yt-dlp, or set NUXT_YTDLP_PATH).',
+      'yt-dlp not found. Install it (Docker image includes it; native: apt install yt-dlp, pip install yt-dlp, or set LOUIS_YTDLP_PATH).',
     )
   }
 
@@ -212,7 +221,10 @@ async function downloadYoutubeAudioInternal(
   event: H3Event | undefined,
   options: { transcode: boolean, enforceMyoSizeLimit: boolean },
 ): Promise<DownloadedAudio> {
-  const { ytdlpPath: configuredPath, audioWorkDir } = resolveAudioWorkDirConfig(event)
+  const audioConfig = resolveAudioWorkDirConfig(event)
+  const runtime = event ? useRuntimeConfig(event) : useRuntimeConfig()
+  const configuredPath = String(runtime.ytdlpPath || 'yt-dlp')
+  const audioWorkDir = audioConfig.audioWorkDir
   const cacheMode = cacheModeForOptions(options.transcode)
   const cacheDir = getCacheDir(audioWorkDir, cacheMode)
   await mkdir(cacheDir, { recursive: true })

@@ -52,9 +52,13 @@ Install / “Add to Home Screen” affordance in the phone overflow menu (uses t
 
 Optional per-result toggle to expand YouTube chapters into separate playlist tracks. Must compose cleanly with auto ~1-hour long-track splitting.
 
-### Desktop app wrapper (Electron or Tauri)
+### Desktop app wrapper (Electron)
 
-Package Louis as a cross-OS executable so less technical users can run it without Docker/GitHub CLI — consumer-friendly install alongside the one-click hosting work.
+~~Package Louis as a cross-OS executable~~ — **ready to merge**: Electron host, bundled yt-dlp/ffmpeg, Settings credentials, DMG/NSIS on the same `v*` Release as GHCR. See [docs/DESKTOP.md](docs/DESKTOP.md) and [docs/DESKTOP_SHIP.md](docs/DESKTOP_SHIP.md). Stretch (Phase 7): Linux AppImage, auto-update, signed builds.
+
+### Experiment with yt-dlp search backend
+
+Spike replacing YouTube Data API v3 search/metadata with bundled/`PATH` yt-dlp (`ytsearch` + `--flat-playlist`) so desktop users need no Google Cloud API key. Keep the existing `/api/youtube/search` response shape; optional Data API fallback for self-host. Goal: fewer setup steps for the Electron app.
 
 ### Audio trim
 

@@ -47,6 +47,11 @@ const showPhoneTray = computed(() => isPhone.value && phase.value === 'visible')
 
 const showDesktopGate = computed(() => !isPhone.value && showScreen.value)
 
+/** True only while the welcome overlay is interactively covering the app. */
+const blocksApp = computed(
+  () => phase.value === 'visible' && (showDesktopGate.value || showPhoneTray.value),
+)
+
 const gateClass = computed(() => ({
   'yoto-auth-gate--animating': phase.value === 'animating',
   'yoto-auth-gate--visible': phase.value === 'visible',
@@ -70,20 +75,14 @@ function clearBootTimer() {
   }
 }
 
-function setBlocking(value: boolean) {
-  emit('update:blocking', value)
-}
-
 function hide() {
   clearBootTimer()
   phase.value = 'hidden'
-  setBlocking(false)
   celebrationPlayed = false
 }
 
 function showVisible() {
   phase.value = 'visible'
-  setBlocking(true)
   if (!celebrationPlayed) {
     celebrationPlayed = true
     playEvent('authConnected')
@@ -98,7 +97,6 @@ function beginBoot() {
   }
 
   phase.value = 'animating'
-  setBlocking(false)
 
   bootFallbackTimer = setTimeout(() => {
     if (phase.value === 'animating') {
@@ -121,6 +119,10 @@ function onDismiss() {
   emit('dismiss')
 }
 
+watch(blocksApp, (value) => {
+  emit('update:blocking', value)
+}, { immediate: true })
+
 watch(
   [() => props.open, () => props.paused],
   ([open, paused]) => {
@@ -132,7 +134,6 @@ watch(
       clearBootTimer()
       if (phase.value === 'animating' || phase.value === 'visible') return
       phase.value = 'hidden'
-      setBlocking(false)
       return
     }
     if (phase.value === 'hidden') {
@@ -144,11 +145,7 @@ watch(
 
 function onPhoneChange() {
   if (!phoneMq) return
-  const wasPhone = isPhone.value
   isPhone.value = phoneMq.matches
-  if (wasPhone && !isPhone.value && props.open && phase.value === 'visible') {
-    setBlocking(true)
-  }
 }
 
 onMounted(() => {

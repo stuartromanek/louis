@@ -30,6 +30,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=4000
+ENV LOUIS_AUDIO_WORK_DIR=/data/audio
+# Legacy fallback for older tooling that still reads NUXT_*
 ENV NUXT_AUDIO_WORK_DIR=/data/audio
 
 COPY --from=build /app/.output ./.output

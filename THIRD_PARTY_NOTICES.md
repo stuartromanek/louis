@@ -23,9 +23,11 @@ Most UI sound effects in `public/sound/` are from **[SND](https://snd.dev/)** (S
 
 **Exception:** `public/sound/louis.wav` is a first-party Louis splash cue and is not part of the SND kit.
 
-## External binaries (not bundled in npm)
+## External binaries
 
 - **yt-dlp** — YouTube audio download ([yt-dlp](https://github.com/yt-dlp/yt-dlp))
 - **ffmpeg** — required for save flow audio extraction (via yt-dlp `-x`)
 
-Docker images install these via `apt`. Native installs must provide them on `PATH`.
+**Docker / native server:** install via `apt` or put them on `PATH` (see `.env.example` for `LOUIS_YTDLP_PATH`).
+
+**Desktop (Electron):** `npm run desktop:fetch-binaries` downloads platform builds into `desktop/resources/bin/` (not committed). macOS ffmpeg from [ffmpeg.martin-riedl.de](https://ffmpeg.martin-riedl.de/); Linux/Windows ffmpeg from [yt-dlp/FFmpeg-Builds](https://github.com/yt-dlp/FFmpeg-Builds).

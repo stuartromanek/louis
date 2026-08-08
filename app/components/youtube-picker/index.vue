@@ -2,7 +2,7 @@
   YouTube Picker — self-contained search/browse/select component.
 
   Requires:
-  - NUXT_YOUTUBE_API_KEY in .env
+  - LOUIS_YOUTUBE_API_KEY in .env
   - Server proxy routes at /api/youtube/search and /api/youtube/videos
 -->
 <script setup lang="ts">

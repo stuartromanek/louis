@@ -2,6 +2,7 @@ import type { H3Event } from 'h3'
 import {
   getAccessTokenCookie,
   getRefreshTokenCookie,
+  getScopeCookie,
   refreshAccessToken,
   setAccessTokenCookie,
   setRefreshTokenCookie,
@@ -9,6 +10,12 @@ import {
   YOTO_API_BASE_URL,
   type YotoConfig,
 } from './yoto-auth'
+import {
+  clearYotoDesktopSession,
+  isDesktopAuthMode,
+  readYotoDesktopSession,
+  writeYotoDesktopSession,
+} from './yoto-desktop-session'
 import { withMappedYotoLimitError } from '#shared/myo-editor/yotoMyoLimits'
 
 export function getYotoRedirectUri(event: H3Event): string {
@@ -30,7 +37,7 @@ export function getYotoConfig(event: H3Event): YotoConfig {
   if (!clientId) {
     throw createError({
       statusCode: 503,
-      statusMessage: 'Yoto API not configured. Set NUXT_YOTO_CLIENT_ID in .env',
+      statusMessage: 'Yoto API not configured. Set LOUIS_YOTO_CLIENT_ID in .env',
     })
   }
 
@@ -43,12 +50,18 @@ export function isYotoConfigured(event: H3Event): boolean {
 }
 
 export function isYotoConnected(event: H3Event): boolean {
-  return Boolean(getRefreshTokenCookie(event) || getAccessTokenCookie(event))
+  if (getRefreshTokenCookie(event) || getAccessTokenCookie(event)) return true
+  const session = readYotoDesktopSession()
+  return Boolean(session?.refreshToken || session?.accessToken)
+}
+
+export function getYotoAuthScope(event: H3Event): string | undefined {
+  return getScopeCookie(event) || readYotoDesktopSession()?.scope || undefined
 }
 
 export async function getYotoAccessToken(event: H3Event): Promise<string> {
-  const refreshToken = getRefreshTokenCookie(event)
   const config = getYotoConfig(event)
+  const refreshToken = getRefreshTokenCookie(event) || readYotoDesktopSession()?.refreshToken || ''
 
   if (refreshToken) {
     try {
@@ -62,11 +75,21 @@ export async function getYotoAccessToken(event: H3Event): Promise<string> {
         setScopeCookie(event, tokens.scope)
       }
 
+      if (isDesktopAuthMode()) {
+        writeYotoDesktopSession({
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token || refreshToken,
+          scope: tokens.scope || readYotoDesktopSession()?.scope || '',
+          accessExpiresAt: Date.now() + Math.max(tokens.expires_in - 60, 60) * 1000,
+        })
+      }
+
       return tokens.access_token
     }
     catch (err: unknown) {
       const e = err as { statusCode?: number }
       if (e.statusCode === 401) {
+        clearYotoDesktopSession()
         throw createError({
           statusCode: 401,
           statusMessage: 'Yoto session expired. Please reconnect.',
@@ -76,7 +99,7 @@ export async function getYotoAccessToken(event: H3Event): Promise<string> {
     }
   }
 
-  const accessToken = getAccessTokenCookie(event)
+  const accessToken = getAccessTokenCookie(event) || readYotoDesktopSession()?.accessToken || ''
   if (accessToken) {
     return accessToken
   }

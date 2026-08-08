@@ -10,6 +10,13 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 ## [Unreleased]
 
 ### Added
+- **Desktop app (Electron):** macOS DMG (arm64 + x64) and Windows NSIS installers built on `v*` tags and attached to the same GitHub Release as GHCR — [docs/DESKTOP.md](docs/DESKTOP.md), [docs/RELEASE.md](docs/RELEASE.md), checklist [docs/DESKTOP_SHIP.md](docs/DESKTOP_SHIP.md).
+- Bundled yt-dlp + ffmpeg in the desktop package (`npm run desktop:fetch-binaries`); no Homebrew required for consumers.
+- Desktop Settings → **Desktop API keys** (Yoto client ID, YouTube API key, optional cookies path) stored under Application Support `config.json` — not baked into the binary. Fixed OAuth redirect `http://127.0.0.1:4010/api/yoto/auth/callback`.
+- **First-run setup wizard** on the splash background when required keys are missing: step-through Yoto / YouTube / redirect URI / “You’re ready”, with Back, step chip, FLIP layout motion, and **Let’s go** to save (and restart Nitro in the desktop app). Optional yt-dlp cookies stay in **Settings → Advanced** only.
+- Shared `DesktopApiKeysFields` for Settings and the wizard (tooltips, yoto.dev / Google Cloud links, redirect URI **Copy**).
+- Maintainer scripts: `desktop:spike`, `desktop:dir`, `desktop:build:host` / `:mac` / `:win` / `:build`.
+- HMR preview: `?desktopPrefs=1` (and `&desktopSetup=1`) mocks desktop config in sessionStorage — [docs/DESKTOP.md](docs/DESKTOP.md).
 - Phone editor IA below 600px: Search / Library tabs, nested card detail, Add-to-card drawer, Menu tray, toasts, and denser YouTube results (desktop/tablet two-column layout unchanged at `sm+`).
 - Mobile Menu update affordances: Bell + light pink when a save is pending; IndexPointingUp + left-to-right pink progress fill while updating.
 - How-to empty state and How To modal with beat art; Search Clear after submit; phone-friendly over-limit / long-track controls.
@@ -18,10 +25,19 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - In-process singleflight for concurrent downloads of the same YouTube id (preview stampede protection).
 
 ### Changed
+- Desktop first-run wizard no longer asks for yt-dlp cookies; set that path later under **Settings → Advanced** ([docs/DESKTOP.md](docs/DESKTOP.md)).
+- Auth gate: **Edit Settings** under Connect (and other primary actions) so a bad desktop client ID can be fixed without dismissing the gate.
+- Desktop **Connect** opens Yoto OAuth in the system browser (`shell.openExternal`); tokens persist in `yoto-session.json` so Louis never navigates away (and password managers work).
+- Renamed product UI copy from Preferences to **Settings**.
+- Env contract is now **`LOUIS_*`** (e.g. `LOUIS_YOTO_CLIENT_ID`, `LOUIS_YOUTUBE_API_KEY`, `LOUIS_PUBLIC_DESKTOP`); legacy **`NUXT_*` / `NUXT_PUBLIC_*`** still accepted as a deprecated fallback (`LOUIS_*` wins when both are set). Nitro boot plugin applies custom names at container runtime.
 - UI typeface is self-hosted **LT Saeada** (Regular / Medium / Bold) instead of Dongle.
+- Desktop Settings: General / Advanced nav; Done saves dirty API keys (Save & restart in Electron); required Yoto client ID + YouTube API key match the wizard.
+- Desktop config merge preserves omitted fields (e.g. client secret); `get-config` / setup gating use the same effective config (stored `config.json` with env filling blanks for spike/dev).
+- After credential save, desktop reload opens setup again if required keys are still missing.
 - Phone chrome polish for narrow viewports (densify ≤360px / ≤310px): tab icons, result art, howto mocks, tray open animation.
 - Expected anon→cookies escalate and retries log at info level (not warn/error).
 - Long API errors use h3 `message` instead of `statusMessage` (avoids future sanitization warnings).
+- Release workflow uploads desktop installers alongside GHCR on each `v*` tag.
 
 ### Removed
 - Public demo documentation and maintainer demo template (`docs/DEMO.md`, `.env.demo.example`, and related README / SECURITY notes).

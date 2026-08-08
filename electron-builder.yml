@@ -1,0 +1,70 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "app.louis.desktop",
+  "productName": "Louis",
+  "copyright": "Copyright © Louis contributors",
+  "directories": {
+    "app": "desktop",
+    "output": "desktop/out",
+    "buildResources": "desktop/icons"
+  },
+  "beforeBuild": "desktop/electron-before-build.cjs",
+  "files": [
+    "main.mjs",
+    "preload.cjs",
+    "configStore.mjs",
+    "loading.html",
+    "icons/**/*",
+    "package.json"
+  ],
+  "extraResources": [
+    {
+      "from": ".output",
+      "to": ".output"
+    },
+    {
+      "from": "desktop/resources/bin",
+      "to": "bin",
+      "filter": ["**/*", "!README.md"]
+    },
+    {
+      "from": "shared/louis-env.mjs",
+      "to": "shared/louis-env.mjs"
+    }
+  ],
+  "asar": true,
+  "mac": {
+    "category": "public.app-category.entertainment",
+    "icon": "icon.png",
+    "identity": null,
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["arm64", "x64"]
+      }
+    ],
+    "artifactName": "Louis-${version}-${arch}.${ext}"
+  },
+  "dmg": {
+    "artifactName": "Louis-${version}-${arch}.${ext}"
+  },
+  "win": {
+    "icon": "icon.png",
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "artifactName": "Louis-Setup-${version}.${ext}"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "artifactName": "Louis-Setup-${version}.${ext}"
+  },
+  "linux": {
+    "icon": "icon.png",
+    "target": ["dir"]
+  }
+}

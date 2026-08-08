@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { YOTO_MYO_KEY } from '~/components/yoto-myo/keys'
 import HowToModal from '~/components/layout/HowToModal.vue'
-import UserPreferencesModal from '~/components/layout/UserPreferencesModal.vue'
+import { usePreferencesShell } from '~/composables/usePreferencesShell'
+import { useDesktopHost } from '~/composables/useDesktopHost'
 
 const yoto = inject(YOTO_MYO_KEY)
 if (!yoto) {
@@ -9,10 +10,11 @@ if (!yoto) {
 }
 
 const { playEvent } = useUiSound()
+const { openPreferences } = usePreferencesShell()
+const { isDesktop } = useDesktopHost()
 
 const { connected, status, refresh, disconnect, hasWriteScope, connect, errorMessage } = yoto
 
-const prefsOpen = ref(false)
 const howToOpen = ref(false)
 
 const needsReconnect = computed(
@@ -42,9 +44,9 @@ function openHowTo() {
   howToOpen.value = true
 }
 
-function openPreferences() {
+function onOpenPreferences() {
   playEvent('buttonClick')
-  prefsOpen.value = true
+  openPreferences()
 }
 
 function onConnect() {
@@ -107,13 +109,22 @@ function onRetry() {
       <button
         type="button"
         class="status-bar__action"
-        @click="openPreferences"
+        @click="onOpenPreferences"
       >
-        Preferences
+        Settings
       </button>
 
       <button
-        v-if="status === 'disconnected' || status === 'unconfigured'"
+        v-if="status === 'unconfigured'"
+        type="button"
+        class="status-bar__action status-bar__action--emphasis"
+        @click="onOpenPreferences"
+      >
+        {{ isDesktop ? 'Add API keys' : 'Settings' }}
+      </button>
+
+      <button
+        v-if="status === 'disconnected'"
         type="button"
         class="status-bar__action status-bar__action--emphasis"
         @click="onConnect"
@@ -150,6 +161,5 @@ function onRetry() {
     </div>
 
     <HowToModal v-model:open="howToOpen" />
-    <UserPreferencesModal v-model:open="prefsOpen" />
   </div>
 </template>

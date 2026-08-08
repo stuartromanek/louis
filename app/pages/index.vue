@@ -1,55 +1,58 @@
 <template>
-  <div
-    class="app-shell"
-    :inert="authGateBlocksApp || welcomeBlocksApp || splashHoldsGate || undefined"
-  >
-    <DragDropProvider
-      :plugins="configurePlaylistDndPlugins"
-      @drag-start="onDragStart"
-      @drag-over="onDragOver"
-      @drag-end="onDragEnd"
-    >
-      <AppMainLayout
-        :playlist-title="playlistTitle"
-        :myo-count="myoCountLabel"
-      >
-        <template #youtube>
-          <YoutubePicker embedded />
-        </template>
-
-        <template #myo>
-          <YotoMyo embedded @update:count="myoCountLabel = $event" />
-        </template>
-
-        <template #playlist>
-          <YoutubePlaylist
-            :scroll-to-video-id="scrollToVideoId"
-            @scroll-to-complete="scrollToVideoId = null"
-          />
-        </template>
-
-        <template #playlist-footer>
-          <PlaylistPanelFooter />
-        </template>
-
-        <template #phone-library>
-          <MobileLibraryView />
-        </template>
-
-        <template #toolbar>
-          <AppStatusBar />
-        </template>
-
-        <template #footer>
-          <AppDevToolsStrip />
-        </template>
-      </AppMainLayout>
-      <MobileAddToCardDrawer />
-      <MobileToastHost />
-    </DragDropProvider>
-    <!-- Same bg as splash; covers first paint until splash boots or is skipped. -->
+  <div class="app-shell">
+    <!-- inert on the editor only — overlays (setup/splash/gates) stay interactive. -->
     <div
-      v-if="splashHoldsGate"
+      class="app-shell__main"
+      :inert="mainContentInert || undefined"
+    >
+      <DragDropProvider
+        :plugins="configurePlaylistDndPlugins"
+        @drag-start="onDragStart"
+        @drag-over="onDragOver"
+        @drag-end="onDragEnd"
+      >
+        <AppMainLayout
+          :playlist-title="playlistTitle"
+          :myo-count="myoCountLabel"
+        >
+          <template #youtube>
+            <YoutubePicker embedded />
+          </template>
+
+          <template #myo>
+            <YotoMyo embedded @update:count="myoCountLabel = $event" />
+          </template>
+
+          <template #playlist>
+            <YoutubePlaylist
+              :scroll-to-video-id="scrollToVideoId"
+              @scroll-to-complete="scrollToVideoId = null"
+            />
+          </template>
+
+          <template #playlist-footer>
+            <PlaylistPanelFooter />
+          </template>
+
+          <template #phone-library>
+            <MobileLibraryView />
+          </template>
+
+          <template #toolbar>
+            <AppStatusBar />
+          </template>
+
+          <template #footer>
+            <AppDevToolsStrip />
+          </template>
+        </AppMainLayout>
+        <MobileAddToCardDrawer />
+        <MobileToastHost />
+      </DragDropProvider>
+    </div>
+    <!-- Same bg as splash; covers first paint until splash + desktop setup finish. -->
+    <div
+      v-if="appBootHold"
       class="app-splash-cover"
       aria-hidden="true"
     />
@@ -58,16 +61,24 @@
       :debug="splashDebug"
       @done="markSplashSeen"
     />
+    <Teleport to="body">
+      <DesktopSetupScreen
+        v-if="showDesktopSetup"
+        @complete="onDesktopSetupComplete"
+      />
+    </Teleport>
     <YotoAuthGate
-      :paused="splashHoldsGate || welcomeOpen"
+      :paused="appBootHold || welcomeOpen"
       @update:blocking="authGateBlocksApp = $event"
     />
     <YotoConnectedModal
       :open="welcomeOpen"
-      :paused="splashHoldsGate"
+      :paused="appBootHold"
       @update:blocking="welcomeBlocksApp = $event"
       @dismiss="onWelcomeDismiss"
     />
+    <!-- Single prefs host (status bar + phone header both open via shell state). -->
+    <UserPreferencesModal v-model:open="prefsOpen" />
   </div>
 </template>
 
@@ -90,9 +101,11 @@ import { useYotoMyo } from '~/components/yoto-myo/useYotoMyo'
 import { YOTO_MYO_KEY } from '~/components/yoto-myo/keys'
 import AppStatusBar from '~/components/layout/AppStatusBar.vue'
 import AppDevToolsStrip from '~/components/dev/AppDevToolsStrip.vue'
+import UserPreferencesModal from '~/components/layout/UserPreferencesModal.vue'
 import YotoAuthGate from '~/components/yoto-myo/YotoAuthGate.vue'
 import YotoConnectedModal from '~/components/yoto-myo/YotoConnectedModal.vue'
 import AppSplash from '~/components/splash/AppSplash.vue'
+import DesktopSetupScreen from '~/components/splash/DesktopSetupScreen.vue'
 import MobileLibraryView from '~/components/layout/MobileLibraryView.vue'
 import MobileAddToCardDrawer from '~/components/layout/MobileAddToCardDrawer.vue'
 import MobileToastHost from '~/components/ui/MobileToastHost.vue'
@@ -115,6 +128,8 @@ const router = useRouter()
 
 const { playEvent } = useUiSound()
 const { shouldShowSplash, splashHoldsGate, splashDebug, markSplashSeen } = useAppSplash()
+const { open: prefsOpen } = usePreferencesShell()
+const { isDesktop, getConfig, desktopPrefsDebug } = useDesktopHost()
 
 const { playlist, isPlaylistLocked, selectedCardId, cardTitle } = editor
 const { connected, status } = yoto
@@ -124,13 +139,66 @@ const authGateBlocksApp = ref(false)
 const welcomeBlocksApp = ref(false)
 const welcomeOpen = ref(false)
 const scrollToVideoId = ref<string | null>(null)
+const desktopConfigChecked = ref(false)
+const needsDesktopSetup = ref(false)
 let lastReorderIndex: number | null = null
 let welcomeHandled = false
+
+const appBootHold = computed(
+  () =>
+    splashHoldsGate.value
+    || needsDesktopSetup.value
+    || (isDesktop.value && !desktopConfigChecked.value),
+)
+
+const showDesktopSetup = computed(
+  () => needsDesktopSetup.value && !splashHoldsGate.value && desktopConfigChecked.value,
+)
+
+/** Block editor interaction while a gate/setup owns the screen — not the shell root. */
+const mainContentInert = computed(
+  () => authGateBlocksApp.value || welcomeBlocksApp.value || appBootHold.value,
+)
+
+async function refreshDesktopSetupNeeded() {
+  if (!isDesktop.value) {
+    needsDesktopSetup.value = false
+    desktopConfigChecked.value = true
+    return
+  }
+  try {
+    const config = await getConfig()
+    const forceQuery = route.query.desktopSetup === '1' && desktopPrefsDebug.value
+    needsDesktopSetup.value = forceQuery
+      || !config.yotoClientId.trim()
+      || !config.youtubeApiKey.trim()
+  }
+  catch {
+    needsDesktopSetup.value = true
+  }
+  finally {
+    desktopConfigChecked.value = true
+  }
+  if (route.query.desktopSetup === '1') {
+    void clearDesktopSetupQuery()
+  }
+}
+
+function onDesktopSetupComplete() {
+  needsDesktopSetup.value = false
+}
 
 async function clearYotoConnectedQuery() {
   if (route.query.yoto !== 'connected') return
   const nextQuery = { ...route.query }
   delete nextQuery.yoto
+  await router.replace({ query: nextQuery })
+}
+
+async function clearDesktopSetupQuery() {
+  if (route.query.desktopSetup !== '1') return
+  const nextQuery = { ...route.query }
+  delete nextQuery.desktopSetup
   await router.replace({ query: nextQuery })
 }
 
@@ -140,11 +208,20 @@ function onWelcomeDismiss() {
 }
 
 watch(
-  [() => route.query.yoto, connected, status, splashHoldsGate],
+  isDesktop,
+  () => {
+    desktopConfigChecked.value = false
+    void refreshDesktopSetupNeeded()
+  },
+  { immediate: true },
+)
+
+watch(
+  [() => route.query.yoto, connected, status, appBootHold],
   ([yotoFlag]) => {
     if (welcomeHandled) return
     if (yotoFlag !== 'connected') return
-    if (splashHoldsGate.value) return
+    if (appBootHold.value) return
     if (status.value === 'loading') return
 
     if (!connected.value) {

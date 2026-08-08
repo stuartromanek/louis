@@ -3,7 +3,7 @@ import path from 'node:path'
 import type { H3Event } from 'h3'
 
 export interface YtdlpCookiesStatus {
-  /** True when NUXT_YTDLP_COOKIES_FILE is non-empty (path not returned). */
+  /** True when LOUIS_YTDLP_COOKIES_FILE is non-empty (path not returned). */
   configured: boolean
   /** True when the configured file exists and is readable. */
   readable: boolean
@@ -16,7 +16,7 @@ function runtimeConfig(event?: H3Event) {
 }
 
 /**
- * yt-dlp `--cookies` args from NUXT_YTDLP_COOKIES_FILE when set and readable.
+ * yt-dlp `--cookies` args from LOUIS_YTDLP_COOKIES_FILE when set and readable.
  * Returns [] (and does not throw) when unset or unreadable.
  */
 export async function resolveYtdlpCookiesArgs(event?: H3Event): Promise<string[]> {
@@ -32,7 +32,7 @@ export async function resolveYtdlpCookiesArgs(event?: H3Event): Promise<string[]
     if (!missingFileLogged) {
       missingFileLogged = true
       console.warn(
-        '[ytdlp-cookies] NUXT_YTDLP_COOKIES_FILE is set but not readable; downloads will run without --cookies',
+        '[ytdlp-cookies] LOUIS_YTDLP_COOKIES_FILE is set but not readable; downloads will run without --cookies',
       )
     }
     return []

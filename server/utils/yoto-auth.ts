@@ -38,7 +38,10 @@ export async function generatePkceChallenge() {
   return pkceChallenge()
 }
 
-export function buildAuthorizeUrl(config: YotoConfig, codeChallenge?: string): string {
+export function buildAuthorizeUrl(
+  config: YotoConfig,
+  options?: { codeChallenge?: string; state?: string },
+): string {
   const params = new URLSearchParams({
     audience: YOTO_API_AUDIENCE,
     scope: YOTO_SCOPES,
@@ -47,9 +50,13 @@ export function buildAuthorizeUrl(config: YotoConfig, codeChallenge?: string): s
     redirect_uri: config.redirectUri,
   })
 
-  if (codeChallenge) {
-    params.set('code_challenge', codeChallenge)
+  if (options?.codeChallenge) {
+    params.set('code_challenge', options.codeChallenge)
     params.set('code_challenge_method', 'S256')
+  }
+
+  if (options?.state) {
+    params.set('state', options.state)
   }
 
   return `${YOTO_AUTH_BASE_URL}/authorize?${params.toString()}`

@@ -1,0 +1,9 @@
+{
+  "name": "Louis",
+  "version": "1.0.0",
+  "private": true,
+  "main": "main.mjs",
+  "type": "module",
+  "description": "Louis desktop host (Electron)",
+  "author": "Louis contributors"
+}

@@ -38,7 +38,7 @@ const roles = [
       <p class="type-body text-pretty max-w-2xl mb-4">
         Map UI copy to a named role below (or <code class="font-maru-mono">MaruHeading</code> sm/md).
         Approximate the closest fit, or ask how a new role should be named before adding tokens.
-        Preferences title is the only approved product one-off.
+        Settings title is the only approved product one-off.
       </p>
     </div>
 
