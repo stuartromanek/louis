@@ -61,14 +61,25 @@ jobs:
       - name: Build DMGs (unsigned; see docs/DESKTOP_SIGNING.md for CI signing)
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: npx electron-builder --mac dmg --publish never
+        run: npx electron-builder --mac dmg --arm64 --x64 --publish never
+
+      - name: Verify macOS DMGs (arm64 + x64)
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          arm64=(desktop/out/Louis-*-arm64.dmg)
+          x64=(desktop/out/Louis-*-x64.dmg)
+          ls -la desktop/out/Louis-*.dmg || true
+          (( ${#arm64[@]} == 1 )) || { echo "expected one arm64 DMG, got ${#arm64[@]}"; exit 1; }
+          (( ${#x64[@]} == 1 )) || { echo "expected one x64 DMG, got ${#x64[@]}"; exit 1; }
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: desktop-mac
           path: |
-            desktop/out/Louis-*.dmg
+            desktop/out/Louis-*-arm64.dmg
+            desktop/out/Louis-*-x64.dmg
           if-no-files-found: error
 
   desktop-win:
@@ -96,7 +107,7 @@ jobs:
       - name: Build NSIS (unsigned; see docs/DESKTOP_SIGNING.md for CI signing)
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: npx electron-builder --win nsis --publish never
+        run: npx electron-builder --win nsis --x64 --publish never
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4

@@ -9,6 +9,9 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [Unreleased]
 
+### Fixed
+- macOS release builds both arm64 and x64 DMGs (`electron-builder --arm64 --x64`); CI verifies both artifacts before upload.
+
 ## [1.1.1] - 2026-08-08
 
 ### Fixed
