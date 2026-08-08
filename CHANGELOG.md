@@ -9,6 +9,8 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-08-08
+
 ### Fixed
 - macOS release builds both arm64 and x64 DMGs (`electron-builder --arm64 --x64`); CI verifies both artifacts before upload.
 
@@ -73,7 +75,8 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - Marketing page (`/marketing`) and `public/marketing/` assets (Louis/Yoto art lives under `public/images/`).
 - Experimental muted `<video>` splash cue path (`louis.mp4`); splash audio uses the shared UI sound player only.
 
-[Unreleased]: https://github.com/stuartromanek/louis/compare/v1.1.1...main
+[Unreleased]: https://github.com/stuartromanek/louis/compare/v1.1.2...main
+[1.1.2]: https://github.com/stuartromanek/louis/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/stuartromanek/louis/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/stuartromanek/louis/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/stuartromanek/louis-/releases/tag/v1.0.0
