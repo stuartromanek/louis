@@ -22,7 +22,7 @@ When a YouTube source exceeds Yoto’s per-track duration cap (~1 hour), automat
 
 ### Home Assistant add-on
 
-Package Louis as a [Home Assistant](https://www.home-assistant.io/) add-on so users can install and run it from their HA instance (config via add-on options, data volume for the audio work dir).
+~~Package Louis as a [Home Assistant](https://www.home-assistant.io/) add-on so users can install and run it from their HA instance (config via add-on options, data volume for the audio work dir).~~ — **done**: see [homeassistant/louis/DOCS.md](homeassistant/louis/DOCS.md). Requires multi-arch GHCR (`amd64` + `arm64`) on `v*` releases.
 
 ### Docker Hub (and image registries)
 

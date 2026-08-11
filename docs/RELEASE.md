@@ -6,7 +6,7 @@ The app version shown in Settings (`Louis v…`) comes from `package.json` via `
 
 Pushing a tag matching `v*` runs [`.github/workflows/release.yml`](../.github/workflows/release.yml), which:
 
-1. Publishes a Docker image to GHCR (`:latest` and `:{tag}`)
+1. Publishes a **multi-arch** Docker image to GHCR (`:latest` and `:{tag}` for `linux/amd64` + `linux/arm64`)
 2. Builds macOS DMGs (arm64 + x64) and Windows NSIS Setup
 3. Uploads those installers as **Assets** on the same GitHub Release created by `release-it`
 
@@ -84,11 +84,12 @@ Example: splash + welcome modal + auth gate redesign → **minor** (e.g. `0.1.0`
 Checklist for tag `vX.Y.Z`:
 
 - [ ] GitHub Action **Release** workflow succeeded (all jobs green)
-- [ ] GHCR image exists: `ghcr.io/<org>/louis:vX.Y.Z` and `:latest`
+- [ ] GHCR image exists: `ghcr.io/<org>/louis:vX.Y.Z` and `:latest` (**amd64 + arm64** manifest)
 - [ ] Release page `…/releases/tag/vX.Y.Z` lists under **Assets**:
   - `Louis-X.Y.Z-arm64.dmg`
   - `Louis-X.Y.Z-x64.dmg`
   - `Louis-Setup-X.Y.Z.exe`
+- [ ] If the Home Assistant add-on pin changed: bump `homeassistant/louis/config.yaml` `version` and `Dockerfile` `FROM …:vX.Y.Z` to match
 - [ ] Deploy that tag on Railway (or your host) when you want a pinned Docker version; `:latest` tracks the newest tagged release
 - [ ] Start the next cycle by writing new bullets under `[Unreleased]` again
 

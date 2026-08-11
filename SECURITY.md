@@ -20,7 +20,7 @@ Include:
 ## Scope notes
 
 - This app stores Yoto OAuth tokens in httpOnly cookies on the server (self-host / Docker). The desktop app also writes tokens to `yoto-session.json` under Application Support after system-browser Connect — treat that file like a secret.
-- Self-hosters must use HTTPS in production
+- Self-hosters should use HTTPS in production. OAuth cookies default to `Secure` when `NODE_ENV=production`; set `LOUIS_COOKIE_SECURE=false` only for intentional plain HTTP (e.g. Home Assistant LAN). Prefer `true` behind TLS / reverse proxy.
 - Do not commit `.env`, API keys, refresh tokens, or YouTube `cookies.txt`
 - `LOUIS_YTDLP_COOKIES_FILE` (when set on any deploy) is a server secret — never expose path or contents via debug routes or API responses; prefer a throwaway Google account
 - **Desktop installers** do not embed Yoto/YouTube API keys or cookies. Credentials live in user-writable app data (`config.json` under Application Support / equivalent) via Settings. Optional yt-dlp cookies are a **user-chosen file path**, never shipped inside the DMG/NSIS
