@@ -374,16 +374,16 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 1.35rem;
-  height: 1.35rem;
+  width: 1.1rem;
+  height: 1.1rem;
   margin: 0;
   padding: 0;
-  border: 2px solid var(--color-maru-black);
+  border: 1.5px solid var(--color-maru-black);
   border-radius: 999px;
   background: var(--color-maru-white);
-  box-shadow: 2px 2px 0 var(--color-maru-black);
+  box-shadow: 1.5px 1.5px 0 var(--color-maru-black);
   font-family: var(--font-maru);
-  font-size: var(--text-maru-meta);
+  font-size: 0.65rem;
   font-weight: 700;
   line-height: 1;
   color: var(--color-maru-black);
@@ -396,7 +396,7 @@
 
 .prefs-projector__help:hover:not(:disabled) {
   background: var(--color-maru-yellow);
-  box-shadow: 3px 3px 0 var(--color-maru-black);
+  box-shadow: 2.5px 2.5px 0 var(--color-maru-black);
   translate: -1px -1px;
 }
 
@@ -687,6 +687,7 @@
 }
 
 .prefs-projector__done:disabled,
+.prefs-projector__browse:disabled,
 .prefs-projector__pull:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -804,6 +805,11 @@
     box-shadow 0.15s ease-out,
     translate 0.15s ease-out,
     scale 0.15s ease-out;
+}
+
+.prefs-projector__use-default {
+  align-self: flex-start;
+  margin-top: 0.5rem;
 }
 
 .prefs-projector__browse .maru-button__label,

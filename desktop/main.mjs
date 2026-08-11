@@ -13,6 +13,7 @@ import {
   effectiveDesktopConfig,
   mergeDesktopConfig,
 } from './configStore.mjs'
+import { BUNDLED_YOTO_CLIENT_ID } from '../shared/bundledYotoClientId.mjs'
 import { pickLouisEnv, setLouisAndNuxtEnv } from '../shared/louis-env.mjs'
 
 const require = createRequire(import.meta.url)
@@ -364,7 +365,11 @@ async function showLoadingThenApp() {
 
 function registerIpc() {
   // Return effective config so empty config.json + spike .env matches setup gating.
-  ipcMain.handle('louis:get-config', () => effectiveConfigForSetupCheck())
+  // bundledYotoClientId is UI metadata only (not persisted to config.json).
+  ipcMain.handle('louis:get-config', () => ({
+    ...effectiveConfigForSetupCheck(),
+    bundledYotoClientId: BUNDLED_YOTO_CLIENT_ID,
+  }))
   ipcMain.handle('louis:get-redirect-uri', () => DESKTOP_REDIRECT_URI)
 
   ipcMain.handle('louis:open-external', async (_event, url) => {

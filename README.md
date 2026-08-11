@@ -36,7 +36,7 @@ Installers ship as **Assets** on each GitHub Release (same `vX.Y.Z` as Docker):
 | Windows             | `Louis-Setup-<version>.exe` |
 
 
-After install, open **Settings → Desktop API keys** and add your Yoto client ID + YouTube Data API key. Register OAuth redirect `http://127.0.0.1:4010/api/yoto/auth/callback` on [yoto.dev](https://yoto.dev/get-started/start-here/). Details: [docs/DESKTOP.md](docs/DESKTOP.md).
+After install, the setup wizard (or **Settings → Advanced**) asks for a Yoto client ID and YouTube Data API key. Prefer **Use default client** for Yoto, or bring your own from [yoto.dev](https://yoto.dev/get-started/start-here/) with redirect `http://127.0.0.1:4010/api/yoto/auth/callback`. Details: [docs/DESKTOP.md](docs/DESKTOP.md).
 
 Installers are currently **unsigned** (Gatekeeper / SmartScreen may warn). Signing notes: [docs/DESKTOP_SIGNING.md](docs/DESKTOP_SIGNING.md).
 

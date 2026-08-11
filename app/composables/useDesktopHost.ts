@@ -1,14 +1,18 @@
+import { BUNDLED_YOTO_CLIENT_ID } from '#shared/bundledYotoClientId.mjs'
+
 export type LouisDesktopConfig = {
   yotoClientId: string
   yotoClientSecret: string
   youtubeApiKey: string
   ytdlpCookiesFile: string
+  /** Louis public PKCE client ID for “Use default client” (not persisted). */
+  bundledYotoClientId: string
 }
 
 type LouisDesktopBridge = {
   isDesktop: true
-  getConfig: () => Promise<LouisDesktopConfig>
-  setConfig: (config: Partial<LouisDesktopConfig>) => Promise<LouisDesktopConfig>
+  getConfig: () => Promise<Partial<LouisDesktopConfig>>
+  setConfig: (config: Partial<LouisDesktopConfig>) => Promise<Partial<LouisDesktopConfig>>
   pickCookiesFile: () => Promise<string | null>
   getRedirectUri: () => Promise<string>
   openExternal: (url: string) => Promise<void>
@@ -30,6 +34,7 @@ function emptyConfig(): LouisDesktopConfig {
     yotoClientSecret: '',
     youtubeApiKey: '',
     ytdlpCookiesFile: '',
+    bundledYotoClientId: BUNDLED_YOTO_CLIENT_ID,
   }
 }
 
@@ -39,6 +44,18 @@ function normalizeConfig(raw: Partial<LouisDesktopConfig> | null | undefined): L
     yotoClientSecret: String(raw?.yotoClientSecret || '').trim(),
     youtubeApiKey: String(raw?.youtubeApiKey || '').trim(),
     ytdlpCookiesFile: String(raw?.ytdlpCookiesFile || '').trim(),
+    bundledYotoClientId:
+      String(raw?.bundledYotoClientId || '').trim() || BUNDLED_YOTO_CLIENT_ID,
+  }
+}
+
+/** Persist only user credentials in the prefs mock (not bundled metadata). */
+function mockPersistShape(config: LouisDesktopConfig) {
+  return {
+    yotoClientId: config.yotoClientId,
+    yotoClientSecret: config.yotoClientSecret,
+    youtubeApiKey: config.youtubeApiKey,
+    ytdlpCookiesFile: config.ytdlpCookiesFile,
   }
 }
 
@@ -57,7 +74,7 @@ function readMockConfig(): LouisDesktopConfig {
 function writeMockConfig(next: LouisDesktopConfig): LouisDesktopConfig {
   const normalized = normalizeConfig(next)
   if (typeof sessionStorage !== 'undefined') {
-    sessionStorage.setItem(DESKTOP_PREFS_MOCK_CONFIG_KEY, JSON.stringify(normalized))
+    sessionStorage.setItem(DESKTOP_PREFS_MOCK_CONFIG_KEY, JSON.stringify(mockPersistShape(normalized)))
   }
   return normalized
 }
@@ -138,7 +155,7 @@ export function useDesktopHost() {
     }
     if (window.louisDesktop) {
       const raw = await window.louisDesktop.setConfig(config)
-      return normalizeConfig(raw)
+      return normalizeConfig({ ...raw, bundledYotoClientId: BUNDLED_YOTO_CLIENT_ID })
     }
     if (desktopPrefsDebug.value) {
       const current = readMockConfig()

@@ -5,9 +5,7 @@ import { colorForIndex } from '~/utils/howtoBeats'
 
 type SetupStep = 'intro' | 'yoto' | 'youtube' | 'redirect' | 'ready'
 
-const STEPS: SetupStep[] = ['intro', 'yoto', 'youtube', 'redirect', 'ready']
-/** Form field steps after intro (excludes ready confirm). */
-const FIELD_TOTAL = 3
+const ALL_STEPS: SetupStep[] = ['intro', 'yoto', 'youtube', 'redirect', 'ready']
 const FLIP_MS = 340
 const FLIP_EASE = 'cubic-bezier(0.2, 0, 0, 1)'
 const LEAVE_MS = 320
@@ -23,6 +21,7 @@ const { playEvent } = useUiSound()
 const yotoClientId = ref('')
 const youtubeApiKey = ref('')
 const redirectUri = ref('http://127.0.0.1:4010/api/yoto/auth/callback')
+const bundledYotoClientId = ref('')
 const saving = ref(false)
 const leaving = ref(false)
 const error = ref('')
@@ -38,13 +37,28 @@ const ledeEl = ref<HTMLElement | null>(null)
 const actionsEl = ref<HTMLElement | null>(null)
 const confirmEl = ref<HTMLButtonElement | null>(null)
 
-const step = computed(() => STEPS[stepIndex.value] ?? 'intro')
+const usingBundledClient = computed(
+  () => Boolean(bundledYotoClientId.value)
+    && yotoClientId.value.trim() === bundledYotoClientId.value,
+)
+
+/** Default client already has the desktop redirect registered — skip that step. */
+const activeSteps = computed(() => (
+  usingBundledClient.value
+    ? ALL_STEPS.filter(s => s !== 'redirect')
+    : ALL_STEPS
+))
+
+/** Form field steps after intro (excludes ready confirm). */
+const fieldTotal = computed(() => (usingBundledClient.value ? 2 : 3))
+
+const step = computed(() => activeSteps.value[stepIndex.value] ?? 'intro')
 const isFirst = computed(() => stepIndex.value === 0)
-const isLast = computed(() => stepIndex.value === STEPS.length - 1)
+const isLast = computed(() => stepIndex.value === activeSteps.value.length - 1)
 const isReadyStep = computed(() => step.value === 'ready')
 
-/** Progress through form fields; intro is 0; ready stays at FIELD_TOTAL. */
-const fieldsDone = computed(() => Math.min(stepIndex.value, FIELD_TOTAL))
+/** Progress through form fields; intro is 0; ready stays at fieldTotal. */
+const fieldsDone = computed(() => Math.min(stepIndex.value, fieldTotal.value))
 
 const stepCountColor = computed(() => colorForIndex(fieldsDone.value))
 
@@ -52,6 +66,10 @@ const fieldOnly = computed((): 'yoto' | 'youtube' | 'redirect' | null => {
   if (step.value === 'intro' || step.value === 'ready') return null
   return step.value
 })
+
+const showUseDefaultClient = computed(
+  () => step.value === 'yoto' && Boolean(bundledYotoClientId.value),
+)
 
 const canAdvance = computed(() => {
   if (saving.value || leaving.value) return false
@@ -87,21 +105,18 @@ const heading = computed(() => {
 const lede = computed(() => {
   switch (step.value) {
     case 'intro':
-      return 'A few keys so Louis can talk to Yoto and YouTube. They stay on this computer — never inside the app installer.'
-    case 'yoto':
-      return 'Required to connect your Yoto account.'
-    case 'youtube':
-      return 'Required to search YouTube from Louis.'
-    case 'redirect':
-      return 'Register this exact URI on your Yoto developer app at yoto.dev.'
+      return 'A few keys so Louis can talk to Yoto and YouTube. Your YouTube key stays on this computer — use Louis’s bundled Yoto client or your own.'
     case 'ready':
       return desktopPrefsDebug.value
-        ? 'Keys stay on this computer. Confirm to open Louis and connect to Yoto.'
-        : 'Keys stay on this computer. Confirm to save, restart the local server, and connect to Yoto.'
+        ? 'Your YouTube key stays on this computer. Confirm to open Louis and connect to Yoto.'
+        : 'Your YouTube key stays on this computer. Confirm to save, restart the local server, and connect to Yoto.'
     default:
+      // Field steps fold this into DesktopApiKeysFields hints.
       return ''
   }
 })
+
+const showHeaderLede = computed(() => Boolean(lede.value))
 
 function sharedEls(): HTMLElement[] {
   return [brandEl.value, titleEl.value, ledeEl.value, actionsEl.value].filter(
@@ -145,7 +160,7 @@ async function moveToStep(nextIndex: number) {
   await nextTick()
   await nextTick()
   flipFrom(sharedEls(), first)
-  if (STEPS[nextIndex] === 'ready') {
+  if (activeSteps.value[nextIndex] === 'ready') {
     await nextTick()
     confirmEl.value?.focus({ preventScroll: true })
   }
@@ -185,6 +200,7 @@ async function load() {
     const [config, uri] = await Promise.all([getConfig(), getRedirectUri()])
     yotoClientId.value = config.yotoClientId
     youtubeApiKey.value = config.youtubeApiKey
+    bundledYotoClientId.value = config.bundledYotoClientId
     redirectUri.value = uri
   }
   catch (err) {
@@ -201,6 +217,12 @@ async function goBack() {
   error.value = ''
   playEvent('buttonClick')
   await moveToStep(stepIndex.value - 1)
+}
+
+function onUseDefaultClient() {
+  if (saving.value || leaving.value || !bundledYotoClientId.value || usingBundledClient.value) return
+  playEvent('select')
+  yotoClientId.value = bundledYotoClientId.value
 }
 
 async function goNext() {
@@ -290,15 +312,16 @@ onMounted(() => {
               class="desktop-setup__step-count"
               :class="[stepCountColor.bg, stepCountColor.text]"
               aria-live="polite"
-              :aria-label="`${fieldsDone} of ${FIELD_TOTAL} fields`"
+              :aria-label="`${fieldsDone} of ${fieldTotal} fields`"
             >
               <span class="desktop-setup__step-n" aria-hidden="true">{{ fieldsDone }}</span>
               <span class="desktop-setup__step-sep" aria-hidden="true">of</span>
-              <span class="desktop-setup__step-x" aria-hidden="true">{{ FIELD_TOTAL }}</span>
+              <span class="desktop-setup__step-x" aria-hidden="true">{{ fieldTotal }}</span>
             </p>
           </Transition>
         </div>
         <p
+          v-if="showHeaderLede"
           ref="ledeEl"
           class="desktop-setup__lede prefs-projector__hint"
         >
@@ -317,6 +340,7 @@ onMounted(() => {
           id-prefix="desktop-setup"
           :error="error"
           :only="fieldOnly"
+          :using-bundled-client="usingBundledClient"
           stagger
           animate-in
         />
@@ -347,6 +371,16 @@ onMounted(() => {
             @click="goBack"
           >
             ← Back
+          </button>
+          <button
+            v-if="showUseDefaultClient"
+            type="button"
+            class="prefs-projector__done desktop-setup__use-default maru-button bg-maru-blue-light"
+            :disabled="saving || leaving || usingBundledClient"
+            :aria-pressed="usingBundledClient"
+            @click="onUseDefaultClient"
+          >
+            <span class="maru-button__label">{{ usingBundledClient ? 'Using default client' : 'Use default client' }}</span>
           </button>
           <button
             ref="confirmEl"

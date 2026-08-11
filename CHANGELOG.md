@@ -9,6 +9,12 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [Unreleased]
 
+### Added
+- Desktop **Use default client** prefills Louis’s bundled public Yoto PKCE client ID (setup wizard + Settings → Advanced).
+
+### Fixed
+- Desktop Yoto session: expired access without refresh forces reconnect; save/reuse-test read scope from cookie or `yoto-session.json`.
+
 ## [1.1.2] - 2026-08-08
 
 ### Fixed
