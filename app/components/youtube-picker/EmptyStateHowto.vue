@@ -427,7 +427,7 @@ function onKeydown(event: KeyboardEvent) {
   --howto-fan-max-w: 25rem;
   --howto-fan-max-h: 18rem;
   /* Extra overall shrink — height (and width) without retuning type/geometry. */
-  --howto-fan-shrink: 1;
+  --howto-fan-shrink: 0.9;
 }
 
 /* Mid / tall panes: let the fan use the cell — only the available box should clip it. */

@@ -23,7 +23,7 @@ Include:
 - Self-hosters should use HTTPS in production. OAuth cookies default to `Secure` when `NODE_ENV=production`; set `LOUIS_COOKIE_SECURE=false` only for intentional plain HTTP (e.g. Home Assistant LAN). Prefer `true` behind TLS / reverse proxy.
 - Do not commit `.env`, API keys, refresh tokens, or YouTube `cookies.txt`
 - `LOUIS_YTDLP_COOKIES_FILE` (when set on any deploy) is a server secret — never expose path or contents via debug routes or API responses; prefer a throwaway Google account
-- **Desktop installers** do not embed Yoto/YouTube API keys or cookies. Credentials live in user-writable app data (`config.json` under Application Support / equivalent) via Settings. Optional yt-dlp cookies are a **user-chosen file path**, never shipped inside the DMG/NSIS
+- Louis builds may include a **public** Yoto PKCE client ID (not a secret). Desktop setup / Settings can prefill it via **Use default client**. Self-host still requires an explicit `LOUIS_YOTO_CLIENT_ID` in `.env` (no silent fallback). Do **not** embed YouTube API keys, client secrets, cookies, or OAuth tokens in installers or images — those live in user-writable app data (`config.json` / env) only. Optional yt-dlp cookies are a **user-chosen file path**, never shipped inside the DMG/NSIS
 - Treat unsigned desktop builds like any other downloaded binary until release signing is enabled ([docs/DESKTOP_SIGNING.md](docs/DESKTOP_SIGNING.md))
 
 ## Out of scope
