@@ -143,10 +143,22 @@ async function postTokenRequest(body: Record<string, string>): Promise<YotoToken
   }
 }
 
+/**
+ * Whether OAuth cookies should use the Secure flag.
+ * LOUIS_COOKIE_SECURE=true|false overrides; when unset, secure iff NODE_ENV=production.
+ * Set false for plain HTTP (e.g. Home Assistant LAN http://homeassistant.local:4000).
+ */
+export function isYotoCookieSecure(): boolean {
+  const raw = (process.env.LOUIS_COOKIE_SECURE || process.env.NUXT_COOKIE_SECURE || '').trim().toLowerCase()
+  if (raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on') return true
+  if (raw === '0' || raw === 'false' || raw === 'no' || raw === 'off') return false
+  return process.env.NODE_ENV === 'production'
+}
+
 export function setPkceVerifierCookie(event: H3Event, verifier: string) {
   setCookie(event, YOTO_PKCE_VERIFIER_COOKIE, verifier, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isYotoCookieSecure(),
     sameSite: 'lax',
     maxAge: 60 * 10,
     path: '/',
@@ -164,7 +176,7 @@ export function clearPkceVerifierCookie(event: H3Event) {
 export function setAccessTokenCookie(event: H3Event, accessToken: string, expiresIn: number) {
   setCookie(event, YOTO_ACCESS_TOKEN_COOKIE, accessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isYotoCookieSecure(),
     sameSite: 'lax',
     maxAge: Math.max(expiresIn - 60, 60),
     path: '/',
@@ -182,7 +194,7 @@ export function clearAccessTokenCookie(event: H3Event) {
 export function setRefreshTokenCookie(event: H3Event, refreshToken: string) {
   setCookie(event, YOTO_REFRESH_TOKEN_COOKIE, refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isYotoCookieSecure(),
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 365,
     path: '/',
@@ -201,7 +213,7 @@ export function setScopeCookie(event: H3Event, scope: string | undefined) {
   if (!scope) return
   setCookie(event, YOTO_SCOPE_COOKIE, scope, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isYotoCookieSecure(),
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 365,
     path: '/',

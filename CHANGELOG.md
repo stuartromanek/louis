@@ -10,7 +10,10 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 ## [Unreleased]
 
 ### Added
-- Desktop **Use default client** prefills Louis’s bundled public Yoto PKCE client ID (setup wizard + Settings → Advanced).
+- **Home Assistant add-on** under `homeassistant/` (Supervisor repo + options → `LOUIS_*`, port 4000, `/data/audio`) — [homeassistant/louis/DOCS.md](homeassistant/louis/DOCS.md).
+- `LOUIS_COOKIE_SECURE` to override OAuth cookie `Secure` (plain HTTP / HA LAN).
+- GHCR release images publish **linux/amd64 + linux/arm64** (required for typical HA hosts).
+- Desktop **Use default client** prefills Louis's bundled public Yoto PKCE client ID (setup wizard + Settings → Advanced).
 
 ### Fixed
 - Desktop Yoto session: expired access without refresh forces reconnect; save/reuse-test read scope from cookie or `yoto-session.json`.
