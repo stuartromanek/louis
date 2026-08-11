@@ -1,6 +1,6 @@
-import { getScopeCookie, hasContentManageScope } from '../../../../utils/yoto-auth'
+import { hasContentManageScope } from '../../../../utils/yoto-auth'
 import { startSaveJob } from '../../../../utils/save-jobs'
-import { getYotoAccessToken } from '../../../../utils/yoto'
+import { getYotoAccessToken, getYotoAuthScope } from '../../../../utils/yoto'
 import type { PlaylistTrack } from '#shared/myo-editor/types'
 
 interface SaveRequestBody {
@@ -17,7 +17,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'cardId is required' })
   }
 
-  const scope = getScopeCookie(event)
+  // Desktop system-browser OAuth stores scope in yoto-session.json, not cookies.
+  const scope = getYotoAuthScope(event)
   if (!hasContentManageScope(scope)) {
     throw createError({
       statusCode: 403,

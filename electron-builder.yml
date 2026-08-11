@@ -30,6 +30,10 @@
     {
       "from": "shared/louis-env.mjs",
       "to": "shared/louis-env.mjs"
+    },
+    {
+      "from": "shared/bundledYotoClientId.mjs",
+      "to": "shared/bundledYotoClientId.mjs"
     }
   ],
   "asar": true,
