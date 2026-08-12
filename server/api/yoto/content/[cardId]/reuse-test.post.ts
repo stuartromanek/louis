@@ -1,6 +1,6 @@
 import { testReuseContentUpdate } from '../../../../utils/save-jobs'
-import { getScopeCookie, hasContentManageScope } from '../../../../utils/yoto-auth'
-import { getYotoAccessToken } from '../../../../utils/yoto'
+import { hasContentManageScope } from '../../../../utils/yoto-auth'
+import { getYotoAccessToken, getYotoAuthScope } from '../../../../utils/yoto'
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig(event)
@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'cardId is required' })
   }
 
-  const scope = getScopeCookie(event)
+  const scope = getYotoAuthScope(event)
   if (!hasContentManageScope(scope)) {
     throw createError({
       statusCode: 403,

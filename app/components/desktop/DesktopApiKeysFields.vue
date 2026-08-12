@@ -18,6 +18,8 @@ const props = withDefaults(defineProps<{
   animateIn?: boolean
   /** Show a single field (wizard step). Omit to show all. */
   only?: 'yoto' | 'youtube' | 'cookies' | 'redirect' | null
+  /** Wizard: draft matches Louis bundled client (redirect hint). */
+  usingBundledClient?: boolean
 }>(), {
   disabled: false,
   idPrefix: 'desktop-api',
@@ -25,18 +27,20 @@ const props = withDefaults(defineProps<{
   stagger: false,
   animateIn: false,
   only: null,
+  usingBundledClient: false,
 })
 
 const yotoClientId = defineModel<string>('yotoClientId', { default: '' })
 const youtubeApiKey = defineModel<string>('youtubeApiKey', { default: '' })
 const ytdlpCookiesFile = defineModel<string>('ytdlpCookiesFile', { default: '' })
 
-const { pickCookiesFile } = useDesktopHost()
+const { pickCookiesFile, getConfig } = useDesktopHost()
 const { playEvent } = useUiSound()
 
 const prefersReducedMotion = ref(false)
 const entered = ref(false)
 const redirectCopied = ref(false)
+const bundledYotoClientId = ref('')
 let redirectCopiedTimer: ReturnType<typeof setTimeout> | null = null
 let focusTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -50,6 +54,11 @@ const youtubeId = computed(() => `${props.idPrefix}-youtube-api-key`)
 const cookiesId = computed(() => `${props.idPrefix}-ytdlp-cookies`)
 
 const redirectCopyLabel = computed(() => (redirectCopied.value ? 'Copied' : 'Copy'))
+
+const showUseDefaultClient = computed(() => Boolean(bundledYotoClientId.value))
+const usingBundledClient = computed(
+  () => showUseDefaultClient.value && yotoClientId.value.trim() === bundledYotoClientId.value,
+)
 
 function showField(id: 'yoto' | 'youtube' | 'cookies' | 'redirect') {
   return !props.only || props.only === id
@@ -139,6 +148,22 @@ async function onPickCookies() {
   if (picked) ytdlpCookiesFile.value = picked
 }
 
+function onUseDefaultClient() {
+  if (props.disabled || !bundledYotoClientId.value || usingBundledClient.value) return
+  playEvent('select')
+  yotoClientId.value = bundledYotoClientId.value
+}
+
+async function loadBundledClientId() {
+  try {
+    const config = await getConfig()
+    bundledYotoClientId.value = config.bundledYotoClientId.trim()
+  }
+  catch {
+    bundledYotoClientId.value = ''
+  }
+}
+
 onMounted(() => {
   prefersReducedMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   if (props.animateIn) {
@@ -150,6 +175,7 @@ onMounted(() => {
     entered.value = true
   }
   scheduleFocus()
+  void loadBundledClientId()
 })
 
 onUnmounted(() => {
@@ -184,7 +210,10 @@ watch(
       :style="fieldsetStyle(0)"
     >
       <div class="prefs-projector__field">
-        <div class="prefs-projector__label-row">
+        <div
+          v-if="!only"
+          class="prefs-projector__label-row"
+        >
           <label
             class="prefs-projector__label"
             :for="yotoId"
@@ -210,10 +239,27 @@ watch(
           autocomplete="off"
           spellcheck="false"
           :disabled="disabled"
+          :aria-label="only ? 'Yoto client ID' : undefined"
           placeholder="Public PKCE client from yoto.dev"
         >
+        <button
+          v-if="showUseDefaultClient && !only"
+          type="button"
+          class="prefs-projector__browse prefs-projector__use-default maru-button"
+          :disabled="disabled || usingBundledClient"
+          :aria-pressed="usingBundledClient"
+          @click="onUseDefaultClient"
+        >
+          <span class="maru-button__label">{{ usingBundledClient ? 'Using default client' : 'Use default client' }}</span>
+        </button>
         <p class="prefs-projector__hint">
-          Create a <strong>public</strong> (PKCE) app at
+          <template v-if="only === 'yoto'">
+            Required to connect your Yoto account. Use Louis’s default client, or create your own
+          </template>
+          <template v-else>
+            Prefer Louis’s bundled public client, or create your own
+          </template>
+          <strong>public</strong> (PKCE) app at
           <a
             class="prefs-projector__hint-link"
             :href="YOTO_DEV_URL"
@@ -231,7 +277,10 @@ watch(
       :style="fieldsetStyle(1)"
     >
       <div class="prefs-projector__field">
-        <div class="prefs-projector__label-row">
+        <div
+          v-if="!only"
+          class="prefs-projector__label-row"
+        >
           <label
             class="prefs-projector__label"
             :for="youtubeId"
@@ -257,9 +306,11 @@ watch(
           autocomplete="off"
           spellcheck="false"
           :disabled="disabled"
+          :aria-label="only ? 'YouTube Data API key' : undefined"
           placeholder="Google Cloud Console key"
         >
         <p class="prefs-projector__hint">
+          <template v-if="only === 'youtube'">Required to search YouTube from Louis. </template>
           Enable YouTube Data API v3 in
           <a
             class="prefs-projector__hint-link"
@@ -278,7 +329,10 @@ watch(
       :style="fieldsetStyle(2)"
     >
       <div class="prefs-projector__field">
-        <div class="prefs-projector__label-row">
+        <div
+          v-if="!only"
+          class="prefs-projector__label-row"
+        >
           <label
             class="prefs-projector__label"
             :for="cookiesId"
@@ -305,6 +359,7 @@ watch(
             autocomplete="off"
             spellcheck="false"
             :disabled="disabled"
+            :aria-label="only ? 'yt-dlp cookies.txt (optional)' : undefined"
             placeholder="/path/to/cookies.txt"
           >
           <button
@@ -335,7 +390,10 @@ watch(
       :style="fieldsetStyle(3)"
     >
       <div class="prefs-projector__field">
-        <div class="prefs-projector__label-row">
+        <div
+          v-if="!only"
+          class="prefs-projector__label-row"
+        >
           <span class="prefs-projector__label">OAuth redirect URI</span>
           <MaruTooltip
             placement="bottom"
@@ -349,7 +407,10 @@ watch(
             >?</button>
           </MaruTooltip>
         </div>
-        <div class="prefs-projector__code-row">
+        <div
+          class="prefs-projector__code-row"
+          :aria-label="only ? 'OAuth redirect URI' : undefined"
+        >
           <code class="prefs-projector__code font-maru-mono">{{ redirectUri }}</code>
           <button
             ref="redirectCopyEl"
@@ -371,14 +432,25 @@ watch(
           </button>
         </div>
         <p class="prefs-projector__hint">
-          Add this exact URI on your Yoto developer app at
+          <template v-if="only === 'redirect' && usingBundledClient">
+            Already registered on Louis’s Yoto app. Copy it if you want to verify at
+          </template>
+          <template v-else-if="only === 'redirect'">
+            Register this exact URI on your Yoto developer app at
+          </template>
+          <template v-else>
+            Add this exact URI on your Yoto developer app at
+          </template>
           <a
             class="prefs-projector__hint-link"
             :href="YOTO_DEV_URL"
             target="_blank"
             rel="noopener noreferrer"
           >yoto.dev</a>
-          (port <span class="font-maru-mono">4010</span>, host <span class="font-maru-mono">127.0.0.1</span>).
+          <template v-if="only === 'redirect' && usingBundledClient">.</template>
+          <template v-else>
+            (port <span class="font-maru-mono">4010</span>, host <span class="font-maru-mono">127.0.0.1</span>).
+          </template>
         </p>
       </div>
     </div>

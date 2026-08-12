@@ -14,9 +14,16 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - Instant icon patch for existing card tracks (`PATCH`-style content update) so art saves without a full playlist rewrite; new tracks stay local until Update.
 - Server helpers for Yoto icon upload / public icons / URL import and yotoicons.com search.
 - Modal polish: desktop pop / phone sheet motion, LED preview crossfade, Apply success beat, and keyboard/a11y pass (focus trap, tablist, listbox roving, focus rings).
+- **Home Assistant add-on** under `homeassistant/` (Supervisor repo + options → `LOUIS_*`, port 4000, `/data/audio`) — [homeassistant/louis/DOCS.md](homeassistant/louis/DOCS.md).
+- `LOUIS_COOKIE_SECURE` to override OAuth cookie `Secure` (plain HTTP / HA LAN).
+- GHCR release images publish **linux/amd64 + linux/arm64** (required for typical HA hosts).
+- Desktop **Use default client** prefills Louis's bundled public Yoto PKCE client ID (setup wizard + Settings → Advanced).
 
 ### Changed
 - Yoto OAuth scopes now include `user:icons:manage` (reconnect if icon upload/patch is denied).
+
+### Fixed
+- Desktop Yoto session: expired access without refresh forces reconnect; save/reuse-test read scope from cookie or `yoto-session.json`.
 
 ## [1.1.2] - 2026-08-08
 

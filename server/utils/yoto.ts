@@ -49,10 +49,16 @@ export function isYotoConfigured(event: H3Event): boolean {
   return Boolean(config.yotoClientId)
 }
 
+/** True when we can still obtain an API access token (refresh or non-expired access). */
 export function isYotoConnected(event: H3Event): boolean {
-  if (getRefreshTokenCookie(event) || getAccessTokenCookie(event)) return true
+  if (getRefreshTokenCookie(event)) return true
+  if (getAccessTokenCookie(event)) return true
   const session = readYotoDesktopSession()
-  return Boolean(session?.refreshToken || session?.accessToken)
+  if (!session) return false
+  if (session.refreshToken) return true
+  if (!session.accessToken) return false
+  if (session.accessExpiresAt && Date.now() > session.accessExpiresAt) return false
+  return true
 }
 
 export function getYotoAuthScope(event: H3Event): string | undefined {
@@ -61,7 +67,11 @@ export function getYotoAuthScope(event: H3Event): string | undefined {
 
 export async function getYotoAccessToken(event: H3Event): Promise<string> {
   const config = getYotoConfig(event)
-  const refreshToken = getRefreshTokenCookie(event) || readYotoDesktopSession()?.refreshToken || ''
+  const session = readYotoDesktopSession()
+  const refreshToken = getRefreshTokenCookie(event) || session?.refreshToken || ''
+  const cookieAccess = getAccessTokenCookie(event) || ''
+  const sessionAccess = session?.accessToken || ''
+  const sessionExpired = Boolean(session?.accessExpiresAt && Date.now() > session.accessExpiresAt)
 
   if (refreshToken) {
     try {
@@ -99,7 +109,16 @@ export async function getYotoAccessToken(event: H3Event): Promise<string> {
     }
   }
 
-  const accessToken = getAccessTokenCookie(event) || readYotoDesktopSession()?.accessToken || ''
+  // Expired desktop access with no refresh → force reconnect (do not call Yoto with a dead token).
+  if (sessionAccess && sessionExpired) {
+    clearYotoDesktopSession()
+    throw createError({
+      statusCode: 401,
+      statusMessage: 'Yoto session expired. Please reconnect.',
+    })
+  }
+
+  const accessToken = cookieAccess || sessionAccess
   if (accessToken) {
     return accessToken
   }

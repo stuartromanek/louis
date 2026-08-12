@@ -8,7 +8,7 @@ Self-hosted **Nuxt** server app. Yoto OAuth token exchange and YouTube audio dow
 
 [https://github.com/user-attachments/assets/6083e578-a0ba-4047-8d44-d2c4efad511d](https://github.com/user-attachments/assets/6083e578-a0ba-4047-8d44-d2c4efad511d)
 
-[Self-host](#self-host) · [Download (desktop)](#download-desktop) · [Native development](#native-development) · [Contributing](CONTRIBUTING.md) · [Releases](docs/RELEASE.md) · [Desktop](docs/DESKTOP.md)
+[Self-host](#self-host) · [Home Assistant](#home-assistant) · [Download (desktop)](#download-desktop) · [Native development](#native-development) · [Contributing](CONTRIBUTING.md) · [Releases](docs/RELEASE.md) · [Desktop](docs/DESKTOP.md)
 
 **Personal use only.** You are responsible for complying with [YouTube’s Terms of Service](https://www.youtube.com/t/terms) and applicable law when downloading audio.
 
@@ -36,7 +36,7 @@ Installers ship as **Assets** on each GitHub Release (same `vX.Y.Z` as Docker):
 | Windows             | `Louis-Setup-<version>.exe` |
 
 
-After install, open **Settings → Desktop API keys** and add your Yoto client ID + YouTube Data API key. Register OAuth redirect `http://127.0.0.1:4010/api/yoto/auth/callback` on [yoto.dev](https://yoto.dev/get-started/start-here/). Details: [docs/DESKTOP.md](docs/DESKTOP.md).
+After install, the setup wizard (or **Settings → Advanced**) asks for a Yoto client ID and YouTube Data API key. Prefer **Use default client** for Yoto, or bring your own from [yoto.dev](https://yoto.dev/get-started/start-here/) with redirect `http://127.0.0.1:4010/api/yoto/auth/callback`. Details: [docs/DESKTOP.md](docs/DESKTOP.md).
 
 Installers are currently **unsigned** (Gatekeeper / SmartScreen may warn). Signing notes: [docs/DESKTOP_SIGNING.md](docs/DESKTOP_SIGNING.md).
 
@@ -49,7 +49,19 @@ docker pull ghcr.io/stuartromanek/louis:latest
 # or pin: ghcr.io/stuartromanek/louis:vX.Y.Z
 ```
 
+Images are multi-arch (`linux/amd64` + `linux/arm64`) on each `v*` release.
+
 Compose / env setup below. Cut releases: [docs/RELEASE.md](docs/RELEASE.md).
+
+## Home Assistant
+
+Install Louis from Supervisor as a custom add-on (wraps the same GHCR image; options map to `LOUIS_*`; audio under `/data/audio`; UI on host port **4000**, not ingress).
+
+1. **Settings → Add-ons → Add-on store → ⋮ → Repositories** → add `https://github.com/stuartromanek/louis`
+2. Install **Louis**, set **youtube_api_key** and confirm **yoto_redirect_uri** matches [yoto.dev](https://yoto.dev/get-started/start-here/)
+3. Open `http://homeassistant.local:4000` (or your host:port)
+
+Full options, redirect URI, and `cookie_secure` notes: [homeassistant/louis/DOCS.md](homeassistant/louis/DOCS.md). Sources live under `homeassistant/`; root `repository.yaml` + `louis/` symlinks are for Supervisor discovery.
 
 ## Quick start (Docker)
 
@@ -106,10 +118,11 @@ Copy `[.env.example](.env.example)`. Use `LOUIS_*` **names** so the same file wo
 #### Yoto
 
 
-| Variable                  | Notes                                                                              |
-| ------------------------- | ---------------------------------------------------------------------------------- |
-| `LOUIS_YOTO_CLIENT_SECRET` | Leave empty for PKCE                                                               |
-| `LOUIS_YOTO_REDIRECT_URI`  | Required in production; must match the portal. Local/dev can auto-detect from host |
+| Variable                   | Notes                                                                                                                                      |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `LOUIS_YOTO_CLIENT_SECRET` | Leave empty for PKCE                                                                                                                       |
+| `LOUIS_YOTO_REDIRECT_URI`  | Required in production; must match the portal. Local/dev can auto-detect from host                                                         |
+| `LOUIS_COOKIE_SECURE`      | OAuth cookie `Secure` flag. When unset: secure iff `NODE_ENV=production`. Set `false` for plain HTTP (HA LAN); `true` behind HTTPS         |
 
 
 
@@ -146,7 +159,7 @@ docker run -p 4000:4000 --env-file .env louis:local
 ### 4. Deploy constraints
 
 - **Single instance** — save-job progress is in memory
-- **HTTPS in production** — OAuth cookies set `secure` when `NODE_ENV=production`
+- **HTTPS in production** — OAuth cookies default to `secure` when `NODE_ENV=production`. Override with `LOUIS_COOKIE_SECURE=false` for plain HTTP (e.g. Home Assistant LAN), or `true` behind TLS
 - **Persistent disk** — recommended for the audio cache under `LOUIS_AUDIO_WORK_DIR` (`cache/preview/`, `cache/save/`). Stale `jobs/` dirs and old cache files are swept on startup and after downloads.
 
 

@@ -1,0 +1,36 @@
+name: Louis
+version: 1.1.2
+slug: louis
+description: Yoto Make Your Own (MYO) client backed by YouTube — search, arrange playlists, save to your cards.
+url: https://github.com/stuartromanek/louis
+arch:
+  - amd64
+  - aarch64
+startup: application
+boot: auto
+init: false
+ingress: false
+panel_icon: mdi:speaker
+ports:
+  4000/tcp: 4000
+ports_description:
+  4000/tcp: Louis web UI (also the Yoto OAuth redirect target — do not use ingress)
+map:
+  - data:rw
+watchdog: http://[HOST]:[PORT:4000]/api/health
+options:
+  yoto_client_id: PK00MDKCVwWvOG8o3px3qSl57FhfUZxm
+  youtube_api_key: ""
+  yoto_redirect_uri: http://homeassistant.local:4000/api/yoto/auth/callback
+  cookie_secure: false
+  ytdlp_cookies_file: ""
+  audio_cache_max_age_ms: 1209600000
+  audio_cache_max_bytes: 5368709120
+schema:
+  yoto_client_id: str
+  youtube_api_key: password
+  yoto_redirect_uri: str
+  cookie_secure: bool
+  ytdlp_cookies_file: str?
+  audio_cache_max_age_ms: int?
+  audio_cache_max_bytes: int?
