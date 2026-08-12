@@ -2,8 +2,8 @@
 const props = withDefaults(defineProps<{
   /** Tooltip body text. */
   text: string
-  /** Prefer `top` near screen edges / footers. */
-  placement?: 'top' | 'bottom'
+  /** Prefer `top` near screen edges / footers; `right` beside vertical tool rails. */
+  placement?: 'top' | 'bottom' | 'right'
 }>(), {
   placement: 'top',
 })
@@ -21,8 +21,25 @@ function updatePosition() {
   const gap = 8
   const margin = 12
   const vw = window.innerWidth
+  const vh = window.innerHeight
   // Prefer a wide bubble on narrow screens; keep a soft cap on desktop.
   const maxBubble = Math.min(22 * 16, vw - margin * 2)
+
+  if (props.placement === 'right') {
+    const top = Math.min(
+      Math.max(margin, rect.top + rect.height / 2),
+      vh - margin,
+    )
+    bubbleStyle.value = {
+      left: `${rect.right + gap}px`,
+      top: `${top}px`,
+      maxWidth: `${maxBubble}px`,
+      width: 'max-content',
+      transform: 'translateY(-50%)',
+    }
+    return
+  }
+
   const triggerCenter = rect.left + rect.width / 2
   // Clamp so a max-width bubble centered on `left` stays on-screen.
   const half = maxBubble / 2

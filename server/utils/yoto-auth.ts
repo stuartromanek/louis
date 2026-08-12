@@ -8,7 +8,7 @@ export const YOTO_ACCESS_TOKEN_COOKIE = 'yoto_access_token'
 export const YOTO_AUTH_BASE_URL = 'https://login.yotoplay.com'
 export const YOTO_API_AUDIENCE = 'https://api.yotoplay.com'
 export const YOTO_API_BASE_URL = 'https://api.yotoplay.com'
-export const YOTO_SCOPES = 'user:content:view user:content:manage'
+export const YOTO_SCOPES = 'user:content:view user:content:manage user:icons:manage'
 export const YOTO_SCOPE_COOKIE = 'yoto_token_scope'
 
 export type YotoAuthFlow = 'confidential' | 'public-pkce'

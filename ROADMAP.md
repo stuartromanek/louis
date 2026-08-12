@@ -6,15 +6,11 @@ Ideas and planned work for **Louis**. Order is not a commitment; priorities may 
 
 ### [Yoto Icons](https://yotoicons.com/) integration
 
-Browse and apply community 16×16 pixel icons from [yotoicons.com](https://yotoicons.com/) when editing MYO cards / tracks (Yoto `display.icon16x16`).
-
-Possible shape: search/browse in-app, pick an icon, attach it to a chapter or track before save.
+~~Browse and apply community 16×16 pixel icons from [yotoicons.com](https://yotoicons.com/) when editing MYO cards / tracks (Yoto `display.icon16x16`).~~ — **done** (Track Art Editor → Icons tab: Yoto public + yotoicons.com search).
 
 ### Pixel art editor
 
-In-app 16×16 editor for custom Yoto display icons — draw or tweak pixel art, then save as the track/chapter icon alongside the playlist.
-
-Pairs naturally with Yoto Icons (edit a community icon or start from scratch).
+~~In-app 16×16 editor for custom Yoto display icons — draw or tweak pixel art, then save as the track/chapter icon alongside the playlist.~~ — **done** (Track Art Editor → Draw tab).
 
 ### Auto long-track split
 
