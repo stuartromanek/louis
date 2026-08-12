@@ -79,6 +79,10 @@
     />
     <!-- Single prefs host (status bar + phone header both open via shell state). -->
     <UserPreferencesModal v-model:open="prefsOpen" />
+    <TrackArtEditorModal
+      v-model:open="trackArtOpen"
+      v-model:track-id="trackArtTrackId"
+    />
   </div>
 </template>
 
@@ -102,6 +106,7 @@ import { YOTO_MYO_KEY } from '~/components/yoto-myo/keys'
 import AppStatusBar from '~/components/layout/AppStatusBar.vue'
 import AppDevToolsStrip from '~/components/dev/AppDevToolsStrip.vue'
 import UserPreferencesModal from '~/components/layout/UserPreferencesModal.vue'
+import TrackArtEditorModal from '~/components/track-art/TrackArtEditorModal.vue'
 import YotoAuthGate from '~/components/yoto-myo/YotoAuthGate.vue'
 import YotoConnectedModal from '~/components/yoto-myo/YotoConnectedModal.vue'
 import AppSplash from '~/components/splash/AppSplash.vue'
@@ -113,6 +118,10 @@ import {
   MOBILE_EDITOR_CHROME_KEY,
   useMobileEditorChrome,
 } from '~/composables/useMobileEditorChrome'
+import {
+  TRACK_ART_EDITOR_KEY,
+  useTrackArtEditorShell,
+} from '~/composables/useTrackArtEditor'
 
 const yoto = useYotoMyo()
 provide(YOTO_MYO_KEY, yoto)
@@ -122,6 +131,11 @@ provide(MYO_EDITOR_KEY, editor)
 
 const mobileChrome = useMobileEditorChrome()
 provide(MOBILE_EDITOR_CHROME_KEY, mobileChrome)
+
+const trackArtEditor = useTrackArtEditorShell()
+provide(TRACK_ART_EDITOR_KEY, trackArtEditor)
+const trackArtOpen = trackArtEditor.open
+const trackArtTrackId = trackArtEditor.trackId
 
 const route = useRoute()
 const router = useRouter()
@@ -157,7 +171,7 @@ const showDesktopSetup = computed(
 
 /** Block editor interaction while a gate/setup owns the screen — not the shell root. */
 const mainContentInert = computed(
-  () => authGateBlocksApp.value || welcomeBlocksApp.value || appBootHold.value,
+  () => authGateBlocksApp.value || welcomeBlocksApp.value || appBootHold.value || trackArtOpen.value,
 )
 
 async function refreshDesktopSetupNeeded() {

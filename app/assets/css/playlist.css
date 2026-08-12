@@ -93,6 +93,14 @@
   background-clip: padding-box;
 }
 
+/* Between type-meta-sm and type-meta — playlist row channel/duration only */
+.playlist-item__subtitle {
+  margin: 0;
+  font-family: var(--font-maru);
+  font-size: clamp(0.7rem, 0.575rem + 0.4vw, 0.875rem);
+  line-height: 1.1;
+}
+
 .playlist-remove {
   box-sizing: border-box;
   flex-shrink: 0;

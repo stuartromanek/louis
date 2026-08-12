@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1459px" height="1459px" viewBox="0 0 1459 1459" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Frame</title>
+    <defs>
+        <path d="M1192,1459 L265.000001,1459 L265,532 L1192,532 Z M530,399 L397,399 L397,266 L530,266 Z M1062,399 L929,399 L929,266 L1062,266 Z M397,266 L264,266 L264,133 L397,133 Z M797,133 L797,266 L664,266 L664,0 L797,0 Z M1195,266 L1062,266 L1062,133 L1195,133 Z" id="path-1"></path>
+    </defs>
+    <g id="Frame" stroke="none" fill="none" xlink:href="#path-1" fill-rule="evenodd" stroke-width="1">
+        <g id="Group" transform="translate(264, 0)">
+            <rect id="Rectangle" fill="#E1D7CE" x="1" y="532" width="927" height="927"></rect>
+            <rect id="Rectangle-2" stroke="#979797" fill="#E1583D" x="133.5" y="661.5" width="264" height="264"></rect>
+            <rect id="Rectangle-6" stroke="#979797" fill="#F55C3E" x="133.5" y="661.5" width="264" height="129"></rect>
+            <rect id="Rectangle-3" stroke="#979797" fill="#E1583D" x="533.5" y="661.5" width="264" height="264"></rect>
+            <rect id="Rectangle-7" stroke="#979797" fill="#F55C3E" x="533.5" y="661.5" width="264" height="129"></rect>
+            <rect id="Rectangle-5" stroke="#979797" fill="#585553" x="133.5" y="1062.5" width="264" height="264"></rect>
+            <rect id="Rectangle-8" fill="#9B958F" x="133" y="1062" width="133" height="133"></rect>
+            <rect id="Rectangle-11" fill="#B8DA77" x="133" y="266" width="133" height="133"></rect>
+            <rect id="Rectangle-13" fill="#B8DA77" x="400" y="133" width="133" height="133"></rect>
+            <rect id="Rectangle-14" fill="#9ACA3C" x="400" y="0" width="133" height="133"></rect>
+            <rect id="Rectangle-12" fill="#9ACA3C" x="0" y="133" width="133" height="133"></rect>
+            <rect id="Rectangle-16" fill="#B8DA77" x="665" y="266" width="133" height="133"></rect>
+            <rect id="Rectangle-15" fill="#9ACA3C" x="798" y="133" width="133" height="133"></rect>
+            <rect id="Rectangle-9" fill="#9B958F" x="266" y="1195" width="133" height="133"></rect>
+            <rect id="Rectangle-4" stroke="#979797" fill="#585553" x="533.5" y="1062.5" width="264" height="264"></rect>
+        </g>
+    </g>
+</svg>

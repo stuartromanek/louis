@@ -35,7 +35,7 @@
   --text-maru-title: clamp(0.85rem, 0.7rem + 0.55vw, 1.05rem);
   --text-maru-title--line-height: 1.1;
   --text-maru-title-sm: clamp(0.8rem, 0.65rem + 0.5vw, 1rem);
-  --text-maru-title-sm--line-height: 0.9;
+  --text-maru-title-sm--line-height: 1.15;
   --text-maru-empty-title: clamp(1.1rem, 5.5cqw, 1.75rem);
   --text-maru-empty-title--line-height: 1.15;
   --text-maru-empty-body: clamp(1.05rem, 4cqw, 1.35rem);

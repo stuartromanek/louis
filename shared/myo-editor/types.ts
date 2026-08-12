@@ -82,6 +82,8 @@ export interface PlaylistTrack {
   chapterDisplay?: { icon16x16: string | null }
   /** Cached Yoto fields for reuse on save (avoids ambiguous lookups). */
   yotoReuse?: YotoTrackReuseSnapshot
+  /** HTTPS preview for the track's 16×16 icon (playlist thumb); not sent to Yoto. */
+  iconPreviewUrl?: string | null
 }
 
 export interface ProvenanceTrackEntry {

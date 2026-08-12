@@ -9,6 +9,15 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [Unreleased]
 
+### Added
+- **Track Art Editor** — per-track 16×16 Yoto icons from the playlist (desktop) and mobile card detail: Icons tab (Yoto public library + [yotoicons.com](https://yotoicons.com/) search + upload) and Draw tab (pixel canvas, palette, undo/redo).
+- Instant icon patch for existing card tracks (`PATCH`-style content update) so art saves without a full playlist rewrite; new tracks stay local until Update.
+- Server helpers for Yoto icon upload / public icons / URL import and yotoicons.com search.
+- Modal polish: desktop pop / phone sheet motion, LED preview crossfade, Apply success beat, and keyboard/a11y pass (focus trap, tablist, listbox roving, focus rings).
+
+### Changed
+- Yoto OAuth scopes now include `user:icons:manage` (reconnect if icon upload/patch is denied).
+
 ## [1.1.2] - 2026-08-08
 
 ### Fixed

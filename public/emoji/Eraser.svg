@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32px" height="32px" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Pencil--Streamline-Openmoji-Emoji Copy 2</title>
+    <g id="Pencil--Streamline-Openmoji-Emoji-Copy-2" stroke="none" fill="none">
+        <g id="Pencil--Streamline-Openmoji" stroke-width="1" fill-rule="evenodd" transform="translate(0.931, 0.627)">
+            <g id="Group" transform="translate(26, 4) rotate(-180) translate(-26, -4)translate(5, -17)">
+                <g id="color" transform="translate(0.6043, -0)">
+                    <polyline id="Path" fill="#F4AA41" points="4.56329528 27.2996443 20.4352215 11.4260197 29.9707875 20.9625324 14.2335718 36.7013105"></polyline>
+                    <polyline id="Path" fill="#EA5A47" points="25.5368682 6.32398907 31.8601682 0 41.3957342 9.53651272 35.1260854 15.8067226"></polyline>
+                    <polyline id="Path" fill="#9B9B9A" points="19.4081229 12.4532816 25.8831791 5.9775212 35.4187451 15.5140339 28.9985051 21.93485"></polyline>
+                </g>
+                <g id="line" transform="translate(0, 0.8367)" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-width="0.99">
+                    <polygon id="Path" points="5.66685451 39.0604808 13.4192385 36.0878478 35.3284884 14.1764227 26.9842857 5.83139148 5.07485182 27.7429392 2.0929487 35.5055978"></polygon>
+                    <polyline id="Path" points="29.8620748 2.95331663 32.8150369 0 41.159301 8.34503119 38.231233 11.2733899"></polyline>
+                    <line x1="21.0744985" y1="12.2428867" x2="29.0925633" y2="20.2618088" id="Path"></line>
+                </g>
+            </g>
+        </g>
+        <line x1="7.12648901" y1="23.8904855" x2="4.87351099" y2="26.1095145" id="Line" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></line>
+        <line x1="4.58109327" y1="21.0120028" x2="1.41890673" y2="20.9879972" id="Line-2" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></line>
+        <line x1="10.0120028" y1="26.4189067" x2="9.98799723" y2="29.5810933" id="Line-3" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></line>
+    </g>
+</svg>

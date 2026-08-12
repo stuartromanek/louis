@@ -18,10 +18,13 @@ import {
   YOTO_MYO_TRACK_COUNT_MESSAGE,
 } from '#shared/myo-editor/yotoMyoLimits'
 import { formatDurationSeconds } from '#shared/myo-editor/youtubeDuration'
+import TrackArtThumb from '~/components/track-art/TrackArtThumb.vue'
+import { TRACK_ART_EDITOR_KEY } from '~/composables/useTrackArtEditor'
 
 const yoto = inject(YOTO_MYO_KEY)
 const editor = inject(MYO_EDITOR_KEY)
 const chrome = inject(MOBILE_EDITOR_CHROME_KEY)
+const artEditor = inject(TRACK_ART_EDITOR_KEY)
 
 if (!yoto || !editor || !chrome) {
   throw new Error('MobileLibraryView requires YOTO_MYO_KEY, MYO_EDITOR_KEY, and MOBILE_EDITOR_CHROME_KEY')
@@ -474,38 +477,27 @@ onUnmounted(() => {
             :key="track.id"
             class="mobile-card-track border-maru rounded-maru bg-maru-white"
           >
-            <div class="mobile-card-track__media">
-              <img
-                v-if="track.thumbnailUrl"
-                :src="track.thumbnailUrl"
-                alt=""
-                class="mobile-card-track__thumb"
-                loading="lazy"
-              >
-              <div
-                v-else
-                class="mobile-card-track__thumb mobile-card-track__thumb--empty"
-                aria-hidden="true"
-              >
-                <MaruEmoji
-                  name="MusicalNote"
-                  :size-rem="1.1"
-                />
-              </div>
-              <span
-                class="mobile-card-track__index type-meta font-maru-bold"
-                :class="`mobile-card-track__index--tone-${index % 6}`"
-                aria-hidden="true"
-              >{{ index + 1 }}</span>
-              <span
-                v-if="track.duration"
-                class="yt-result-duration font-maru-mono tabular-nums"
-              >{{ formatDurationSeconds(track.duration) }}</span>
+            <div class="mobile-card-track__media mobile-card-track__media--art">
+              <TrackArtThumb
+                class="mobile-card-track__art-thumb"
+                :track="track"
+                :locked="tracksLocked"
+                size="md"
+                @edit="artEditor?.openForTrack(track.id)"
+              />
             </div>
 
-            <p class="mobile-card-track__title font-maru-medium line-clamp-2 text-pretty">
-              {{ track.title }}
-            </p>
+            <div class="mobile-card-track__copy">
+              <p class="mobile-card-track__title font-maru-medium line-clamp-2 text-pretty">
+                {{ track.title }}
+              </p>
+              <p
+                v-if="track.duration"
+                class="mobile-card-track__meta type-meta-sm font-maru-mono tabular-nums text-maru-black/70"
+              >
+                {{ formatDurationSeconds(track.duration) }}
+              </p>
+            </div>
 
             <button
               type="button"

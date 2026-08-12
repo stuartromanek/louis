@@ -21,7 +21,7 @@
     "desktop:build:mac": "npm run desktop:sync-version && npm run desktop:fetch-binaries -- darwin-arm64 darwin-x64 && npm run build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg --arm64 --x64 --publish never",
     "desktop:build:win": "npm run desktop:sync-version && npm run desktop:fetch-binaries -- win32-x64 && npm run build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win nsis --x64 --publish never",
     "desktop:build:host": "node desktop/scripts/build-host.mjs",
-    "test": "node --experimental-strip-types --test shared/*.test.ts shared/**/*.test.ts desktop/**/*.test.mjs",
+    "test": "node --experimental-strip-types --test shared/*.test.ts shared/**/*.test.ts server/**/*.test.ts desktop/**/*.test.mjs",
     "postinstall": "nuxt prepare",
     "release": "release-it"
   },

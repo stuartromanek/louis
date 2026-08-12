@@ -974,6 +974,14 @@
   box-shadow: 2px 2px 0 var(--color-maru-black);
 }
 
+/* Phone: hug track art (3rem) — don't leave the old 4.75rem art column empty */
+@media (max-width: 599px) {
+  .mobile-card-track {
+    grid-template-columns: 3rem minmax(0, 1fr) auto;
+    column-gap: 0.6rem;
+  }
+}
+
 .mobile-card-track__media {
   position: relative;
   align-self: stretch;
@@ -1060,6 +1068,19 @@
   min-width: 0;
   font-size: var(--text-maru-button-sm);
   line-height: var(--text-maru-body--line-height);
+}
+
+.mobile-card-track__copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  align-self: center;
+}
+
+.mobile-card-track__meta {
+  margin: 0;
+  min-width: 0;
 }
 
 .mobile-card-track__menu {
@@ -1181,7 +1202,7 @@
   }
 
   .mobile-card-track {
-    grid-template-columns: 3rem minmax(0, 1fr) auto;
+    column-gap: 0.5rem;
   }
 
   .mobile-card-track__media {

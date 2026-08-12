@@ -1,6 +1,8 @@
 import type { InjectionKey } from 'vue'
 import type { PlaylistTrack } from '~/components/playlist/types'
 import { playlistRowId } from '#shared/myo-editor/playlistRowId'
+import { applyTrackIcon, resolveTrackIcon, mediaIdFromIcon16x16 } from '#shared/myo-editor/trackArt'
+import { isPersistedCardTrack } from '#shared/myo-editor/patchCardIcon'
 import type { SaveJobPhase } from '#shared/myo-editor/types'
 import type { YotoMyoCard } from '~/components/yoto-myo/types'
 import { cardToPlaylist } from './cardToPlaylist'
@@ -67,16 +69,35 @@ export interface MyoEditorContext {
   clearSelection: (force?: boolean) => boolean
   resetChanges: () => void
   updateCard: (options?: { acknowledgeCapacityRisk?: boolean }) => Promise<void>
+  setTrackArt: (trackId: string, icon16x16: string, previewUrl: string) => void
+  /** Local apply + optional instant icon patch for tracks already on the saved card. */
+  persistTrackArt: (
+    trackId: string,
+    icon16x16: string,
+    previewUrl: string,
+  ) => Promise<{ patched: boolean; error?: string }>
 }
 
 export const MYO_EDITOR_KEY: InjectionKey<MyoEditorContext> = Symbol('myoEditor')
 
 function playlistSnapshot(playlist: PlaylistTrack[]): string {
-  return JSON.stringify(playlist.map(playlistRowId))
+  return JSON.stringify(playlist.map(track => ({
+    id: playlistRowId(track),
+    icon: resolveTrackIcon(track).icon16x16,
+  })))
 }
 
 function clonePlaylist(playlist: PlaylistTrack[]): PlaylistTrack[] {
-  return playlist.map(item => ({ ...item }))
+  return playlist.map(item => ({
+    ...item,
+    chapterDisplay: item.chapterDisplay ? { ...item.chapterDisplay } : item.chapterDisplay,
+    yotoReuse: item.yotoReuse
+      ? {
+          ...item.yotoReuse,
+          display: item.yotoReuse.display ? { ...item.yotoReuse.display } : item.yotoReuse.display,
+        }
+      : item.yotoReuse,
+  }))
 }
 
 function cloneSnapshot(snapshot: CardSaveSnapshot): CardSaveSnapshot {
@@ -347,13 +368,36 @@ export function useMyoEditor() {
     cardTitle.value = snapshot.cardTitle
   }
 
-  async function reloadCardFromApi(cardId: string, titleFallback?: string) {
+  async function reloadCardFromApi(
+    cardId: string,
+    titleFallback?: string,
+    previousPlaylist?: PlaylistTrack[],
+  ) {
     const detail = await $fetch<YotoCardDetail>(`/api/yoto/content/${cardId}`)
     originalCardDetail.value = detail
     const result = await cardToPlaylist(detail)
     isPodcast.value = result.isPodcast
     rememberPodcastStatus(cardId, result.isPodcast)
-    playlist.value = result.tracks
+
+    // Keep working preview URLs from the pre-reload playlist when catalog lookup misses
+    // (custom uploads sometimes lag in /user/me right after save).
+    const previewByMediaId = new Map<string, string>()
+    for (const track of previousPlaylist ?? []) {
+      const icon = resolveTrackIcon(track).icon16x16
+      const mediaId = mediaIdFromIcon16x16(icon)
+      const preview = track.iconPreviewUrl?.trim()
+      if (mediaId && preview && !preview.includes('media-secure.aws.fooropa.com')) {
+        previewByMediaId.set(mediaId, preview)
+      }
+    }
+
+    playlist.value = result.tracks.map((track) => {
+      if (track.iconPreviewUrl?.trim()) return track
+      const icon = resolveTrackIcon(track).icon16x16
+      const mediaId = mediaIdFromIcon16x16(icon)
+      const preview = mediaId ? previewByMediaId.get(mediaId) : undefined
+      return preview ? { ...track, iconPreviewUrl: preview } : track
+    })
     baselinePlaylist.value = clonePlaylist(playlist.value)
     cardTitle.value = titleFallback || detail.title
   }
@@ -381,7 +425,8 @@ export function useMyoEditor() {
 
     if (isSelected) {
       try {
-        await reloadCardFromApi(cardId, titleFallback)
+        const previousPlaylist = clonePlaylist(playlist.value)
+        await reloadCardFromApi(cardId, titleFallback, previousPlaylist)
         errorMessage.value = ''
         await nextTick()
       }
@@ -673,6 +718,76 @@ export function useMyoEditor() {
     if (cardId) clearPendingDraft(cardId)
   }
 
+  function setTrackArt(trackId: string, icon16x16: string, previewUrl: string) {
+    if (isPlaylistLocked.value || isPodcast.value) return
+    const index = playlist.value.findIndex(track => track.id === trackId)
+    if (index < 0) return
+    const current = playlist.value[index]!
+    const next = applyTrackIcon(current, icon16x16, previewUrl)
+    const copy = clonePlaylist(playlist.value)
+    copy[index] = next
+    playlist.value = copy
+  }
+
+  async function persistTrackArt(
+    trackId: string,
+    icon16x16: string,
+    previewUrl: string,
+  ): Promise<{ patched: boolean; error?: string }> {
+    if (isPlaylistLocked.value || isPodcast.value) {
+      return { patched: false }
+    }
+
+    setTrackArt(trackId, icon16x16, previewUrl)
+
+    const cardId = selectedCardId.value
+    const track = playlist.value.find(item => item.id === trackId)
+    if (
+      !cardId
+      || !track
+      || !track.chapterKey
+      || !track.trackKey
+      || !isPersistedCardTrack(track, baselinePlaylist.value)
+    ) {
+      return { patched: false }
+    }
+
+    try {
+      await $fetch(`/api/yoto/content/${cardId}/patch-icon`, {
+        method: 'POST',
+        body: {
+          chapterKey: track.chapterKey,
+          trackKey: track.trackKey,
+          icon16x16,
+        },
+      })
+
+      const baselineIndex = baselinePlaylist.value.findIndex(
+        item => playlistRowId(item) === playlistRowId(track),
+      )
+      if (baselineIndex >= 0) {
+        const copy = clonePlaylist(baselinePlaylist.value)
+        copy[baselineIndex] = applyTrackIcon(copy[baselineIndex]!, icon16x16, previewUrl)
+        baselinePlaylist.value = copy
+      }
+
+      return { patched: true }
+    }
+    catch (err: unknown) {
+      const e = err as { statusMessage?: string; message?: string; data?: { statusMessage?: string } }
+      const message = (
+        e.statusMessage
+        ?? e.data?.statusMessage
+        ?? e.message
+        ?? 'Failed to save track art'
+      )
+      const displayMessage = message.length > 240 ? `${message.slice(0, 237)}…` : message
+      errorMessage.value = displayMessage
+      playEvent('saveError')
+      return { patched: false, error: displayMessage }
+    }
+  }
+
   async function updateCard(options?: { acknowledgeCapacityRisk?: boolean }) {
     const cardId = selectedCardId.value
     if (!cardId || !isDirty.value || loading.value || isPlaylistLocked.value) return
@@ -756,5 +871,7 @@ export function useMyoEditor() {
     clearSelection,
     resetChanges,
     updateCard,
+    setTrackArt,
+    persistTrackArt,
   }
 }
