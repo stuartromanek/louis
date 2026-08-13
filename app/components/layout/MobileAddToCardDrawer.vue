@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import MobileTray from '~/components/ui/MobileTray.vue'
+import Tray from '~/components/ui/Tray.vue'
 import { MYO_EDITOR_KEY } from '~/components/myo-editor/keys'
 import { YOTO_MYO_KEY } from '~/components/yoto-myo/keys'
 import { MOBILE_EDITOR_CHROME_KEY } from '~/composables/useMobileEditorChrome'
@@ -25,7 +25,7 @@ const {
   selectCard,
 } = editor
 const { addDrawerVideo, closeAddDrawer, goToTab } = chrome
-const { showAddedToCard, showError } = useMobileToast()
+const { showAddedToCard, showError } = useToast()
 
 const picking = ref(false)
 
@@ -100,7 +100,7 @@ function onGoLibrary() {
 </script>
 
 <template>
-  <MobileTray
+  <Tray
     v-model:open="trayOpen"
     title="Add to..."
     height="auto"
@@ -174,5 +174,5 @@ function onGoLibrary() {
         </button>
       </li>
     </ul>
-  </MobileTray>
+  </Tray>
 </template>

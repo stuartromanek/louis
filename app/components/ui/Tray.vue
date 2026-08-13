@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * House mobile tray — half-viewport bottom sheet with green dim.
+ * Docked sheet / toast shell — bottom or top, with optional green dim.
  * Reusable shell: pass open + slot content. Optional title.
  *
  * Enter must paint a closed frame first (preenter), then flip to
@@ -21,6 +21,8 @@ const props = withDefaults(defineProps<{
   height?: string
   /** Sheet docks to bottom (default) or top of the viewport. */
   placement?: 'bottom' | 'top'
+  /** Horizontal dock for toasts. Ignored on phone (full width). */
+  align?: 'start' | 'center' | 'end'
   /** Compact toast: shorter motion, optional backdrop. */
   variant?: 'sheet' | 'toast'
   showBackdrop?: boolean
@@ -33,6 +35,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   height: '50svh',
   placement: 'bottom',
+  align: 'center',
   variant: 'sheet',
   showBackdrop: true,
   closeOnBackdrop: true,
@@ -77,14 +80,16 @@ const resolvedLabelledBy = computed(() => {
 })
 
 const rootClass = computed(() => ({
-  'mobile-tray': true,
-  'mobile-tray--preenter': phase.value === 'preenter',
-  'mobile-tray--entering': phase.value === 'entering',
-  'mobile-tray--open': phase.value === 'open',
-  'mobile-tray--exiting': phase.value === 'exiting',
-  'mobile-tray--reduced': prefersReducedMotion.value,
-  'mobile-tray--top': props.placement === 'top',
-  'mobile-tray--toast': props.variant === 'toast',
+  'tray': true,
+  'tray--preenter': phase.value === 'preenter',
+  'tray--entering': phase.value === 'entering',
+  'tray--open': phase.value === 'open',
+  'tray--exiting': phase.value === 'exiting',
+  'tray--reduced': prefersReducedMotion.value,
+  'tray--top': props.placement === 'top',
+  'tray--toast': props.variant === 'toast',
+  'tray--align-start': props.align === 'start',
+  'tray--align-end': props.align === 'end',
 }))
 
 function clearTimers() {
@@ -291,7 +296,7 @@ function beginOpen() {
 
       // Stay in --entering until stagger finishes (chunk-in is tied to that class).
       const settleMs = props.variant === 'toast'
-        ? (prefersReducedMotion.value ? 40 : 420)
+        ? (prefersReducedMotion.value ? 40 : 750)
         : (prefersReducedMotion.value ? 40 : 1300)
       after(settleMs, () => {
         if (phase.value === 'entering') phase.value = 'open'
@@ -377,6 +382,7 @@ const PHONE_MQ = '(max-width: 599px)'
 let phoneMq: MediaQueryList | null = null
 
 function onPhoneBreakpointChange() {
+  if (props.variant === 'toast') return
   if (phoneMq && !phoneMq.matches && open.value) {
     open.value = false
   }
@@ -411,15 +417,15 @@ defineExpose({
       <button
         v-if="showBackdrop"
         type="button"
-        class="mobile-tray__backdrop"
+        class="tray__backdrop"
         :tabindex="interactive ? 0 : -1"
         aria-label="Close"
         @click="onBackdrop"
       />
       <div
         ref="sheetEl"
-        class="mobile-tray__sheet border-maru bg-maru-white"
-        :class="{ 'mobile-tray__sheet--auto': height === 'auto' }"
+        class="tray__sheet"
+        :class="{ 'tray__sheet--auto': height === 'auto' }"
         :style="sheetBoxStyle ?? undefined"
         :role="role"
         :aria-modal="variant === 'toast' ? undefined : 'true'"
@@ -427,26 +433,29 @@ defineExpose({
         :aria-labelledby="resolvedLabelledBy"
         :aria-hidden="!interactive"
       >
-        <div
-          class="mobile-tray__handle"
-          aria-hidden="true"
-        />
-        <header
-          v-if="title || $slots.header"
-          class="mobile-tray__header"
-        >
-          <slot name="header">
-            <h2
-              v-if="title"
-              :id="titleId"
-              class="mobile-tray__title type-body font-maru-medium text-pretty m-0"
-            >
-              {{ title }}
-            </h2>
-          </slot>
-        </header>
-        <div class="mobile-tray__body mobile-tray__stagger">
-          <slot />
+        <slot name="badge" />
+        <div class="tray__face border-maru bg-maru-white">
+          <div
+            class="tray__handle"
+            aria-hidden="true"
+          />
+          <header
+            v-if="title || $slots.header"
+            class="tray__header"
+          >
+            <slot name="header">
+              <h2
+                v-if="title"
+                :id="titleId"
+                class="tray__title type-body font-maru-medium text-pretty m-0"
+              >
+                {{ title }}
+              </h2>
+            </slot>
+          </header>
+          <div class="tray__body tray__stagger">
+            <slot />
+          </div>
         </div>
       </div>
     </div>

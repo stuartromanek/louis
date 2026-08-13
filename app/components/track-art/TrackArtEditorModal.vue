@@ -19,7 +19,7 @@ const trackId = defineModel<string | null>('trackId', { default: null })
 const editor = inject(MYO_EDITOR_KEY)
 const artShell = inject(TRACK_ART_EDITOR_KEY, null)
 const { playEvent } = useUiSound()
-const { showError } = useMobileToast()
+const { showError } = useToast()
 
 const phase = ref<Phase>('idle')
 const tab = ref<TrackArtTab>('icons')
@@ -383,7 +383,6 @@ onUnmounted(() => {
       <div
         class="track-art-modal__backdrop"
         aria-hidden="true"
-        @click="interactive && beginClose()"
       />
 
       <div

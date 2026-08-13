@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import MaruHeading from '~/components/layout/MaruHeading.vue'
-import MobileTray from '~/components/ui/MobileTray.vue'
+import Tray from '~/components/ui/Tray.vue'
 import { YOTO_MYO_KEY } from './keys'
 
 const GATE_DELAY_MS = 2000
@@ -252,8 +252,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- Phone: mobile tray with Louis inside the Yoto frame -->
-  <MobileTray
+  <!-- Phone: tray with Louis inside the Yoto frame -->
+  <Tray
     v-model:open="trayOpen"
     :dismissible="false"
     :close-on-backdrop="false"
@@ -318,7 +318,7 @@ onUnmounted(() => {
     >
       Edit Settings
     </button>
-  </MobileTray>
+  </Tray>
 
   <!-- Desktop: TV frame gate -->
   <Teleport to="body">

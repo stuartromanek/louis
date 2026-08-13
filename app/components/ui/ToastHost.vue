@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import MobileTray from '~/components/ui/MobileTray.vue'
+import Tray from '~/components/ui/Tray.vue'
 import { MYO_EDITOR_KEY } from '~/components/myo-editor/keys'
 import { YOTO_MYO_KEY } from '~/components/yoto-myo/keys'
 import { MOBILE_EDITOR_CHROME_KEY } from '~/composables/useMobileEditorChrome'
@@ -7,7 +7,8 @@ import {
   getPlaylistCapacitySnapshot,
 } from '#shared/myo-editor/yotoMyoLimits'
 
-const { open, payload, dismiss, showError } = useMobileToast()
+const { open, payload, persistent, dismiss, showError } = useToast()
+const { platform } = usePwaInstall()
 const { playEvent } = useUiSound()
 const editor = inject(MYO_EDITOR_KEY, null)
 const yoto = inject(YOTO_MYO_KEY, null)
@@ -23,11 +24,19 @@ const trayOpen = computed({
 })
 
 const isErrorToast = computed(() => payload.value?.kind === 'error')
+const isInstallHelp = computed(() => payload.value?.kind === 'install-help')
+
+const trayPlacement = computed(() => payload.value?.edge ?? 'top')
+const trayAlign = computed(() => payload.value?.align ?? 'end')
+const trayTitle = computed(() => (
+  isInstallHelp.value ? 'Add to Home Screen' : undefined
+))
 
 const message = computed(() => {
   const data = payload.value
   if (!data) return ''
   if (data.kind === 'error') return data.message
+  if (data.kind === 'install-help') return 'Add to Home Screen'
   return `${data.trackTitle} successfully added to ${data.cardTitle}`
 })
 
@@ -77,6 +86,10 @@ function onCancelRiskyUpdate() {
   showCapacityConfirm.value = false
 }
 
+function onDismiss() {
+  dismiss()
+}
+
 function toastPhoneError(msg: string, prev: string) {
   if (!chrome?.isPhone.value) return
   if (!msg || msg === prev) return
@@ -93,23 +106,27 @@ watch(
   (msg, prev) => toastPhoneError(msg, prev ?? ''),
 )
 
-watch(open, (isOpen) => {
-  if (!isOpen) return
-  playEvent(isErrorToast.value ? 'saveError' : 'notification')
+watch(open, (isOpen, wasOpen) => {
+  if (isOpen) {
+    playEvent(isErrorToast.value ? 'saveError' : 'notification')
+    return
+  }
+  if (wasOpen && persistent.value) playEvent('toastDismiss')
 })
 
 watch(() => chrome?.isPhone.value, (phone) => {
   if (phone === false) {
-    dismiss()
     showCapacityConfirm.value = false
   }
 })
 </script>
 
 <template>
-  <MobileTray
+  <Tray
     v-model:open="trayOpen"
-    placement="top"
+    :placement="trayPlacement"
+    :align="trayAlign"
+    :title="trayTitle"
     variant="toast"
     height="auto"
     :show-backdrop="false"
@@ -117,34 +134,69 @@ watch(() => chrome?.isPhone.value, (phone) => {
     :role="isErrorToast ? 'alert' : 'status'"
     :aria-label="message"
   >
+    <template
+      v-if="persistent"
+      #badge
+    >
+      <button
+        type="button"
+        class="toast__dismiss"
+        aria-label="Dismiss"
+        @click="onDismiss"
+      >
+        <span
+          class="toast__dismiss-mark"
+          aria-hidden="true"
+        >×</span>
+      </button>
+    </template>
     <div
       v-if="payload?.kind === 'added'"
-      class="mobile-toast__stack"
+      class="toast__stack"
     >
-      <p class="mobile-toast__message type-body m-0">
-        <span class="mobile-toast__emphasis font-maru-medium">{{ payload.trackTitle }}</span>
+      <p class="toast__message type-body m-0">
+        <span class="toast__emphasis font-maru-medium">{{ payload.trackTitle }}</span>
         successfully added to
-        <span class="mobile-toast__emphasis font-maru-medium">{{ payload.cardTitle }}</span>
+        <span class="toast__emphasis font-maru-medium">{{ payload.cardTitle }}</span>
       </p>
       <button
         type="button"
-        class="mobile-toast__update"
+        class="toast__update"
         :disabled="!canUpdatePlaylists"
         @click="onUpdatePlaylists"
       >
-        <span class="mobile-toast__update-label">Update Playlists</span>
+        <span class="toast__update-label">Update Playlists</span>
       </button>
     </div>
 
     <div
       v-else-if="payload?.kind === 'error'"
-      class="mobile-toast__stack mobile-toast__stack--error"
+      class="toast__stack toast__stack--error"
     >
-      <p class="mobile-toast__message type-body m-0">
+      <p class="toast__message type-body m-0">
         {{ payload.message }}
       </p>
     </div>
-  </MobileTray>
+
+    <p
+      v-else-if="payload?.kind === 'install-help'"
+      class="pwa-install-help__steps type-title m-0"
+    >
+      <template v-if="platform === 'ios'">
+        Tap
+        <strong class="font-maru-bold">Share</strong>
+        in the browser toolbar, then
+        <strong class="font-maru-bold">Add to Home Screen</strong>, then
+        <strong class="font-maru-bold">Add</strong>.
+      </template>
+      <template v-else>
+        Open the browser menu, then tap
+        <strong class="font-maru-bold">Install app</strong>
+        or
+        <strong class="font-maru-bold">Add to Home Screen</strong>.
+      </template>
+    </p>
+  </Tray>
 
   <Teleport to="body">
     <div
@@ -152,11 +204,11 @@ watch(() => chrome?.isPhone.value, (phone) => {
       class="mobile-overflow-menu__confirm"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="mobile-toast-capacity-title"
+      aria-labelledby="toast-capacity-title"
     >
       <div class="mobile-overflow-menu__confirm-card border-maru rounded-maru">
         <p
-          id="mobile-toast-capacity-title"
+          id="toast-capacity-title"
           class="type-body text-pretty m-0"
         >
           Over MYO limit — update may fail.

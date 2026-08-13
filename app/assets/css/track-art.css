@@ -114,7 +114,6 @@
   /* Enter: card leads slightly — backdrop 240ms behind window's 280ms punch */
   transition: opacity 240ms cubic-bezier(0.2, 0, 0, 1);
   pointer-events: auto;
-  cursor: pointer;
 }
 
 .track-art-modal--entering .track-art-modal__backdrop,

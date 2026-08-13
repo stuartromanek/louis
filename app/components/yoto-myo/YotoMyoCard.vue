@@ -113,7 +113,7 @@ const cardMotionStyle = computed(() => {
 
           <p
             v-if="card.duration || card.trackCount"
-            class="myo-playing-card__duration type-meta-sm"
+            class="myo-playing-card__duration type-meta"
           >
             <template v-if="card.duration">{{ formatDuration(card.duration) }}</template>
             <template v-if="card.duration && card.trackCount"> · </template>

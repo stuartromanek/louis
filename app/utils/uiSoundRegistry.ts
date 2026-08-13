@@ -28,6 +28,7 @@ export type UiSoundEvent =
   | 'authGateShow'
   | 'splashCue'
   | 'authConnected'
+  | 'toastDismiss'
 
 export type UiSoundRegistryConfig = {
   sounds: UiSoundId | readonly UiSoundId[]
@@ -64,6 +65,7 @@ export const UI_SOUND_REGISTRY: Record<UiSoundEvent, UiSoundRegistryConfig> = {
   authGateShow: { sounds: 'ringtone_loop', volume: 0.8, oneShot: true },
   splashCue: { sounds: 'louis', volume: 0.9 },
   authConnected: { sounds: 'celebration', volume: 1 },
+  toastDismiss: { sounds: uiSoundVariants('swipe'), volume: 0.7 },
 }
 
 export type ResolvedUiSound = {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import MaruHeading from '~/components/layout/MaruHeading.vue'
-import MobileTray from '~/components/ui/MobileTray.vue'
+import Tray from '~/components/ui/Tray.vue'
 
 const TV_BOOT_MS = 1100
 const PHONE_MQ = '(max-width: 599px)'
@@ -164,7 +164,7 @@ onUnmounted(() => {
 
 <template>
   <!-- Phone: welcome tray (Louis in Yoto frame) -->
-  <MobileTray
+  <Tray
     v-model:open="trayOpen"
     role="dialog"
     aria-label="You're connected"
@@ -224,7 +224,7 @@ onUnmounted(() => {
     >
       <span class="maru-button__label">Let's go</span>
     </button>
-  </MobileTray>
+  </Tray>
 
   <!-- Desktop: TV frame welcome -->
   <Teleport to="body">
