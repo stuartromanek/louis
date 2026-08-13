@@ -1,27 +1,46 @@
-export type MobileToastAddedPayload = {
+import { detectPwaInstallPlatform } from '~/composables/usePwaInstall'
+
+export type ToastEdge = 'top' | 'bottom'
+export type ToastAlign = 'start' | 'center' | 'end'
+
+type ToastPlacement = {
+  edge: ToastEdge
+  align: ToastAlign
+}
+
+export type ToastAddedPayload = ToastPlacement & {
   kind: 'added'
   trackTitle: string
   cardTitle: string
 }
 
-export type MobileToastErrorPayload = {
+export type ToastErrorPayload = ToastPlacement & {
   kind: 'error'
   message: string
 }
 
-export type MobileToastPayload = MobileToastAddedPayload | MobileToastErrorPayload
+export type ToastInstallHelpPayload = ToastPlacement & {
+  kind: 'install-help'
+}
+
+export type ToastPayload =
+  | ToastAddedPayload
+  | ToastErrorPayload
+  | ToastInstallHelpPayload
 
 /** Client-only timer handle — never touched during SSR. */
 const clientTimer: { id: ReturnType<typeof setTimeout> | null } = { id: null }
 
 /**
- * Shared mobile toast — top tray notifications (phone only at call sites).
+ * Shared toast — top/bottom tray notifications.
  * State uses Nuxt `useState` so it stays per-request on SSR and shared in the client app.
+ * Phone ignores `align` (full width); sm+ honors corner placement.
  */
-export function useMobileToast() {
-  const open = useState('mobile-toast-open', () => false)
-  const payload = useState<MobileToastPayload | null>('mobile-toast-payload', () => null)
-  const seq = useState('mobile-toast-seq', () => 0)
+export function useToast() {
+  const open = useState('toast-open', () => false)
+  const payload = useState<ToastPayload | null>('toast-payload', () => null)
+  const seq = useState('toast-seq', () => 0)
+  const persistent = useState('toast-persistent', () => false)
 
   function clearAutoClose() {
     if (!import.meta.client) return
@@ -40,8 +59,10 @@ export function useMobileToast() {
     clearAutoClose()
     seq.value += 1
     const id = seq.value
+    persistent.value = durationMs <= 0
     open.value = true
     if (!import.meta.client) return
+    if (durationMs <= 0) return
     clientTimer.id = setTimeout(() => {
       if (id !== seq.value) return
       dismiss()
@@ -53,6 +74,8 @@ export function useMobileToast() {
       kind: 'added',
       trackTitle: trackTitle.trim() || 'Track',
       cardTitle: cardTitle.trim() || 'card',
+      edge: 'top',
+      align: 'end',
     }
     scheduleAutoClose(durationMs)
   }
@@ -63,8 +86,20 @@ export function useMobileToast() {
     payload.value = {
       kind: 'error',
       message: text,
+      edge: 'top',
+      align: 'end',
     }
     scheduleAutoClose(durationMs)
+  }
+
+  function showInstallHelp() {
+    payload.value = {
+      kind: 'install-help',
+      // iOS Safari Share sits in the bottom toolbar — don't cover it.
+      edge: detectPwaInstallPlatform() === 'ios' ? 'top' : 'bottom',
+      align: 'end',
+    }
+    scheduleAutoClose(0)
   }
 
   return {
@@ -72,6 +107,8 @@ export function useMobileToast() {
     payload,
     showAddedToCard,
     showError,
+    showInstallHelp,
+    persistent,
     dismiss,
   }
 }

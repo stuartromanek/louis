@@ -66,7 +66,7 @@ const {
 } = useYoutubePicker(props.maxResults)
 
 const chrome = inject(MOBILE_EDITOR_CHROME_KEY, null)
-const { showError } = useMobileToast()
+const { showError } = useToast()
 
 watch(errorMessage, (msg, prev) => {
   if (!chrome?.isPhone.value) return

@@ -38,7 +38,7 @@ Explore pre-canned deploy targets that consume container images (Railway templat
 
 ### “Add to Desktop” in mobile menu
 
-Install / “Add to Home Screen” affordance in the phone overflow menu (uses the browser install prompt / platform instructions). Manifest + apple web-app meta already target standalone; this is the in-app entry point.
+~~Install / “Add to Home Screen” affordance in the phone overflow menu (uses the browser install prompt / platform instructions). Manifest + apple web-app meta already target standalone; this is the in-app entry point.~~ — **done**: phone Menu + tablet/desktop status bar; native `beforeinstallprompt` when available, otherwise platform steps.
 
 ### Resume pending playlist edits
 

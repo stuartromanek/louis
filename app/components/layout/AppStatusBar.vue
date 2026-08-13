@@ -12,6 +12,12 @@ if (!yoto) {
 const { playEvent } = useUiSound()
 const { openPreferences } = usePreferencesShell()
 const { isDesktop } = useDesktopHost()
+const {
+  showInstallItem,
+  canPrompt,
+  promptInstall,
+} = usePwaInstall()
+const { showInstallHelp } = useToast()
 
 const { connected, status, refresh, disconnect, hasWriteScope, connect, errorMessage } = yoto
 
@@ -47,6 +53,15 @@ function openHowTo() {
 function onOpenPreferences() {
   playEvent('buttonClick')
   openPreferences()
+}
+
+function onInstall() {
+  playEvent('buttonClick')
+  if (canPrompt.value) {
+    void promptInstall()
+    return
+  }
+  showInstallHelp()
 }
 
 function onConnect() {
@@ -94,7 +109,7 @@ function onRetry() {
         class="status-bar__action"
         @click="openHowTo"
       >
-        How To
+        Help
       </button>
 
       <a
@@ -103,7 +118,7 @@ function onRetry() {
         target="_blank"
         rel="noopener noreferrer"
       >
-        Issue / Feedback
+        Report Issues
       </a>
 
       <button
@@ -112,6 +127,15 @@ function onRetry() {
         @click="onOpenPreferences"
       >
         Settings
+      </button>
+
+      <button
+        v-if="showInstallItem"
+        type="button"
+        class="status-bar__action"
+        @click="onInstall"
+      >
+        Add to Home
       </button>
 
       <button

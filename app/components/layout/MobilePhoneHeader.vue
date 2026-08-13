@@ -2,7 +2,7 @@
 import { MYO_EDITOR_KEY } from '~/components/myo-editor/keys'
 import { YOTO_MYO_KEY } from '~/components/yoto-myo/keys'
 import HowToModal from '~/components/layout/HowToModal.vue'
-import MobileTray from '~/components/ui/MobileTray.vue'
+import Tray from '~/components/ui/Tray.vue'
 import MaruEmoji from '~/components/ui/MaruEmoji.vue'
 import { MOBILE_EDITOR_CHROME_KEY } from '~/composables/useMobileEditorChrome'
 import PlaylistSaveProgress from '~/components/playlist/PlaylistSaveProgress.vue'
@@ -25,6 +25,12 @@ const chrome = inject(MOBILE_EDITOR_CHROME_KEY, null)
 const { playEvent } = useUiSound()
 const saveProgressTestMode = useSaveProgressTestMode()
 const { openPreferences: openPreferencesShell } = usePreferencesShell()
+const {
+  showInstallItem,
+  canPrompt,
+  promptInstall,
+} = usePwaInstall()
+const { showInstallHelp } = useToast()
 
 const { connected, status, refresh, disconnect, hasWriteScope, connect } = yoto
 
@@ -138,6 +144,16 @@ function openPreferences() {
   playEvent('buttonClick')
   menuOpen.value = false
   openPreferencesShell()
+}
+
+function onAddToHomeScreen() {
+  playEvent('buttonClick')
+  menuOpen.value = false
+  if (canPrompt.value) {
+    void promptInstall()
+    return
+  }
+  showInstallHelp()
 }
 
 function onConnect() {
@@ -267,7 +283,7 @@ onBeforeUnmount(() => {
       <span class="mobile-editor-tabs__label">Menu</span>
     </button>
 
-    <MobileTray
+    <Tray
       v-model:open="menuOpen"
       role="menu"
       aria-label="Menu"
@@ -305,7 +321,7 @@ onBeforeUnmount(() => {
             size="md"
             class="mobile-overflow-menu__item-emoji"
           />
-          <span class="mobile-overflow-menu__item-label">How To</span>
+          <span class="mobile-overflow-menu__item-label">Help</span>
         </button>
         <a
           class="mobile-overflow-menu__item mobile-overflow-menu__item--feedback"
@@ -320,7 +336,7 @@ onBeforeUnmount(() => {
             size="md"
             class="mobile-overflow-menu__item-emoji"
           />
-          <span class="mobile-overflow-menu__item-label">Issue / Feedback</span>
+          <span class="mobile-overflow-menu__item-label">Report Issues</span>
         </a>
         <button
           type="button"
@@ -334,6 +350,20 @@ onBeforeUnmount(() => {
             class="mobile-overflow-menu__item-emoji"
           />
           <span class="mobile-overflow-menu__item-label">Settings</span>
+        </button>
+        <button
+          v-if="showInstallItem"
+          type="button"
+          class="mobile-overflow-menu__item mobile-overflow-menu__item--install"
+          role="menuitem"
+          @click="onAddToHomeScreen"
+        >
+          <MaruEmoji
+            name="CardIndex"
+            size="md"
+            class="mobile-overflow-menu__item-emoji"
+          />
+          <span class="mobile-overflow-menu__item-label">Add to Home</span>
         </button>
         <button
           v-if="status === 'disconnected' || status === 'unconfigured'"
@@ -409,7 +439,7 @@ onBeforeUnmount(() => {
           </template>
         </button>
       </div>
-    </MobileTray>
+    </Tray>
 
     <Teleport to="body">
       <div

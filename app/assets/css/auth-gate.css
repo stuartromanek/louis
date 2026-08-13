@@ -402,7 +402,7 @@
 
 /* ─── Phone auth gate (mobile tray + Louis in Yoto frame) ─── */
 
-.mobile-tray__body:has(.yoto-auth-gate-phone__player) {
+.tray__body:has(.yoto-auth-gate-phone__player) {
   /* Size queries so the decorative player can track tray width *and* height. */
   container-type: size;
   container-name: auth-phone-tray;
@@ -490,7 +490,7 @@
   text-transform: none;
 }
 
-.mobile-tray .yoto-auth-gate-phone__heading {
+.tray .yoto-auth-gate-phone__heading {
   opacity: 1;
   scale: 1;
   animation: none;
@@ -518,7 +518,7 @@
   justify-content: center;
 }
 
-.mobile-tray .yoto-auth-gate__secondary {
+.tray .yoto-auth-gate__secondary {
   display: block;
   width: 100%;
   max-width: 22rem;
@@ -530,15 +530,15 @@
 
 /* Press feedback only after the tray has finished layering in —
    avoid clobbering stagger opacity / blur / transform transitions. */
-.mobile-tray--open .yoto-auth-gate-phone__cta {
+.tray--open .yoto-auth-gate-phone__cta {
   transition:
     scale 0.12s ease-out,
     translate 0.12s ease-out,
     box-shadow 0.12s ease-out;
 }
 
-.mobile-tray--open .yoto-auth-gate-phone__cta:active,
-.mobile-tray--open .maru-button.yoto-auth-gate-phone__cta:active {
+.tray--open .yoto-auth-gate-phone__cta:active,
+.tray--open .maru-button.yoto-auth-gate-phone__cta:active {
   scale: 0.96;
   translate: 1px 2px;
   transition: none;
@@ -567,7 +567,7 @@
   margin-top: 0.5rem;
 }
 
-.mobile-tray__body:has(.yoto-auth-gate-phone__features) {
+.tray__body:has(.yoto-auth-gate-phone__features) {
   justify-content: center;
   gap: 1.25rem;
   padding-top: 0.85rem;
@@ -576,7 +576,7 @@
   --auth-phone-player-max: 11.5rem;
 }
 
-.mobile-tray__body:has(.yoto-auth-gate-phone__features) .yoto-auth-gate-phone__copy {
+.tray__body:has(.yoto-auth-gate-phone__features) .yoto-auth-gate-phone__copy {
   gap: 0.9rem;
 }
 

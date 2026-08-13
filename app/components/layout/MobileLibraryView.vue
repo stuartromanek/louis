@@ -8,7 +8,7 @@ import type { YotoMyoCard as YotoMyoCardType } from '~/components/yoto-myo/types
 import { moveItem } from '~/utils/reorder'
 import PlaylistSaveProgress from '~/components/playlist/PlaylistSaveProgress.vue'
 import MobilePlaylistCapacity from '~/components/playlist/MobilePlaylistCapacity.vue'
-import MobileTray from '~/components/ui/MobileTray.vue'
+import Tray from '~/components/ui/Tray.vue'
 import {
   SAVE_PROGRESS_TEST_FIXTURE,
   useSaveProgressTestMode,
@@ -523,7 +523,7 @@ onUnmounted(() => {
           No tracks yet. Add songs from Search.
         </p>
 
-        <MobileTray
+        <Tray
           v-model:open="trackMenuOpen"
           role="menu"
           :aria-label="`Actions for ${menuTrackTitle}`"
@@ -587,7 +587,7 @@ onUnmounted(() => {
               <span class="mobile-overflow-menu__item-label">Remove</span>
             </button>
           </div>
-        </MobileTray>
+        </Tray>
       </div>
 
       <div

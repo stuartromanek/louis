@@ -88,8 +88,8 @@
   box-shadow: 1px 1px 0 var(--color-maru-black);
 }
 
-.mobile-tray--open .mobile-overflow-menu__item:active:not(:disabled),
-.mobile-tray--entering .mobile-overflow-menu__item:active:not(:disabled) {
+.tray--open .mobile-overflow-menu__item:active:not(:disabled),
+.tray--entering .mobile-overflow-menu__item:active:not(:disabled) {
   transform: translateY(0) translate(2px, 2px) scale(0.98);
   box-shadow: 0 0 0 var(--color-maru-black);
 }
@@ -104,8 +104,8 @@
     box-shadow: 4px 4px 0 var(--color-maru-black);
   }
 
-  .mobile-tray--open .mobile-overflow-menu__item:hover:not(:disabled),
-  .mobile-tray--entering .mobile-overflow-menu__item:hover:not(:disabled) {
+  .tray--open .mobile-overflow-menu__item:hover:not(:disabled),
+  .tray--entering .mobile-overflow-menu__item:hover:not(:disabled) {
     transform: translateY(0) translate(-1px, -1px);
   }
 }
@@ -138,6 +138,18 @@
 @media (hover: hover) and (pointer: fine) {
   .mobile-overflow-menu__item--prefs:hover {
     background: var(--color-maru-magenta-lighter);
+  }
+}
+
+.mobile-overflow-menu__item--install {
+  background: var(--color-maru-green-light);
+  white-space: normal;
+  text-wrap: pretty;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mobile-overflow-menu__item--install:hover {
+    background: var(--color-maru-green-lighter);
   }
 }
 
@@ -289,10 +301,10 @@
 
 .mobile-overflow-menu__item--update:not(.mobile-overflow-menu__item--update-ready):not(.mobile-overflow-menu__item--update-busy):hover,
 .mobile-overflow-menu__item--update:not(.mobile-overflow-menu__item--update-ready):not(.mobile-overflow-menu__item--update-busy):active,
-.mobile-tray--open .mobile-overflow-menu__item--update:not(.mobile-overflow-menu__item--update-ready):not(.mobile-overflow-menu__item--update-busy):hover,
-.mobile-tray--entering .mobile-overflow-menu__item--update:not(.mobile-overflow-menu__item--update-ready):not(.mobile-overflow-menu__item--update-busy):hover,
-.mobile-tray--open .mobile-overflow-menu__item--update:not(.mobile-overflow-menu__item--update-ready):not(.mobile-overflow-menu__item--update-busy):active,
-.mobile-tray--entering .mobile-overflow-menu__item--update:not(.mobile-overflow-menu__item--update-ready):not(.mobile-overflow-menu__item--update-busy):active {
+.tray--open .mobile-overflow-menu__item--update:not(.mobile-overflow-menu__item--update-ready):not(.mobile-overflow-menu__item--update-busy):hover,
+.tray--entering .mobile-overflow-menu__item--update:not(.mobile-overflow-menu__item--update-ready):not(.mobile-overflow-menu__item--update-busy):hover,
+.tray--open .mobile-overflow-menu__item--update:not(.mobile-overflow-menu__item--update-ready):not(.mobile-overflow-menu__item--update-busy):active,
+.tray--entering .mobile-overflow-menu__item--update:not(.mobile-overflow-menu__item--update-ready):not(.mobile-overflow-menu__item--update-busy):active {
   background: color-mix(in srgb, var(--color-maru-gray-light) 70%, var(--color-maru-white));
   transform: none;
   box-shadow: none;
@@ -386,23 +398,23 @@
 
 @media (hover: hover) and (pointer: fine) {
   .mobile-overflow-menu__item--update-ready:hover,
-  .mobile-tray--open .mobile-overflow-menu__item--update-ready:hover,
-  .mobile-tray--entering .mobile-overflow-menu__item--update-ready:hover {
+  .tray--open .mobile-overflow-menu__item--update-ready:hover,
+  .tray--entering .mobile-overflow-menu__item--update-ready:hover {
     background: var(--color-maru-blue-lighter);
     color: var(--color-maru-black);
     box-shadow: 4px 4px 0 var(--color-maru-red);
     filter: none;
   }
 
-  .mobile-tray--open .mobile-overflow-menu__item--update-ready:hover,
-  .mobile-tray--entering .mobile-overflow-menu__item--update-ready:hover {
+  .tray--open .mobile-overflow-menu__item--update-ready:hover,
+  .tray--entering .mobile-overflow-menu__item--update-ready:hover {
     transform: translateY(0) translate(-1px, -1px);
   }
 }
 
 .mobile-overflow-menu__item--update-ready:active,
-.mobile-tray--open .mobile-overflow-menu__item--update-ready:active,
-.mobile-tray--entering .mobile-overflow-menu__item--update-ready:active {
+.tray--open .mobile-overflow-menu__item--update-ready:active,
+.tray--entering .mobile-overflow-menu__item--update-ready:active {
   color: var(--color-maru-white);
   transform: translateY(0) translate(2px, 2px) scale(0.98);
   box-shadow: 0 0 0 var(--color-maru-red);

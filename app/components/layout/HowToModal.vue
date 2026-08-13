@@ -145,7 +145,7 @@ onUnmounted(() => {
         <header class="howto-modal__header border-maru-bottom">
           <MaruHeading
             :id="headingId"
-            text="How To"
+            text="Help"
             tone="white"
             size="sm"
             as="h2"
@@ -154,7 +154,7 @@ onUnmounted(() => {
             type="button"
             class="howto-modal__close"
             :disabled="!interactive"
-            aria-label="Close How To"
+            aria-label="Close Help"
             @click="beginClose"
           >
             Close
@@ -232,7 +232,7 @@ onUnmounted(() => {
               href="https://docs.google.com/forms/d/e/1FAIpQLSccwkdCpYaJjODtpxSrtBIaye045nobwudH1L0VX8S6NzFtjA/viewform?usp=publish-editor"
               target="_blank"
               rel="noopener noreferrer"
-            >Issue / Feedback</a>
+            >Report Issues</a>
             in the status bar (desktop) or Menu (phone).
           </p>
         </div>

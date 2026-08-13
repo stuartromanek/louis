@@ -18,6 +18,7 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - `LOUIS_COOKIE_SECURE` to override OAuth cookie `Secure` (plain HTTP / HA LAN).
 - GHCR release images publish **linux/amd64 + linux/arm64** (required for typical HA hosts).
 - Desktop **Use default client** prefills Louis's bundled public Yoto PKCE client ID (setup wizard + Settings → Advanced).
+- **Add to Home** in the phone Menu and tablet/desktop status bar (browser install prompt, or a toast with Share / Install steps when the prompt is unavailable).
 
 ### Changed
 - Yoto OAuth scopes now include `user:icons:manage` (reconnect if icon upload/patch is denied).

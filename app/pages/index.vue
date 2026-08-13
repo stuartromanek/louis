@@ -47,7 +47,7 @@
           </template>
         </AppMainLayout>
         <MobileAddToCardDrawer />
-        <MobileToastHost />
+        <ToastHost />
       </DragDropProvider>
     </div>
     <!-- Same bg as splash; covers first paint until splash + desktop setup finish. -->
@@ -113,7 +113,7 @@ import AppSplash from '~/components/splash/AppSplash.vue'
 import DesktopSetupScreen from '~/components/splash/DesktopSetupScreen.vue'
 import MobileLibraryView from '~/components/layout/MobileLibraryView.vue'
 import MobileAddToCardDrawer from '~/components/layout/MobileAddToCardDrawer.vue'
-import MobileToastHost from '~/components/ui/MobileToastHost.vue'
+import ToastHost from '~/components/ui/ToastHost.vue'
 import {
   MOBILE_EDITOR_CHROME_KEY,
   useMobileEditorChrome,
