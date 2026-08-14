@@ -7,6 +7,8 @@ type StoredPrefs = {
   showDebugPanel?: boolean
   /** Empty array = user cleared (use app defaults). Absent = never customized. */
   searchPlaceholders?: string[]
+  /** Pixel editor paint/erase ticks. Absent = on. */
+  drawEditorSounds?: boolean
 }
 
 type SessionPrefs = {
@@ -17,6 +19,7 @@ type SessionPrefs = {
 const showDebugPanelStored = ref<boolean | null>(null)
 /** null = never customized; [] = cleared to defaults; non-empty = custom list */
 const searchPlaceholdersStored = ref<string[] | null>(null)
+const drawEditorSoundsStored = ref<boolean | null>(null)
 const allowLongTracksStored = ref(false)
 
 let initialized = false
@@ -56,6 +59,9 @@ function persist() {
   if (searchPlaceholdersStored.value !== null) {
     toSave.searchPlaceholders = searchPlaceholdersStored.value
   }
+  if (drawEditorSoundsStored.value !== null) {
+    toSave.drawEditorSounds = drawEditorSoundsStored.value
+  }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave))
 }
 
@@ -81,6 +87,9 @@ function ensureInitialized() {
   }
   if (Array.isArray(stored.searchPlaceholders)) {
     searchPlaceholdersStored.value = stored.searchPlaceholders
+  }
+  if (typeof stored.drawEditorSounds === 'boolean') {
+    drawEditorSoundsStored.value = stored.drawEditorSounds
   }
   const session = readSessionStored()
   if (session.allowLongTracks === true) {
@@ -129,6 +138,16 @@ export function useUserPreferences() {
     persist()
   }
 
+  const drawEditorSounds = computed(() => {
+    if (drawEditorSoundsStored.value !== null) return drawEditorSoundsStored.value
+    return true
+  })
+
+  function setDrawEditorSounds(value: boolean) {
+    drawEditorSoundsStored.value = value
+    persist()
+  }
+
   const allowLongTracks = computed(() => allowLongTracksStored.value)
 
   function setAllowLongTracks(value: boolean) {
@@ -142,6 +161,8 @@ export function useUserPreferences() {
     searchPlaceholdersText,
     setShowDebugPanel,
     setSearchPlaceholdersFromText,
+    drawEditorSounds: readonly(drawEditorSounds),
+    setDrawEditorSounds,
     allowLongTracks: readonly(allowLongTracks),
     setAllowLongTracks,
   }

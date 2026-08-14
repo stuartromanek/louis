@@ -9,6 +9,8 @@ import {
 } from './uiSoundCatalog'
 
 const POOL_SIZE = 3
+/** Extra overlapping one-shots (pixel paint/erase) before we steal a busy voice. */
+const POOL_MAX = 24
 
 export type UiSoundPlayOptions = {
   /** Gain multiplied with master volume (0–1). */
@@ -21,6 +23,8 @@ class UiSoundPlayer {
   private pools = new Map<UiSoundId, HTMLAudioElement[]>()
   private poolIndex = new Map<UiSoundId, number>()
   private loops = new Map<UiSoundId, HTMLAudioElement>()
+  /** Voices currently claimed for playback (paused can still be mid-`play()`). */
+  private inFlight = new WeakSet<HTMLAudioElement>()
   /** True after a play() succeeded under a user gesture (browser autoplay policy). */
   private unlocked = false
 
@@ -114,6 +118,7 @@ class UiSoundPlayer {
       return true
     }
     catch {
+      this.inFlight.delete(audio)
       return false
     }
   }
@@ -167,22 +172,46 @@ class UiSoundPlayer {
     return Math.max(0, Math.min(1, this.volume * gain * uiSoundGain(id)))
   }
 
+  private createAudio(id: UiSoundId): HTMLAudioElement {
+    const audio = new Audio(uiSoundPath(id))
+    audio.preload = 'auto'
+    return audio
+  }
+
+  private isIdle(audio: HTMLAudioElement): boolean {
+    if (this.inFlight.has(audio)) return false
+    return audio.paused || audio.ended
+  }
+
+  private claimAudio(audio: HTMLAudioElement): HTMLAudioElement {
+    this.inFlight.add(audio)
+    const release = () => this.inFlight.delete(audio)
+    audio.addEventListener('ended', release, { once: true })
+    audio.addEventListener('pause', release, { once: true })
+    return audio
+  }
+
   private borrowAudio(id: UiSoundId): HTMLAudioElement {
     let pool = this.pools.get(id)
     if (!pool) {
-      pool = Array.from({ length: POOL_SIZE }, () => {
-        const audio = new Audio(uiSoundPath(id))
-        audio.preload = 'auto'
-        return audio
-      })
+      pool = Array.from({ length: POOL_SIZE }, () => this.createAudio(id))
       this.pools.set(id, pool)
       this.poolIndex.set(id, 0)
+    }
+
+    const idle = pool.find(audio => this.isIdle(audio))
+    if (idle) return this.claimAudio(idle)
+
+    if (pool.length < POOL_MAX) {
+      const extra = this.createAudio(id)
+      pool.push(extra)
+      return this.claimAudio(extra)
     }
 
     const index = this.poolIndex.get(id) ?? 0
     const audio = pool[index]!
     this.poolIndex.set(id, (index + 1) % pool.length)
-    return audio
+    return this.claimAudio(audio)
   }
 }
 

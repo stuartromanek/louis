@@ -4,21 +4,11 @@ import { TRACK_ART_PALETTE } from './types'
 import { toIcon16x16, uploadTrackArtPng } from './upload'
 
 const GRID = 16
-/** Fixed palette rows — new colors grow columns instead of stretching canvas height. */
-const PALETTE_ROWS = 8
-const PALETTE_MIN_COLS = 2
-
-/** Reorder a row-major palette into column-major for `grid-auto-flow: column`. */
-function toColumnMajor(colors: readonly string[], cols: number, rows: number): string[] {
-  const out: string[] = []
-  for (let c = 0; c < cols; c++) {
-    for (let r = 0; r < rows; r++) {
-      const i = r * cols + c
-      if (i < colors.length) out.push(colors[i]!)
-    }
-  }
-  return out
-}
+const { playEvent } = useUiSound()
+const { drawEditorSounds, setDrawEditorSounds } = useUserPreferences()
+/** Palette is a 4-wide row-major grid; the custom-color picker is the first cell. */
+const PALETTE_COLS = 4
+const PICKER_SLOT = 1
 
 const props = defineProps<{
   /** Image to approximate onto the 16×16 grid when entering Draw (selected icon or saved art). */
@@ -36,27 +26,14 @@ type Tool = 'draw' | 'erase'
 
 const pixels = ref<(string | null)[]>(Array.from({ length: GRID * GRID }, () => null))
 const tool = ref<Tool>('draw')
-const palette = ref<string[]>(toColumnMajor(TRACK_ART_PALETTE, PALETTE_MIN_COLS, PALETTE_ROWS))
+const palette = ref<string[]>([...TRACK_ART_PALETTE])
 const color = ref<string>(TRACK_ART_PALETTE[9] ?? '#0068FF')
 const painting = ref(false)
 const applying = ref(false)
 const errorMessage = ref('')
 const canvasRef = ref<HTMLCanvasElement | null>(null)
-const railRef = ref<HTMLElement | null>(null)
+const drawRootRef = ref<HTMLElement | null>(null)
 const colorInputRef = ref<HTMLInputElement | null>(null)
-
-const paletteColumns = computed(() =>
-  Math.max(PALETTE_MIN_COLS, Math.ceil(palette.value.length / PALETTE_ROWS)),
-)
-
-/** Desktop tooltips sit to the right; phone rail is horizontal so prefer top. */
-const isPhoneLayout = ref(false)
-const toolTooltipPlacement = computed(() => (isPhoneLayout.value ? 'top' : 'right'))
-
-function syncPhoneLayoutFlag() {
-  if (!import.meta.client) return
-  isPhoneLayout.value = window.matchMedia('(max-width: 599px)').matches
-}
 let previewRaf: number | null = null
 /** Last URL successfully applied to the grid — skip reseed while unchanged. */
 const lastSeededUrl = ref<string | null>(null)
@@ -67,7 +44,9 @@ const past = ref<(string | null)[][]>([])
 const future = ref<(string | null)[][]>([])
 
 const hasPaint = computed(() => pixels.value.some(Boolean))
-const paletteFocusIndex = ref(0)
+const paletteFocusIndex = ref(
+  Math.max(PICKER_SLOT, TRACK_ART_PALETTE.findIndex(c => c === (TRACK_ART_PALETTE[9] ?? '#0068FF')) + PICKER_SLOT),
+)
 const paletteListRef = ref<HTMLElement | null>(null)
 
 /** On-screen size of one 16×16 grid cell (matches canvas display). */
@@ -81,26 +60,11 @@ function updateDisplayPixelSize() {
   if (next !== displayPixelSize.value) displayPixelSize.value = next
 }
 
-/** Square canvas height/width = rail (palette + tools) height on desktop. */
-function syncCanvasToRail() {
+function syncLayout() {
   const canvas = canvasRef.value
-  const rail = railRef.value
-  if (!canvas) return
-
-  if (import.meta.client && window.matchMedia('(max-width: 599px)').matches) {
+  if (canvas) {
     canvas.style.width = ''
     canvas.style.height = ''
-    updateDisplayPixelSize()
-    return
-  }
-
-  if (!rail) return
-  const size = Math.round(rail.getBoundingClientRect().height)
-  if (size < 48) return
-  const px = `${size}px`
-  if (canvas.style.width !== px) {
-    canvas.style.width = px
-    canvas.style.height = px
   }
   updateDisplayPixelSize()
 }
@@ -180,6 +144,9 @@ function paintAt(clientX: number, clientY: number) {
   const next = pixels.value.slice()
   next[i] = nextValue
   pixels.value = next
+  if (drawEditorSounds.value) {
+    playEvent(tool.value === 'erase' ? 'pixelErase' : 'pixelPaint')
+  }
 }
 
 function onPointerDown(event: PointerEvent) {
@@ -199,25 +166,41 @@ function onPointerUp() {
   painting.value = false
 }
 
+function playToolClick() {
+  if (drawEditorSounds.value) playEvent('buttonClick')
+}
+
+function playSwatchClick() {
+  if (drawEditorSounds.value) playEvent('select')
+}
+
 function setTool(next: Tool) {
   tool.value = next
+  playToolClick()
 }
 
 function setColor(next: string) {
   color.value = normalizeHex(next)
   tool.value = 'draw'
   const idx = palette.value.findIndex(swatch => normalizeHex(swatch) === color.value)
-  if (idx >= 0) paletteFocusIndex.value = idx
+  if (idx >= 0) paletteFocusIndex.value = idx + PICKER_SLOT
+  playSwatchClick()
+}
+
+function paletteItemCount() {
+  return palette.value.length + PICKER_SLOT
+}
+
+function pickerTabIndex() {
+  return paletteFocusIndex.value === 0 ? 0 : -1
 }
 
 function paletteOptionTabIndex(index: number) {
-  const selectedIdx = palette.value.findIndex(swatch => normalizeHex(swatch) === normalizeHex(color.value))
-  const focusIdx = selectedIdx >= 0 ? selectedIdx : paletteFocusIndex.value
-  return index === focusIdx ? 0 : -1
+  return index + PICKER_SLOT === paletteFocusIndex.value ? 0 : -1
 }
 
 function focusPaletteOption(index: number) {
-  const next = Math.max(0, Math.min(palette.value.length - 1, index))
+  const next = Math.max(0, Math.min(paletteItemCount() - 1, index))
   paletteFocusIndex.value = next
   nextTick(() => {
     const el = paletteListRef.value?.querySelectorAll<HTMLElement>('[role="option"]')[next]
@@ -227,32 +210,35 @@ function focusPaletteOption(index: number) {
 
 function onPaletteKeydown(event: KeyboardEvent) {
   const colors = palette.value
-  if (!colors.length) return
-  // Desktop palette is column-major (8 rows); phone is row-major (8 columns).
-  const phone = isPhoneLayout.value
-  const across = phone ? Math.max(1, Math.min(8, colors.length)) : PALETTE_ROWS
-
-  let idx = paletteFocusIndex.value
-  const selectedIdx = colors.findIndex(swatch => normalizeHex(swatch) === normalizeHex(color.value))
-  if (selectedIdx >= 0) idx = selectedIdx
+  const count = paletteItemCount()
+  if (!count) return
+  const across = PALETTE_COLS
+  const idx = paletteFocusIndex.value
 
   let next = idx
-  if (event.key === 'ArrowRight') next = Math.min(colors.length - 1, idx + (phone ? 1 : across))
-  else if (event.key === 'ArrowLeft') next = Math.max(0, idx - (phone ? 1 : across))
-  else if (event.key === 'ArrowDown') next = Math.min(colors.length - 1, idx + (phone ? across : 1))
-  else if (event.key === 'ArrowUp') next = Math.max(0, idx - (phone ? across : 1))
+  if (event.key === 'ArrowRight') next = Math.min(count - 1, idx + 1)
+  else if (event.key === 'ArrowLeft') next = Math.max(0, idx - 1)
+  else if (event.key === 'ArrowDown') next = Math.min(count - 1, idx + across)
+  else if (event.key === 'ArrowUp') next = Math.max(0, idx - across)
   else if (event.key === 'Home') next = 0
-  else if (event.key === 'End') next = colors.length - 1
+  else if (event.key === 'End') next = count - 1
   else if (event.key === 'Enter' || event.key === ' ') {
     event.preventDefault()
-    const swatch = colors[idx]
-    if (swatch) setColor(swatch)
+    if (idx === 0) openColorPicker()
+    else {
+      const swatch = colors[idx - PICKER_SLOT]
+      if (swatch) setColor(swatch)
+    }
     return
   }
   else return
 
   event.preventDefault()
-  const swatch = colors[next]
+  if (next === 0) {
+    focusPaletteOption(0)
+    return
+  }
+  const swatch = colors[next - PICKER_SLOT]
   if (!swatch) return
   setColor(swatch)
   focusPaletteOption(next)
@@ -271,6 +257,7 @@ function normalizeHex(value: string): string {
 }
 
 function openColorPicker() {
+  playSwatchClick()
   const input = colorInputRef.value
   if (!input) return
   input.value = normalizeHex(color.value)
@@ -307,6 +294,13 @@ function clearCanvas() {
   if (!hasPaint.value) return
   commitHistory()
   pixels.value = emptyPixels()
+  if (drawEditorSounds.value) playEvent('pixelClear')
+}
+
+function toggleDrawSounds() {
+  const next = !drawEditorSounds.value
+  setDrawEditorSounds(next)
+  playEvent(next ? 'toggleOn' : 'toggleOff')
 }
 
 function onEditorKeyDown(event: KeyboardEvent) {
@@ -400,7 +394,7 @@ watch(
   (isActive) => {
     if (isActive) {
       window.addEventListener('keydown', onEditorKeyDown)
-      nextTick(() => syncCanvasToRail())
+      nextTick(() => syncLayout())
       return
     }
     window.removeEventListener('keydown', onEditorKeyDown)
@@ -420,21 +414,18 @@ watch(
 
 onMounted(() => {
   renderCanvas()
-  syncPhoneLayoutFlag()
-  syncCanvasToRail()
+  syncLayout()
   if (typeof ResizeObserver !== 'undefined') {
-    layoutResizeObserver = new ResizeObserver(() => syncCanvasToRail())
-    if (railRef.value) layoutResizeObserver.observe(railRef.value)
+    layoutResizeObserver = new ResizeObserver(() => syncLayout())
+    if (drawRootRef.value) layoutResizeObserver.observe(drawRootRef.value)
     if (canvasRef.value) layoutResizeObserver.observe(canvasRef.value)
   }
-  window.addEventListener('resize', syncCanvasToRail)
-  window.addEventListener('resize', syncPhoneLayoutFlag)
+  window.addEventListener('resize', syncLayout)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onEditorKeyDown)
-  window.removeEventListener('resize', syncCanvasToRail)
-  window.removeEventListener('resize', syncPhoneLayoutFlag)
+  window.removeEventListener('resize', syncLayout)
   if (previewRaf != null) cancelAnimationFrame(previewRaf)
   layoutResizeObserver?.disconnect()
   layoutResizeObserver = null
@@ -549,7 +540,88 @@ defineExpose({
 </script>
 
 <template>
-  <div class="track-art-draw">
+  <div
+    ref="drawRootRef"
+    class="track-art-draw"
+  >
+    <div
+      class="track-art-draw__tools"
+      role="toolbar"
+      aria-label="Drawing tools"
+    >
+      <MaruTooltip
+        text="Draw"
+        placement="right"
+      >
+        <button
+          type="button"
+          class="track-art-draw__tool"
+          :class="{ 'track-art-draw__tool--selected': tool === 'draw' }"
+          :aria-pressed="tool === 'draw'"
+          aria-label="Draw"
+          @click="setTool('draw')"
+        >
+          <MaruEmoji
+            name="Crayon"
+            :size-rem="2.55"
+          />
+        </button>
+      </MaruTooltip>
+      <MaruTooltip
+        text="Erase"
+        placement="right"
+      >
+        <button
+          type="button"
+          class="track-art-draw__tool"
+          :class="{ 'track-art-draw__tool--selected': tool === 'erase' }"
+          :aria-pressed="tool === 'erase'"
+          aria-label="Erase"
+          @click="setTool('erase')"
+        >
+          <MaruEmoji
+            name="Eraser"
+            :size-rem="2.55"
+          />
+        </button>
+      </MaruTooltip>
+      <MaruTooltip
+        text="Clear"
+        placement="right"
+      >
+        <button
+          type="button"
+          class="track-art-draw__tool"
+          aria-label="Clear drawing"
+          :disabled="!hasPaint || applying"
+          @click="clearCanvas"
+        >
+          <MaruEmoji
+            name="Broom"
+            :size-rem="2.55"
+          />
+        </button>
+      </MaruTooltip>
+      <MaruTooltip
+        :text="drawEditorSounds ? 'Sound' : 'Muted'"
+        placement="right"
+      >
+        <button
+          type="button"
+          class="track-art-draw__tool"
+          :class="drawEditorSounds ? 'track-art-draw__tool--sound-on' : 'track-art-draw__tool--sound-off'"
+          :aria-pressed="drawEditorSounds"
+          :aria-label="drawEditorSounds ? 'Mute drawing sounds' : 'Unmute drawing sounds'"
+          @click="toggleDrawSounds"
+        >
+          <MaruEmoji
+            :name="drawEditorSounds ? 'SpeakerHighVolume' : 'MutedSpeaker'"
+            :size-rem="2.55"
+          />
+        </button>
+      </MaruTooltip>
+    </div>
+
     <div class="track-art-draw__main">
       <div class="track-art-draw__stage">
         <canvas
@@ -577,33 +649,8 @@ defineExpose({
       </p>
     </div>
 
-    <div
-      ref="railRef"
-      class="track-art-draw__rail"
-    >
-      <div
-        class="track-art-draw__palette-col"
-        :style="{ '--track-art-palette-cols': String(paletteColumns) }"
-      >
-        <button
-          type="button"
-          class="track-art-draw__swatch track-art-draw__swatch--picker"
-          aria-label="Pick a custom color"
-          title="Pick a custom color"
-          @click="openColorPicker"
-        >
-          <span
-            class="track-art-draw__picker-stripe"
-            aria-hidden="true"
-          >
-            <span class="track-art-draw__picker-bar track-art-draw__picker-bar--yellow" />
-            <span class="track-art-draw__picker-bar track-art-draw__picker-bar--turquoise" />
-            <span class="track-art-draw__picker-bar track-art-draw__picker-bar--orange" />
-            <span class="track-art-draw__picker-bar track-art-draw__picker-bar--blue" />
-            <span class="track-art-draw__picker-bar track-art-draw__picker-bar--red" />
-            <span class="track-art-draw__picker-bar track-art-draw__picker-bar--green" />
-          </span>
-        </button>
+    <div class="track-art-draw__rail">
+      <div class="track-art-draw__palette-col">
         <input
           ref="colorInputRef"
           class="track-art-draw__color-input"
@@ -619,9 +666,34 @@ defineExpose({
           class="track-art-draw__palette"
           role="listbox"
           aria-label="Color palette"
-          aria-orientation="vertical"
+          aria-orientation="horizontal"
           @keydown="onPaletteKeydown"
         >
+          <button
+            type="button"
+            class="track-art-draw__swatch track-art-draw__swatch--picker"
+            aria-label="Pick a custom color"
+            title="Pick a custom color"
+            role="option"
+            :aria-selected="false"
+            :tabindex="pickerTabIndex()"
+            @click="openColorPicker"
+            @focus="paletteFocusIndex = 0"
+          >
+            <span
+              class="track-art-draw__picker-grid"
+              aria-hidden="true"
+            >
+              <span class="track-art-draw__picker-cell track-art-draw__picker-cell--yellow" />
+              <span class="track-art-draw__picker-cell track-art-draw__picker-cell--orange" />
+              <span class="track-art-draw__picker-cell track-art-draw__picker-cell--red" />
+              <span class="track-art-draw__picker-cell track-art-draw__picker-cell--magenta" />
+              <span class="track-art-draw__picker-cell track-art-draw__picker-cell--turquoise" />
+              <span class="track-art-draw__picker-cell track-art-draw__picker-cell--green" />
+              <span class="track-art-draw__picker-cell track-art-draw__picker-cell--blue" />
+              <span class="track-art-draw__picker-cell track-art-draw__picker-cell--brown" />
+            </span>
+          </button>
           <button
             v-for="(swatch, index) in palette"
             :key="`${swatch}-${index}`"
@@ -633,7 +705,7 @@ defineExpose({
             role="option"
             :tabindex="paletteOptionTabIndex(index)"
             @click="setColor(swatch)"
-            @focus="paletteFocusIndex = index"
+            @focus="paletteFocusIndex = index + PICKER_SLOT"
           >
             <span
               class="track-art-draw__swatch-fill"
@@ -642,66 +714,6 @@ defineExpose({
             />
           </button>
         </div>
-      </div>
-
-      <div
-        class="track-art-draw__tools"
-        role="toolbar"
-        aria-label="Drawing tools"
-      >
-        <MaruTooltip
-          text="Draw"
-          :placement="toolTooltipPlacement"
-        >
-          <button
-            type="button"
-            class="track-art-draw__tool"
-            :class="{ 'track-art-draw__tool--selected': tool === 'draw' }"
-            :aria-pressed="tool === 'draw'"
-            aria-label="Draw"
-            @click="setTool('draw')"
-          >
-            <MaruEmoji
-              name="Crayon"
-              :size-rem="2.55"
-            />
-          </button>
-        </MaruTooltip>
-        <MaruTooltip
-          text="Erase"
-          :placement="toolTooltipPlacement"
-        >
-          <button
-            type="button"
-            class="track-art-draw__tool"
-            :class="{ 'track-art-draw__tool--selected': tool === 'erase' }"
-            :aria-pressed="tool === 'erase'"
-            aria-label="Erase"
-            @click="setTool('erase')"
-          >
-            <MaruEmoji
-              name="Eraser"
-              :size-rem="2.55"
-            />
-          </button>
-        </MaruTooltip>
-        <MaruTooltip
-          text="Clear"
-          :placement="toolTooltipPlacement"
-        >
-          <button
-            type="button"
-            class="track-art-draw__tool"
-            aria-label="Clear drawing"
-            :disabled="!hasPaint || applying"
-            @click="clearCanvas"
-          >
-            <MaruEmoji
-              name="Broom"
-              :size-rem="2.55"
-            />
-          </button>
-        </MaruTooltip>
       </div>
     </div>
   </div>

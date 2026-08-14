@@ -131,10 +131,10 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  width: min(52rem, calc(100vw - 1.5rem));
+  width: min(64rem, calc(100vw - 1.5rem));
   /* Definite height so flex children can shrink and scroll (max-height alone is not enough). */
-  height: min(40rem, calc(100dvh - 1.5rem));
-  max-height: min(40rem, calc(100dvh - 1.5rem));
+  height: calc(100dvh - 1.5rem);
+  max-height: calc(100dvh - 1.5rem);
   overflow: hidden;
   pointer-events: auto;
   box-shadow: 7px 7px 0 var(--color-maru-black);
@@ -298,16 +298,6 @@
   color: var(--color-maru-yellow);
   -webkit-text-stroke: 4px var(--color-maru-black);
   paint-order: stroke fill;
-}
-
-.track-art-modal__subtitle {
-  margin: 0;
-  padding: 0.12rem 0.4rem 0.08rem;
-  border: 2px solid var(--color-maru-black);
-  border-radius: calc(var(--radius-maru) - 8px);
-  background: var(--color-maru-white);
-  box-shadow: 2px 2px 0 var(--color-maru-black);
-  transform: rotate(-1.25deg);
 }
 
 .track-art-modal__close {
@@ -992,50 +982,77 @@
 /* Draw tab */
 
 .track-art-draw {
-  --track-art-swatch: 1.75rem;
-  --track-art-tool: calc(var(--track-art-swatch) * 2);
-  --track-art-palette-gap: 0.45rem;
+  --track-art-tool-size: 4.75rem;
+  --track-art-swatch-size: var(--track-art-tool-size);
+  --track-art-palette-gap: 0.4rem;
+  --track-art-palette-cols: 4;
+  --track-art-cluster-gap: 0.3rem;
+  --track-art-palette-inset: 2px;
+  --track-art-palette-shadow-pad: 6px;
+  --track-art-tools-w: var(--track-art-tool-size);
+  --track-art-palette-w: calc(
+    var(--track-art-swatch-size) * var(--track-art-palette-cols)
+    + var(--track-art-palette-gap) * (var(--track-art-palette-cols) - 1)
+    + var(--track-art-palette-inset)
+    + var(--track-art-palette-shadow-pad)
+  );
+  --track-art-canvas: min(
+    100cqh,
+    calc(100cqw - var(--track-art-tools-w) - var(--track-art-palette-w) - 2 * var(--track-art-cluster-gap))
+  );
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  gap: 0.55rem;
+  gap: var(--track-art-cluster-gap);
+  height: 100%;
   min-height: 0;
   overflow: hidden;
   box-sizing: border-box;
+  container-type: size;
 }
 
 .track-art-draw__main {
   flex: 0 0 auto;
+  width: var(--track-art-canvas);
+  height: var(--track-art-canvas);
   min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.65rem;
-  overflow: visible;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  overflow: hidden;
 }
 
 .track-art-draw__rail {
-  flex: 0 0 auto;
   display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 0.15rem;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 0 0 auto;
+  gap: 0;
+  width: var(--track-art-palette-w);
+  min-width: 0;
   min-height: 0;
+  max-height: 100%;
 }
 
 .track-art-draw__tools {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  flex: 0 0 auto;
   gap: var(--track-art-palette-gap);
-  flex-shrink: 0;
-  padding: 0.15rem;
+  width: var(--track-art-tool-size);
+  padding: 0;
 }
 
 .track-art-draw__tools .maru-tooltip,
 .track-art-draw__tools .maru-tooltip__trigger {
   display: block;
+  width: 100%;
+  min-width: 0;
 }
 
 .track-art-draw__tool {
@@ -1043,8 +1060,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--track-art-tool);
-  height: var(--track-art-tool);
+  width: var(--track-art-tool-size);
+  height: var(--track-art-tool-size);
+  aspect-ratio: 1;
+  max-width: none;
+  max-height: none;
   margin: 0;
   padding: 0;
   border: 3px solid var(--color-maru-black);
@@ -1084,6 +1104,14 @@
 .track-art-draw__tool--selected:active {
   transform: translate(2px, 2px);
   box-shadow: 0 0 0 var(--color-maru-black);
+}
+
+.track-art-draw__tool--sound-on {
+  background: var(--color-maru-green-lighter);
+}
+
+.track-art-draw__tool--sound-off {
+  background: var(--color-maru-gray-light);
 }
 
 /* Selected tool glyph: stepped squash/stretch pulse (no eased morph). */
@@ -1127,21 +1155,12 @@
 }
 
 .track-art-draw__palette-col {
-  --track-art-palette-cols: 2;
-  --track-art-palette-rows: 8;
-  --track-art-palette-width: calc(
-    var(--track-art-swatch) * var(--track-art-palette-cols)
-    + var(--track-art-palette-gap) * (var(--track-art-palette-cols) - 1)
-  );
-  /* Hard shadow + selected blob scale spill */
-  --track-art-palette-shadow-pad: 6px;
-  --track-art-palette-inset: 2px;
-  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 0.35rem;
-  padding: 0.15rem 0.15rem 0.25rem;
+  align-items: stretch;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
 }
 
 .track-art-draw__color-input {
@@ -1153,27 +1172,29 @@
 }
 
 .track-art-draw__palette {
-  flex: 0 0 auto;
-  box-sizing: content-box;
-  width: var(--track-art-palette-width);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 0;
   display: grid;
-  /* Fixed rows; new swatches open another column (keeps canvas height stable). */
-  grid-template-rows: repeat(var(--track-art-palette-rows), var(--track-art-swatch));
-  grid-auto-flow: column;
-  grid-auto-columns: var(--track-art-swatch);
+  grid-template-columns: repeat(var(--track-art-palette-cols), var(--track-art-swatch-size));
+  grid-auto-rows: var(--track-art-swatch-size);
+  grid-auto-flow: row;
   gap: var(--track-art-palette-gap);
   align-content: start;
-  justify-content: start;
+  justify-content: stretch;
   /* Shadows paint into padding (still inside the overflow clip edge) */
   padding: var(--track-art-palette-inset) var(--track-art-palette-shadow-pad) var(--track-art-palette-shadow-pad) var(--track-art-palette-inset);
-  overflow: visible;
+  overflow: auto;
 }
 
 .track-art-draw__swatch {
   position: relative;
   box-sizing: border-box;
-  width: var(--track-art-swatch);
-  height: var(--track-art-swatch);
+  width: var(--track-art-swatch-size);
+  height: var(--track-art-swatch-size);
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 1;
   border: 3px solid var(--color-maru-black);
   border-radius: calc(var(--radius-maru) - 6px);
   padding: 0;
@@ -1195,54 +1216,60 @@
 
 .track-art-draw__swatch--picker {
   display: block;
-  width: var(--track-art-palette-width);
-  height: var(--track-art-swatch);
-  flex-shrink: 0;
-  /* Match palette grid content inset so left edges line up with swatches */
-  margin-left: var(--track-art-palette-inset);
+  width: var(--track-art-swatch-size);
+  height: var(--track-art-swatch-size);
+  aspect-ratio: 1;
+  margin-left: 0;
   padding: 0;
   overflow: hidden;
   background: var(--color-maru-white);
 }
 
-.track-art-draw__picker-stripe {
-  display: flex;
-  width: 100%;
-  height: 100%;
+.track-art-draw__picker-grid {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--color-maru-black);
 }
 
-.track-art-draw__picker-bar {
-  flex: 1 1 0;
+.track-art-draw__picker-cell {
   min-width: 0;
-  height: 100%;
+  min-height: 0;
 }
 
-.track-art-draw__picker-bar + .track-art-draw__picker-bar {
-  border-left: 2px solid var(--color-maru-black);
-}
-
-.track-art-draw__picker-bar--yellow {
+.track-art-draw__picker-cell--yellow {
   background: var(--color-maru-yellow);
 }
 
-.track-art-draw__picker-bar--turquoise {
-  background: var(--color-maru-turquoise-light);
-}
-
-.track-art-draw__picker-bar--orange {
+.track-art-draw__picker-cell--orange {
   background: var(--color-maru-orange);
 }
 
-.track-art-draw__picker-bar--blue {
-  background: var(--color-maru-blue);
-}
-
-.track-art-draw__picker-bar--red {
+.track-art-draw__picker-cell--red {
   background: var(--color-maru-red-light);
 }
 
-.track-art-draw__picker-bar--green {
+.track-art-draw__picker-cell--magenta {
+  background: var(--color-maru-magenta);
+}
+
+.track-art-draw__picker-cell--turquoise {
+  background: var(--color-maru-turquoise-light);
+}
+
+.track-art-draw__picker-cell--green {
   background: var(--color-maru-green-light);
+}
+
+.track-art-draw__picker-cell--blue {
+  background: var(--color-maru-blue);
+}
+
+.track-art-draw__picker-cell--brown {
+  background: var(--color-maru-brown);
 }
 
 .track-art-draw__swatch--picker:active {
@@ -1316,17 +1343,21 @@
 }
 
 .track-art-draw__stage {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: stretch;
 }
 
 .track-art-draw__canvas {
-  width: min(100%, 20rem);
-  height: auto;
-  max-width: min(100%, 55dvh);
-  aspect-ratio: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  aspect-ratio: auto;
   border: 4px solid var(--color-maru-black);
   border-radius: var(--radius-maru);
   touch-action: none;
@@ -1517,55 +1548,68 @@
     aspect-ratio: 1;
   }
 
-  /* Draw: canvas on top; tools row then full-width palette rows */
+  /* Draw: tools left of canvas, palette below */
   .track-art-draw {
-    --track-art-swatch: 1.45rem;
-    --track-art-tool: calc(var(--track-art-swatch) * 2);
+    --track-art-tool-size: 3.35rem;
     --track-art-palette-gap: 0.35rem;
-    --track-art-phone-canvas: min(100%, 18rem, 42dvh);
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: center;
-    gap: 0.55rem;
-    overflow-x: hidden;
-    overflow-y: auto;
+    --track-art-cluster-gap: 0.3rem;
+    --track-art-canvas: auto;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    justify-content: stretch;
+    align-items: stretch;
+    gap: var(--track-art-cluster-gap);
+    overflow: hidden;
+  }
+
+  .track-art-draw__tools {
+    grid-column: 1;
+    grid-row: 1;
+    width: var(--track-art-tool-size);
+    align-self: start;
   }
 
   .track-art-draw__main {
-    flex: 0 0 auto;
-    width: var(--track-art-phone-canvas);
-    max-width: 100%;
-    align-items: stretch;
+    grid-column: 2;
+    grid-row: 1;
+    width: auto;
+    height: auto;
+    min-height: 10rem;
+    align-items: flex-start;
+    justify-content: flex-start;
+    container-type: size;
   }
 
   .track-art-draw__stage {
-    justify-content: center;
-    width: 100%;
+    flex: 0 0 auto;
+    width: min(100cqw, 100cqh);
+    height: min(100cqw, 100cqh);
+    align-self: start;
   }
 
   .track-art-draw__canvas {
     width: 100%;
     max-width: none;
-    height: auto;
+    height: 100%;
   }
 
   .track-art-draw__rail {
-    flex-direction: column;
-    align-items: stretch;
-    align-self: center;
-    gap: 0.15rem;
-    width: var(--track-art-phone-canvas);
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: var(--track-art-palette-w);
     max-width: 100%;
-    margin-top: 0.35rem;
+    min-width: 0;
+    max-height: 46%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    align-self: start;
   }
 
-  .track-art-draw__tools {
-    order: -1;
-    flex-direction: row;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    padding: 0.1rem;
-    gap: var(--track-art-palette-gap);
+  .track-art-draw__tool {
+    width: var(--track-art-tool-size);
+    height: var(--track-art-tool-size);
+    aspect-ratio: 1;
   }
 
   .track-art-draw__palette-col {
@@ -1573,43 +1617,33 @@
     align-items: stretch;
     max-width: 100%;
     width: 100%;
-    padding: 0.1rem 0;
-    gap: 0.3rem;
+    padding: 0;
     container-type: inline-size;
     container-name: track-art-palette;
   }
 
   .track-art-draw__palette {
-    box-sizing: border-box;
-    width: 100%;
+    width: max-content;
     max-width: 100%;
-    grid-template-rows: none;
-    grid-auto-flow: row;
-    /* Rows span canvas width; 8 across matches default 16 swatches → 2 rows */
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-    grid-auto-rows: auto;
-    justify-content: stretch;
+    grid-template-columns: repeat(var(--track-art-palette-cols), var(--track-art-swatch-size));
+    grid-auto-rows: var(--track-art-swatch-size);
+    justify-content: start;
     padding: var(--track-art-palette-inset);
     overflow: visible;
   }
 
   .track-art-draw__swatch {
-    width: auto;
-    height: auto;
+    width: var(--track-art-swatch-size);
+    height: var(--track-art-swatch-size);
     min-width: 0;
     aspect-ratio: 1;
   }
 
   .track-art-draw__swatch--picker {
-    box-sizing: border-box;
-    /* Same content width as the swatch grid */
-    width: calc(100% - 2 * var(--track-art-palette-inset));
-    max-width: none;
-    margin-left: var(--track-art-palette-inset);
-    /* Match one fluid swatch chip (8-across row) */
-    height: calc(
-      (100cqw - 2 * var(--track-art-palette-inset) - 7 * var(--track-art-palette-gap)) / 8
-    );
+    width: var(--track-art-swatch-size);
+    height: var(--track-art-swatch-size);
+    aspect-ratio: 1;
+    margin-left: 0;
   }
 }
 
@@ -1630,10 +1664,6 @@
     right: 0.28rem;
     width: 2.25rem;
     height: 2.25rem;
-  }
-
-  .track-art-modal__subtitle {
-    transform: none;
   }
 
   .track-art-modal__tabs {
@@ -1675,9 +1705,8 @@
   }
 
   .track-art-draw {
-    --track-art-swatch: 1.3rem;
+    --track-art-tool-size: 3.1rem;
     --track-art-palette-gap: 0.3rem;
-    --track-art-phone-canvas: min(100%, 18rem, 38dvh);
     gap: 0.4rem;
   }
 
@@ -1719,11 +1748,6 @@
     letter-spacing: 0.4px;
   }
 
-  .track-art-modal__subtitle {
-    transform: none;
-    padding: 0.08rem 0.3rem 0.06rem;
-  }
-
   .track-art-modal__tabs {
     flex-wrap: wrap;
   }
@@ -1753,23 +1777,12 @@
   }
 
   .track-art-draw {
-    --track-art-swatch: 1.15rem;
+    --track-art-tool-size: 2.85rem;
     --track-art-palette-gap: 0.25rem;
-    --track-art-phone-canvas: min(100%, 18rem, 34dvh);
   }
 
   .track-art-draw__rail {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .track-art-draw__palette {
-    width: 100%;
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-  }
-
-  .track-art-draw__canvas {
-    max-width: none;
+    max-height: 44%;
   }
 }
 

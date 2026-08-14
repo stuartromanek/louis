@@ -27,7 +27,6 @@ const prefersReducedMotion = ref(false)
 const isPhoneLayout = ref(false)
 const applying = ref(false)
 const ledPopping = ref(false)
-const purposeId = 'track-art-editor-purpose'
 const headingId = 'track-art-editor-heading'
 const iconsTabId = 'track-art-tab-icons'
 const drawTabId = 'track-art-tab-draw'
@@ -390,7 +389,7 @@ onUnmounted(() => {
         class="track-art-modal__window border-maru rounded-maru bg-maru-white"
         role="dialog"
         aria-modal="true"
-        :aria-labelledby="`${purposeId} ${headingId}`"
+        :aria-labelledby="headingId"
         @keydown="onWindowKeydown"
       >
         <header class="track-art-modal__header">
@@ -424,12 +423,6 @@ onUnmounted(() => {
               </div>
             </div>
             <div class="track-art-modal__header-copy">
-              <p
-                :id="purposeId"
-                class="track-art-modal__subtitle type-caption text-maru-black"
-              >
-                Track art
-              </p>
               <div class="track-art-modal__title-row">
                 <h2
                   :id="headingId"
