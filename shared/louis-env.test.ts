@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, it } from 'node:test'
 import {
   aliasLouisEnvToNuxtProcessEnv,
   applyLouisEnvToRuntimeConfig,
+  louisRuntimeConfigDefaults,
   pickEnvFrom,
   pickLouisEnv,
   setLouisAndNuxtEnv,
@@ -15,6 +16,8 @@ const ENV_KEYS = [
   'NUXT_YOTO_CLIENT_ID',
   'LOUIS_YOTO_CLIENT_SECRET',
   'NUXT_YOTO_CLIENT_SECRET',
+  'LOUIS_YOTO_REDIRECT_URI',
+  'NUXT_YOTO_REDIRECT_URI',
   'LOUIS_PUBLIC_DESKTOP',
   'NUXT_PUBLIC_DESKTOP',
   'LOUIS_ENABLE_DEBUG_ROUTES',
@@ -161,5 +164,28 @@ describe('applyLouisEnvToRuntimeConfig', () => {
     const config: Record<string, any> = { public: { desktop: false } }
     applyLouisEnvToRuntimeConfig(config)
     assert.equal(config.public.desktop, true)
+  })
+})
+
+describe('louisRuntimeConfigDefaults', () => {
+  const savedEnv: Record<string, string | undefined> = {}
+
+  beforeEach(() => {
+    for (const key of ['LOUIS_YOTO_REDIRECT_URI', 'NUXT_YOTO_REDIRECT_URI'] as const) {
+      savedEnv[key] = process.env[key]
+      delete process.env[key]
+    }
+  })
+
+  afterEach(() => {
+    for (const key of ['LOUIS_YOTO_REDIRECT_URI', 'NUXT_YOTO_REDIRECT_URI'] as const) {
+      const value = savedEnv[key]
+      if (value === undefined) delete process.env[key]
+      else process.env[key] = value
+    }
+  })
+
+  it('leaves yotoRedirectUri empty when unset so production can derive from the request host', () => {
+    assert.equal(louisRuntimeConfigDefaults().yotoRedirectUri, '')
   })
 })

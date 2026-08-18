@@ -22,6 +22,7 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ### Changed
 - Yoto OAuth scopes now include `user:icons:manage` (reconnect if icon upload/patch is denied).
+- Docker / GHCR: OAuth callback no longer defaults to `localhost` — unset `LOUIS_YOTO_REDIRECT_URI` uses the Host the browser actually opened (LAN / Portainer). Image and compose default `LOUIS_COOKIE_SECURE=false` for plain HTTP; set `true` behind TLS. Compose pulls `ghcr.io/stuartromanek/louis:latest`, uses named volume `louis-audio`, and no longer requires a Git-tracked `env_file`.
 
 ### Fixed
 - Desktop Yoto session: expired access without refresh forces reconnect; save/reuse-test read scope from cookie or `yoto-session.json`.

@@ -53,6 +53,8 @@ Images are multi-arch (`linux/amd64` + `linux/arm64`) on each `v*` release.
 
 Compose / env setup below. Cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
+**Portainer:** Stacks → Add stack → **Web editor** (not Git repository). Paste [`docker-compose.yml`](docker-compose.yml), set `LOUIS_YOTO_CLIENT_ID` and `LOUIS_YOUTUBE_API_KEY` in the stack environment UI, then deploy. Open Louis at the **NAS/host URL other devices use** (`http://192.168.x.x:4000` or a hostname) — never the host’s `localhost` from another device. Register that same origin’s `/api/yoto/auth/callback` on [yoto.dev](https://yoto.dev/get-started/start-here/). Image default is `LOUIS_COOKIE_SECURE=false` (LAN HTTP); set `true` only behind HTTPS.
+
 ## Home Assistant
 
 Install Louis from Supervisor as a custom add-on (wraps the same GHCR image; options map to `LOUIS_*`; audio under `/data/audio`; UI on host port **4000**, not ingress).
@@ -75,7 +77,7 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Open [http://localhost:4000](http://localhost:4000). Health: `GET /api/health`.
+Open Louis at the same origin other devices will use (this machine: [http://localhost:4000](http://localhost:4000); phones/tablets: `http://<host-ip-or-name>:4000`). Health: `GET /api/health`.
 
 ## Self-host
 
@@ -89,6 +91,7 @@ Create a **public** client at [yoto.dev](https://yoto.dev/get-started/start-here
 | Setting                  | Value                                                                              |
 | ------------------------ | ---------------------------------------------------------------------------------- |
 | Redirect URI (self-host) | `https://your-domain/api/yoto/auth/callback`                                       |
+| LAN / Portainer          | `http://<host-ip-or-name>:4000/api/yoto/auth/callback` — same origin you open Louis |
 | Local redirect           | `http://localhost:4000/api/yoto/auth/callback`                                     |
 | Desktop app redirect     | `http://127.0.0.1:4010/api/yoto/auth/callback` — see [DESKTOP.md](docs/DESKTOP.md) |
 | Scopes                   | `user:content:view user:content:manage`                                            |
@@ -118,11 +121,11 @@ Copy `[.env.example](.env.example)`. Use `LOUIS_*` **names** so the same file wo
 #### Yoto
 
 
-| Variable                   | Notes                                                                                                                                      |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `LOUIS_YOTO_CLIENT_SECRET` | Leave empty for PKCE                                                                                                                       |
-| `LOUIS_YOTO_REDIRECT_URI`  | Required in production; must match the portal. Local/dev can auto-detect from host                                                         |
-| `LOUIS_COOKIE_SECURE`      | OAuth cookie `Secure` flag. When unset: secure iff `NODE_ENV=production`. Set `false` for plain HTTP (HA LAN); `true` behind HTTPS         |
+| Variable                   | Notes                                                                                                                                                                                                 |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LOUIS_YOTO_CLIENT_SECRET` | Leave empty for PKCE                                                                                                                                                                                  |
+| `LOUIS_YOTO_REDIRECT_URI`  | Optional pin; must match the portal. Unset: Louis uses the Host the browser actually used. Prefer a hostname over a DHCP IP. Other devices cannot use the Docker host’s localhost                    |
+| `LOUIS_COOKIE_SECURE`      | OAuth cookie `Secure` flag. Docker image defaults `false` (LAN HTTP). Node-without-Docker: when unset, secure iff `NODE_ENV=production`. Set `true` behind HTTPS                                      |
 
 
 
@@ -159,8 +162,8 @@ docker run -p 4000:4000 --env-file .env louis:local
 ### 4. Deploy constraints
 
 - **Single instance** — save-job progress is in memory
-- **HTTPS in production** — OAuth cookies default to `secure` when `NODE_ENV=production`. Override with `LOUIS_COOKIE_SECURE=false` for plain HTTP (e.g. Home Assistant LAN), or `true` behind TLS
-- **Persistent disk** — recommended for the audio cache under `LOUIS_AUDIO_WORK_DIR` (`cache/preview/`, `cache/save/`). Stale `jobs/` dirs and old cache files are swept on startup and after downloads.
+- **HTTPS in production** — Docker image defaults OAuth cookies to `LOUIS_COOKIE_SECURE=false` (LAN HTTP). Node-without-Docker defaults to `secure` when `NODE_ENV=production`. Set `true` behind TLS / reverse proxy; keep `false` for plain HTTP (Portainer LAN, Home Assistant)
+- **Persistent disk** — recommended for the audio cache under `LOUIS_AUDIO_WORK_DIR` (`cache/preview/`, `cache/save/`). Stale `jobs/` dirs and old cache files are swept on startup and after downloads. Compose uses the named volume `louis-audio`
 
 
 

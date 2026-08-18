@@ -20,8 +20,9 @@ import { withMappedYotoLimitError } from '#shared/myo-editor/yotoMyoLimits'
 
 export function getYotoRedirectUri(event: H3Event): string {
   const config = useRuntimeConfig(event)
-  if (process.env.NODE_ENV === 'production' && config.yotoRedirectUri) {
-    return config.yotoRedirectUri
+  const pinned = String(config.yotoRedirectUri ?? '').trim()
+  if (process.env.NODE_ENV === 'production' && pinned) {
+    return pinned
   }
 
   const url = getRequestURL(event)

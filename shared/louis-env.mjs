@@ -153,9 +153,8 @@ export function louisRuntimeConfigDefaults() {
     youtubeApiKey: pickLouisEnv('LOUIS_YOUTUBE_API_KEY', 'NUXT_YOUTUBE_API_KEY'),
     yotoClientId: pickLouisEnv('LOUIS_YOTO_CLIENT_ID', 'NUXT_YOTO_CLIENT_ID'),
     yotoClientSecret: pickLouisEnv('LOUIS_YOTO_CLIENT_SECRET', 'NUXT_YOTO_CLIENT_SECRET'),
-    yotoRedirectUri:
-      pickLouisEnv('LOUIS_YOTO_REDIRECT_URI', 'NUXT_YOTO_REDIRECT_URI')
-      || 'http://localhost:4000/api/yoto/auth/callback',
+    // Empty: production derives `${request.origin}/api/yoto/auth/callback` (LAN / Portainer).
+    yotoRedirectUri: pickLouisEnv('LOUIS_YOTO_REDIRECT_URI', 'NUXT_YOTO_REDIRECT_URI'),
     ytdlpPath: pickLouisEnv('LOUIS_YTDLP_PATH', 'NUXT_YTDLP_PATH') || 'yt-dlp',
     ytdlpCookiesFile: pickLouisEnv('LOUIS_YTDLP_COOKIES_FILE', 'NUXT_YTDLP_COOKIES_FILE'),
     audioWorkDir: pickLouisEnv('LOUIS_AUDIO_WORK_DIR', 'NUXT_AUDIO_WORK_DIR'),

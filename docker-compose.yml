@@ -1,5 +1,6 @@
 services:
-  yoto-cards:
+  louis:
+    image: ghcr.io/stuartromanek/louis:latest
     build:
       context: .
       args:
@@ -7,15 +8,20 @@ services:
         YTDLP_CACHE_BUST: ${YTDLP_CACHE_BUST:-}
     ports:
       - "4000:4000"
-    env_file:
-      - .env
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: 4000
       LOUIS_AUDIO_WORK_DIR: /data/audio
+      # Image default is false (LAN HTTP). Set true behind HTTPS.
+      LOUIS_COOKIE_SECURE: ${LOUIS_COOKIE_SECURE:-false}
+      LOUIS_YOTO_CLIENT_ID: ${LOUIS_YOTO_CLIENT_ID:-}
+      LOUIS_YOUTUBE_API_KEY: ${LOUIS_YOUTUBE_API_KEY:-}
+      # Optional pin. Unset = OAuth callback uses the Host the browser actually used.
+      LOUIS_YOTO_REDIRECT_URI: ${LOUIS_YOTO_REDIRECT_URI:-}
+      LOUIS_YOTO_CLIENT_SECRET: ${LOUIS_YOTO_CLIENT_SECRET:-}
     volumes:
-      - ./data/audio:/data/audio
+      - louis-audio:/data/audio
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
@@ -23,3 +29,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+volumes:
+  louis-audio:

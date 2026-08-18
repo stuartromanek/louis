@@ -33,6 +33,8 @@ ENV PORT=4000
 ENV LOUIS_AUDIO_WORK_DIR=/data/audio
 # Legacy fallback for older tooling that still reads NUXT_*
 ENV NUXT_AUDIO_WORK_DIR=/data/audio
+# LAN HTTP (Portainer, NAS). Set true behind HTTPS / a TLS reverse proxy.
+ENV LOUIS_COOKIE_SECURE=false
 
 COPY --from=build /app/.output ./.output
 COPY --from=build /app/package.json ./package.json
