@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import MaruTooltip from '~/components/ui/MaruTooltip.vue'
 import { TRACK_ART_PALETTE } from './types'
-import { toIcon16x16, uploadTrackArtPng } from './upload'
+import { toIcon16x16, uploadTrackArtPng, trackArtFetchError } from './upload'
 
 const GRID = 16
 const { playEvent } = useUiSound()
+const { showError } = useToast()
 const { drawEditorSounds, setDrawEditorSounds } = useUserPreferences()
 /** Palette is a 4-wide row-major grid; the custom-color picker is the first cell. */
 const PALETTE_COLS = 4
@@ -30,7 +31,6 @@ const palette = ref<string[]>([...TRACK_ART_PALETTE])
 const color = ref<string>(TRACK_ART_PALETTE[9] ?? '#0068FF')
 const painting = ref(false)
 const applying = ref(false)
-const errorMessage = ref('')
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const drawRootRef = ref<HTMLElement | null>(null)
 const colorInputRef = ref<HTMLInputElement | null>(null)
@@ -508,12 +508,8 @@ function exportPngBlob(): Promise<Blob> {
 
 async function applyDrawing() {
   if (applying.value) return
-  if (!hasPaint.value) {
-    errorMessage.value = 'Draw something first'
-    return
-  }
+  if (!hasPaint.value) return
   applying.value = true
-  errorMessage.value = ''
   try {
     const blob = await exportPngBlob()
     const uploaded = await uploadTrackArtPng(blob, 'drawn-icon.png')
@@ -524,8 +520,7 @@ async function applyDrawing() {
     })
   }
   catch (err: unknown) {
-    const e = err as { data?: { statusMessage?: string }; statusMessage?: string; message?: string }
-    errorMessage.value = e.data?.statusMessage ?? e.statusMessage ?? e.message ?? 'Could not upload drawing'
+    showError(trackArtFetchError(err, 'Could not upload drawing'))
   }
   finally {
     applying.value = false
@@ -639,14 +634,6 @@ defineExpose({
           @pointerleave="onPointerUp"
         />
       </div>
-
-      <p
-        v-if="errorMessage"
-        class="track-art-draw__error type-meta text-maru-red"
-        role="alert"
-      >
-        {{ errorMessage }}
-      </p>
     </div>
 
     <div class="track-art-draw__rail">

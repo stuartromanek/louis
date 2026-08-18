@@ -19,7 +19,6 @@ const trackId = defineModel<string | null>('trackId', { default: null })
 const editor = inject(MYO_EDITOR_KEY)
 const artShell = inject(TRACK_ART_EDITOR_KEY, null)
 const { playEvent } = useUiSound()
-const { showError } = useToast()
 
 const phase = ref<Phase>('idle')
 const tab = ref<TrackArtTab>('icons')
@@ -279,9 +278,7 @@ function onApplied(payload: { icon16x16: string; previewUrl: string }) {
   const finish = () => {
     ledPopping.value = false
     beginClose()
-    void editor.persistTrackArt(id, payload.icon16x16, payload.previewUrl).then((result) => {
-      if (result.error) showError(result.error)
-    })
+    void editor.persistTrackArt(id, payload.icon16x16, payload.previewUrl)
   }
 
   if (prefersReducedMotion.value) {
@@ -432,18 +429,6 @@ onUnmounted(() => {
                 </h2>
               </div>
             </div>
-            <button
-              type="button"
-              class="track-art-modal__close"
-              :disabled="!interactive"
-              aria-label="Close"
-              @click="beginClose()"
-            >
-              <span
-                class="track-art-modal__close-x"
-                aria-hidden="true"
-              />
-            </button>
           </div>
           <div
             class="track-art-modal__tabs"

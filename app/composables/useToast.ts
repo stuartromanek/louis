@@ -80,7 +80,8 @@ export function useToast() {
     scheduleAutoClose(durationMs)
   }
 
-  function showError(message: string, durationMs = 7000) {
+  /** Technical errors stay until dismissed (durationMs <= 0). */
+  function showError(message: string, durationMs = 0) {
     const text = message.trim()
     if (!text) return
     payload.value = {

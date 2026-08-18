@@ -90,20 +90,19 @@ function onDismiss() {
   dismiss()
 }
 
-function toastPhoneError(msg: string, prev: string) {
-  if (!chrome?.isPhone.value) return
+function toastError(msg: string, prev: string) {
   if (!msg || msg === prev) return
   showError(msg)
 }
 
 watch(
   () => editor?.errorMessage.value ?? '',
-  (msg, prev) => toastPhoneError(msg, prev ?? ''),
+  (msg, prev) => toastError(msg, prev ?? ''),
 )
 
 watch(
   () => yoto?.errorMessage.value ?? '',
-  (msg, prev) => toastPhoneError(msg, prev ?? ''),
+  (msg, prev) => toastError(msg, prev ?? ''),
 )
 
 watch(open, (isOpen, wasOpen) => {
@@ -135,7 +134,7 @@ watch(() => chrome?.isPhone.value, (phone) => {
     :aria-label="message"
   >
     <template
-      v-if="persistent"
+      v-if="persistent || isErrorToast"
       #badge
     >
       <button

@@ -17,7 +17,6 @@ const loading = editor?.loading
 const isPlaylistLocked = editor?.isPlaylistLocked
 const selectedCardId = editor?.selectedCardId
 const isPodcast = editor?.isPodcast
-const errorMessage = editor?.errorMessage
 const playlist = editor?.playlist
 
 const showCapacityConfirm = ref(false)
@@ -38,7 +37,6 @@ const overTrackLimit = computed(
 
 const footerHint = computed(() => {
   if (isPodcast?.value) return 'Podcast cards cannot be edited yet.'
-  if (errorMessage?.value) return errorMessage.value
   if (overTrackLimit.value) return YOTO_MYO_TRACK_COUNT_MESSAGE
   return ''
 })

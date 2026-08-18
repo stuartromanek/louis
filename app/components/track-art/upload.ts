@@ -32,3 +32,9 @@ export async function uploadTrackArtFromUrl(
 export function toIcon16x16(mediaId: string): string {
   return icon16x16FromMediaId(mediaId)
 }
+
+export function trackArtFetchError(err: unknown, fallback: string): string {
+  const e = err as { data?: { statusMessage?: string }; statusMessage?: string; message?: string }
+  const text = e.data?.statusMessage ?? e.statusMessage ?? e.message ?? fallback
+  return text.trim() || fallback
+}

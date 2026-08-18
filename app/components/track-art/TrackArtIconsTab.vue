@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TrackArtIconItem } from './types'
-import { toIcon16x16, uploadTrackArtFromUrl, uploadTrackArtPng } from './upload'
+import { toIcon16x16, uploadTrackArtFromUrl, uploadTrackArtPng, trackArtFetchError } from './upload'
 import { validateYotoIconFile, YOTO_ICON_ACCEPT } from './validateIconUpload'
 
 defineProps<{
@@ -12,6 +12,8 @@ const emit = defineEmits<{
   preview: [url: string | null]
 }>()
 
+const { showError } = useToast()
+
 const search = ref('')
 const publicIcons = ref<TrackArtIconItem[]>([])
 const communityIcons = ref<TrackArtIconItem[]>([])
@@ -20,7 +22,6 @@ const loadingCommunity = ref(false)
 const selected = ref<TrackArtIconItem | null>(null)
 const uploadedIcon = ref<TrackArtIconItem | null>(null)
 const uploading = ref(false)
-const errorMessage = ref('')
 const hintMessage = ref('')
 const applying = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -180,7 +181,6 @@ function onGridKeydown(event: KeyboardEvent) {
 
 async function loadPublic() {
   loadingPublic.value = true
-  errorMessage.value = ''
   try {
     const data = await $fetch<{
       icons: Array<{
@@ -201,8 +201,7 @@ async function loadPublic() {
     }))
   }
   catch (err: unknown) {
-    const e = err as { data?: { statusMessage?: string }; statusMessage?: string; message?: string }
-    errorMessage.value = e.data?.statusMessage ?? e.statusMessage ?? e.message ?? 'Could not load Yoto icons'
+    showError(trackArtFetchError(err, 'Could not load Yoto icons'))
   }
   finally {
     loadingPublic.value = false
@@ -235,8 +234,9 @@ async function searchCommunity(q: string) {
       source: 'yotoicons' as const,
     }))
   }
-  catch {
+  catch (err: unknown) {
     communityIcons.value = []
+    showError(trackArtFetchError(err, 'Could not search yotoicons.com'))
   }
   finally {
     loadingCommunity.value = false
@@ -260,7 +260,6 @@ function pickIcon(icon: TrackArtIconItem) {
   selected.value = icon
   const idx = visibleIcons.value.findIndex(i => iconKey(i) === iconKey(icon))
   if (idx >= 0) activeOptionIndex.value = idx
-  errorMessage.value = ''
   hintMessage.value = ''
   emit('preview', icon.url)
 }
@@ -295,12 +294,11 @@ async function onFileChosen(event: Event) {
   input.value = ''
   if (!file) return
 
-  errorMessage.value = ''
   hintMessage.value = ''
 
   const validation = await validateYotoIconFile(file)
   if (!validation.ok) {
-    errorMessage.value = validation.error ?? 'Invalid icon file'
+    showError(validation.error ?? 'Invalid icon file')
     return
   }
   if (validation.warnings.length) {
@@ -334,8 +332,7 @@ async function onFileChosen(event: Event) {
   catch (err: unknown) {
     revokeLocalPreview()
     emit('preview', selected.value?.url ?? null)
-    const e = err as { data?: { statusMessage?: string }; statusMessage?: string; message?: string }
-    errorMessage.value = e.data?.statusMessage ?? e.statusMessage ?? e.message ?? 'Could not upload icon'
+    showError(trackArtFetchError(err, 'Could not upload icon'))
   }
   finally {
     uploading.value = false
@@ -344,12 +341,8 @@ async function onFileChosen(event: Event) {
 
 async function applySelected() {
   if (applying.value) return
-  if (!selected.value) {
-    errorMessage.value = 'Pick an icon first'
-    return
-  }
+  if (!selected.value) return
   applying.value = true
-  errorMessage.value = ''
   try {
     if (selected.value.source === 'yoto' && selected.value.mediaId) {
       emit('select', {
@@ -366,8 +359,7 @@ async function applySelected() {
     })
   }
   catch (err: unknown) {
-    const e = err as { data?: { statusMessage?: string }; statusMessage?: string; message?: string }
-    errorMessage.value = e.data?.statusMessage ?? e.statusMessage ?? e.message ?? 'Could not apply icon'
+    showError(trackArtFetchError(err, 'Could not apply icon'))
   }
   finally {
     applying.value = false
@@ -502,7 +494,7 @@ defineExpose({
     </div>
 
     <p
-      v-if="hintMessage && !errorMessage"
+      v-if="hintMessage"
       class="track-art-icons__hint type-caption text-maru-gray m-0"
     >
       {{ hintMessage }}
@@ -520,14 +512,7 @@ defineExpose({
       :aria-busy="loadingPublic || loadingCommunity || uploading"
     >
       <p
-        v-if="errorMessage"
-        class="track-art-icons__error type-meta text-maru-red"
-        role="alert"
-      >
-        {{ errorMessage }}
-      </p>
-      <p
-        v-else-if="!visibleIcons.length"
+        v-if="!visibleIcons.length"
         class="track-art-icons__status track-art-icons__status--empty type-empty-body text-maru-gray"
         aria-live="polite"
       >

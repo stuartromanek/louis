@@ -454,7 +454,7 @@ export function useMyoEditor() {
 
   function handleSaveFailed(cardId: string, message: string) {
     playEvent('saveError')
-    const displayMessage = message.length > 240 ? `${message.slice(0, 237)}…` : message
+    const displayMessage = message.length > 420 ? `${message.slice(0, 417)}…` : message
     deleteSaveState(cardId)
     removePersistedSave(cardId)
 
@@ -575,8 +575,8 @@ export function useMyoEditor() {
 
         if (isTerminalStatus(job.status)) {
           removePersistedSave(cardId)
-          if (job.status === 'failed' && selectedCardId.value === cardId) {
-            errorMessage.value = job.error ?? 'Save failed'
+          if (job.status === 'failed') {
+            handleSaveFailed(cardId, job.error ?? 'Save failed')
           }
           if (job.status === 'complete' && selectedCardId.value === cardId) {
             await finalizeSaveSuccess(cardId)

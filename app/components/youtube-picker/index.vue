@@ -10,11 +10,7 @@ import { useYoutubePicker } from './useYoutubePicker'
 import YoutubePickerPreview from './YoutubePickerPreview.vue'
 import YoutubePickerResultsPane from './YoutubePickerResultsPane.vue'
 import YoutubePickerSearch from './YoutubePickerSearch.vue'
-import {
-  useYoutubeAudioPlayer,
-  YOUTUBE_AUDIO_PLAYER_KEY,
-} from './useYoutubeAudioPlayer'
-import { MOBILE_EDITOR_CHROME_KEY } from '~/composables/useMobileEditorChrome'
+import { useYoutubeAudioPlayer, YOUTUBE_AUDIO_PLAYER_KEY } from './useYoutubeAudioPlayer'
 
 const props = withDefaults(defineProps<{
   placeholders?: string[]
@@ -65,11 +61,9 @@ const {
   resetSearch,
 } = useYoutubePicker(props.maxResults)
 
-const chrome = inject(MOBILE_EDITOR_CHROME_KEY, null)
 const { showError } = useToast()
 
 watch(errorMessage, (msg, prev) => {
-  if (!chrome?.isPhone.value) return
   if (!msg || msg === prev) return
   showError(msg)
 })

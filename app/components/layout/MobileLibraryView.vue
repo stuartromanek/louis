@@ -42,7 +42,6 @@ const {
   isPlaylistLocked,
   isDirty,
   isPodcast,
-  errorMessage: editorError,
   selectCard,
   resetChanges,
   updateCard,
@@ -94,7 +93,6 @@ const overTrackLimit = computed(
 
 const footerHint = computed(() => {
   if (isPodcast.value) return 'Podcast cards cannot be edited yet.'
-  if (editorError.value) return editorError.value
   if (overTrackLimit.value) return YOTO_MYO_TRACK_COUNT_MESSAGE
   return ''
 })
