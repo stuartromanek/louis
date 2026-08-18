@@ -15,6 +15,9 @@ export type YotoMyoStatus =
   | 'unconfigured'
   | 'disconnected'
 
+/** Browser OAuth callback landed on `/` with this query flag. */
+export type YotoOAuthInterrupt = 'expired' | 'denied' | 'failed'
+
 export interface YotoAuthStatus {
   configured: boolean
   connected: boolean

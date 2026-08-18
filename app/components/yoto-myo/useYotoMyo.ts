@@ -1,4 +1,4 @@
-import type { YotoAuthStatus, YotoContentMineResponse, YotoMyoCard, YotoMyoStatus } from './types'
+import type { YotoAuthStatus, YotoContentMineResponse, YotoMyoCard, YotoMyoStatus, YotoOAuthInterrupt } from './types'
 
 function extractErrorMessage(err: unknown): string {
   const fetchErr = err as {
@@ -25,9 +25,23 @@ export function useYotoMyo() {
   const connected = ref(false)
   const hasWriteScope = ref(false)
   const connectingExternal = ref(false)
+  const oauthInterrupt = ref<YotoOAuthInterrupt | null>(null)
 
   const router = useRouter()
   const route = useRoute()
+
+  function consumeOAuthInterrupt() {
+    const flag = route.query.yoto
+    if (flag !== 'expired' && flag !== 'denied' && flag !== 'failed') return
+    oauthInterrupt.value = flag
+    if (!import.meta.client) return
+    const nextQuery = { ...route.query }
+    delete nextQuery.yoto
+    void router.replace({ query: nextQuery })
+  }
+
+  consumeOAuthInterrupt()
+  watch(() => route.query.yoto, consumeOAuthInterrupt)
 
   async function fetchCards() {
     status.value = 'loading'
@@ -133,6 +147,7 @@ export function useYotoMyo() {
   }
 
   function connect() {
+    oauthInterrupt.value = null
     if (import.meta.client && window.louisDesktop?.openExternal) {
       void connectExternalBrowser()
       return
@@ -171,6 +186,7 @@ export function useYotoMyo() {
     connected,
     hasWriteScope,
     connectingExternal,
+    oauthInterrupt,
     connect,
     disconnect,
     refresh,

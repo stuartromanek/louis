@@ -1,3 +1,4 @@
+import type { H3Event } from 'h3'
 import {
   clearPkceVerifierCookie,
   exchangeCodeForTokens,
@@ -22,11 +23,14 @@ function escapeHtml(value: string) {
     .replaceAll('"', '&quot;')
 }
 
+/** Browser OAuth returns to `/` with this query; the auth gate reads it. */
+type BrowserOAuthFlag = 'connected' | 'expired' | 'denied' | 'failed'
+
 function externalDoneHtml(ok: boolean, message: string) {
   const title = ok ? 'Connected to Yoto' : 'Yoto sign-in failed'
   const hint = ok
     ? 'You can close this tab and return to Louis.'
-    : 'Close this tab, then fix your Yoto client ID in Louis → Settings → Advanced.'
+    : 'Close this tab, then try Connect again from Louis.'
   const safeMessage = escapeHtml(message)
   return `<!DOCTYPE html>
 <html lang="en">
@@ -49,6 +53,17 @@ function externalDoneHtml(ok: boolean, message: string) {
 </html>`
 }
 
+function finishOAuth(
+  event: H3Event,
+  options: { useHtml: boolean; ok: boolean; message: string; flag: BrowserOAuthFlag },
+) {
+  if (options.useHtml) {
+    setHeader(event, 'Content-Type', 'text/html; charset=utf-8')
+    return externalDoneHtml(options.ok, options.message)
+  }
+  return sendRedirect(event, `/?yoto=${options.flag}`)
+}
+
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const code = String(query.code ?? '').trim()
@@ -56,27 +71,24 @@ export default defineEventHandler(async (event) => {
   const state = String(query.state ?? '').trim()
   const pending = state ? takePendingPkce(state) : null
   const external = Boolean(pending?.external)
+  const failInHtml = external || isDesktopAuthMode()
 
   if (error) {
     const description = String(query.error_description ?? error)
-    if (external || isDesktopAuthMode()) {
-      setHeader(event, 'Content-Type', 'text/html; charset=utf-8')
-      return externalDoneHtml(false, `Yoto authorization failed: ${description}`)
-    }
-    throw createError({
-      statusCode: 401,
+    return finishOAuth(event, {
+      useHtml: failInHtml,
+      ok: false,
       message: `Yoto authorization failed: ${description}`,
+      flag: 'denied',
     })
   }
 
   if (!code) {
-    if (external || isDesktopAuthMode()) {
-      setHeader(event, 'Content-Type', 'text/html; charset=utf-8')
-      return externalDoneHtml(false, 'Missing authorization code from Yoto.')
-    }
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Missing authorization code from Yoto',
+    return finishOAuth(event, {
+      useHtml: failInHtml,
+      ok: false,
+      message: 'Missing authorization code from Yoto.',
+      flag: 'failed',
     })
   }
 
@@ -87,13 +99,11 @@ export default defineEventHandler(async (event) => {
     : undefined
 
   if (flow === 'public-pkce' && !verifier) {
-    if (external || isDesktopAuthMode()) {
-      setHeader(event, 'Content-Type', 'text/html; charset=utf-8')
-      return externalDoneHtml(false, 'OAuth session expired. Try Connect again from Louis.')
-    }
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'OAuth session expired. Please try connecting again.',
+    return finishOAuth(event, {
+      useHtml: failInHtml,
+      ok: false,
+      message: 'OAuth session expired. Try Connect again from Louis.',
+      flag: 'expired',
     })
   }
 
@@ -119,22 +129,23 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    if (external || (isDesktopAuthMode() && pending?.external)) {
-      setHeader(event, 'Content-Type', 'text/html; charset=utf-8')
-      return externalDoneHtml(true, 'Louis is signed in with your Yoto account.')
-    }
-
-    return sendRedirect(event, '/?yoto=connected')
+    return finishOAuth(event, {
+      useHtml: external || (isDesktopAuthMode() && Boolean(pending?.external)),
+      ok: true,
+      message: 'Louis is signed in with your Yoto account.',
+      flag: 'connected',
+    })
   }
   catch (err: unknown) {
     if (flow === 'public-pkce') {
       clearPkceVerifierCookie(event)
     }
-    if (external || isDesktopAuthMode()) {
-      const message = err instanceof Error ? err.message : 'Token exchange failed'
-      setHeader(event, 'Content-Type', 'text/html; charset=utf-8')
-      return externalDoneHtml(false, message)
-    }
-    throw err
+    const message = err instanceof Error ? err.message : 'Token exchange failed'
+    return finishOAuth(event, {
+      useHtml: failInHtml,
+      ok: false,
+      message,
+      flag: 'failed',
+    })
   }
 })

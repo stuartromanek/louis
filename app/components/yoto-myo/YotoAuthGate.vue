@@ -35,6 +35,7 @@ const {
   connected,
   hasWriteScope,
   errorMessage,
+  oauthInterrupt,
   connect,
   refresh,
 } = yoto
@@ -81,6 +82,30 @@ const copy = computed(() => {
       }
     case 'disconnected':
     default:
+      if (oauthInterrupt.value === 'expired') {
+        return {
+          heading: 'Sign-in expired',
+          body: 'That Yoto login did not finish. Connect again to continue.',
+          cta: 'Connect to Yoto',
+          action: 'connect' as const,
+        }
+      }
+      if (oauthInterrupt.value === 'denied') {
+        return {
+          heading: 'Yoto sign-in did not complete',
+          body: 'No account was linked. You can try connecting again.',
+          cta: 'Connect to Yoto',
+          action: 'connect' as const,
+        }
+      }
+      if (oauthInterrupt.value === 'failed') {
+        return {
+          heading: 'Could not finish sign-in',
+          body: 'Something went wrong talking to Yoto. Connect again to retry.',
+          cta: 'Connect to Yoto',
+          action: 'connect' as const,
+        }
+      }
       return {
         heading: 'Connect Louis to Yoto',
         body: 'Link your account to load MYO cards and build playlists.',
@@ -111,7 +136,10 @@ const blocksApp = computed(
 )
 
 const bodyWraps = computed(
-  () => blockedReason.value === 'unconfigured' || blockedReason.value === 'error',
+  () =>
+    blockedReason.value === 'unconfigured'
+    || blockedReason.value === 'error'
+    || Boolean(oauthInterrupt.value),
 )
 
 const gateClass = computed(() => ({
@@ -178,10 +206,11 @@ function startGateSequence() {
   clearTimers()
   phase.value = 'waiting'
 
+  const delay = oauthInterrupt.value ? 0 : GATE_DELAY_MS
   delayTimer = setTimeout(() => {
     delayTimer = null
     beginBoot()
-  }, GATE_DELAY_MS)
+  }, delay)
 }
 
 function onPrimaryAction() {
