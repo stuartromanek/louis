@@ -159,6 +159,11 @@ function buildNitroEnv() {
 
   const audioDir = pickLouisEnv('LOUIS_AUDIO_WORK_DIR', 'NUXT_AUDIO_WORK_DIR') || audioWorkDir
   setLouisAndNuxtEnv(env, 'LOUIS_AUDIO_WORK_DIR', 'NUXT_AUDIO_WORK_DIR', audioDir)
+  const managedBinDir = path.join(audioDir, 'bin')
+  const managedYtdlpName = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp'
+  if (fs.existsSync(path.join(managedBinDir, managedYtdlpName))) {
+    env.PATH = [managedBinDir, env.PATH].filter(Boolean).join(path.delimiter)
+  }
   setLouisAndNuxtEnv(
     env,
     'LOUIS_YOTO_SESSION_FILE',
@@ -393,6 +398,10 @@ function registerIpc() {
     const saved = configStore.write(mergeDesktopConfig(configStore.read(), next))
     await restartNitroAndReload()
     return saved
+  })
+
+  ipcMain.handle('louis:restart-nitro', async () => {
+    await restartNitroAndReload()
   })
 
   ipcMain.handle('louis:pick-cookies-file', async () => {

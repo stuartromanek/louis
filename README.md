@@ -139,7 +139,7 @@ Copy `[.env.example](.env.example)`. Use `LOUIS_*` **names** so the same file wo
 | `LOUIS_AUDIO_JOB_MAX_AGE_MS`   | Stale `jobs/` cleanup (default 1h)                                                                                                                                                                        |
 | `LOUIS_AUDIO_CACHE_MAX_AGE_MS` | Cache file TTL (default 14d)                                                                                                                                                                              |
 | `LOUIS_AUDIO_CACHE_MAX_BYTES`  | Combined preview + save cache cap (default 5 GiB)                                                                                                                                                         |
-| `LOUIS_YTDLP_PATH`             | Docker ships yt-dlp **nightly** on `PATH` (refreshed when the image is rebuilt with a new `YTDLP_CACHE_BUST`)                                                                                             |
+| `LOUIS_YTDLP_PATH`             | Optional pin. Docker ships yt-dlp on `PATH`; Settings → Advanced can install a newer nightly into the audio volume / desktop app data (preferred when its version is newer) |
 | `LOUIS_YTDLP_COOKIES_FILE`     | Optional Netscape `cookies.txt`. Downloads try anonymously first; cookies are used only if YouTube blocks with bot check, hard 403, or age-gate. Prefer a throwaway Google account; never commit the file |
 
 

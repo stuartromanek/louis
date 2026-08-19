@@ -213,8 +213,7 @@
 }
 
 .howto-mock__save-overlay .save-operation-bar {
-  width: 100%;
-  max-width: 14rem;
+  width: min(11.5rem, 58%);
 }
 
 .howto-mock__save-meta {

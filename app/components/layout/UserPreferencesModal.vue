@@ -3,6 +3,7 @@ import { useUserPreferences } from '~/composables/useUserPreferences'
 import { useDesktopHost } from '~/composables/useDesktopHost'
 import { usePreferencesShell } from '~/composables/usePreferencesShell'
 import DesktopApiKeysFields from '~/components/desktop/DesktopApiKeysFields.vue'
+import ToolsUpdateSection from '~/components/layout/ToolsUpdateSection.vue'
 
 type Phase = 'idle' | 'entering' | 'open' | 'exiting'
 type PrefsNav = 'general' | 'advanced'
@@ -20,7 +21,6 @@ const { isDesktop, desktopPrefsDebug, getConfig, setConfig, getRedirectUri } = u
 const { open: shellOpen } = usePreferencesShell()
 
 const runtimeConfig = useRuntimeConfig()
-const demoMode = computed(() => Boolean(runtimeConfig.public.demoMode))
 const appVersion = computed(() => String(runtimeConfig.public.appVersion || '0.0.0'))
 
 const phase = ref<Phase>('idle')
@@ -422,6 +422,8 @@ onUnmounted(() => {
                     />
                   </div>
 
+                  <ToolsUpdateSection :disabled="!formInteractive || credentialsSaving" />
+
                   <label class="prefs-projector__field prefs-projector__field--row prefs-projector__field--switch">
                     <span class="prefs-projector__label">Enable debug panel</span>
                     <span class="maru-checkbox">
@@ -448,12 +450,6 @@ onUnmounted(() => {
               <footer class="prefs-projector__meta">
                 <p class="prefs-projector__meta-line">
                   Louis v{{ appVersion }}
-                </p>
-                <p
-                  v-if="demoMode"
-                  class="prefs-projector__meta-line"
-                >
-                  Demo instance — connect Yoto at your own risk. Downloads use a shared identity; self-host for production.
                 </p>
               </footer>
 

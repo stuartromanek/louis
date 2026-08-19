@@ -230,28 +230,30 @@ watch(
             >?</button>
           </MaruTooltip>
         </div>
-        <input
-          :id="yotoId"
-          ref="yotoInputEl"
-          v-model="yotoClientId"
-          class="prefs-projector__input font-maru-mono"
-          type="text"
-          autocomplete="off"
-          spellcheck="false"
-          :disabled="disabled"
-          :aria-label="only ? 'Yoto client ID' : undefined"
-          placeholder="Public PKCE client from yoto.dev"
-        >
-        <button
-          v-if="showUseDefaultClient && !only"
-          type="button"
-          class="prefs-projector__browse prefs-projector__use-default maru-button"
-          :disabled="disabled || usingBundledClient"
-          :aria-pressed="usingBundledClient"
-          @click="onUseDefaultClient"
-        >
-          <span class="maru-button__label">{{ usingBundledClient ? 'Using default client' : 'Use default client' }}</span>
-        </button>
+        <div class="prefs-projector__file-row">
+          <input
+            :id="yotoId"
+            ref="yotoInputEl"
+            v-model="yotoClientId"
+            class="prefs-projector__input font-maru-mono"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            :disabled="disabled"
+            :aria-label="only ? 'Yoto client ID' : undefined"
+            placeholder="Public PKCE client from yoto.dev"
+          >
+          <button
+            v-if="showUseDefaultClient && !only"
+            type="button"
+            class="prefs-projector__browse maru-button"
+            :disabled="disabled || usingBundledClient"
+            :aria-pressed="usingBundledClient"
+            @click="onUseDefaultClient"
+          >
+            <span class="maru-button__label">{{ usingBundledClient ? 'Using default client' : 'Use default client' }}</span>
+          </button>
+        </div>
         <p class="prefs-projector__hint">
           <template v-if="only === 'yoto'">
             Required to connect your Yoto account. Use Louis’s default client, or create your own

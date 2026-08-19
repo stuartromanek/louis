@@ -25,6 +25,7 @@ import {
 } from './audio-work-dir'
 import { resolveYtdlpCookiesArgs } from './ytdlp-cookies'
 import { checkYoutubeVideoAvailability } from './youtube'
+import { resolveYtdlpBinary } from './ytdlp-binary'
 
 const execFileAsync = promisify(execFile)
 
@@ -32,13 +33,12 @@ const YTDLP_TIMEOUT_MS = 5 * 60 * 1000
 /** Align with Yoto MYO per-track size cap so we fail before upload. */
 const MAX_FILE_BYTES = YOTO_MYO_MAX_TRACK_BYTES
 
-const YTDLP_FALLBACK_PATHS = [
-  '/opt/homebrew/bin/yt-dlp',
-  '/usr/local/bin/yt-dlp',
-]
-
 /** Coalesce concurrent downloads of the same video (preview stampede / parallel saves). */
 const inFlightDownloads = new Map<string, Promise<DownloadedAudio>>()
+
+export function hasInFlightYtdlpDownloads(): boolean {
+  return inFlightDownloads.size > 0
+}
 
 export interface DownloadedAudio {
   filePath: string
@@ -49,68 +49,8 @@ export interface DownloadedAudio {
   recoveredFromRetryableFailure?: boolean
 }
 
-interface ResolvedYtdlp {
-  path: string
-  version: string
-}
-
-let cachedYtdlp: ResolvedYtdlp | null = null
-
-function parseYtdlpVersionDate(version: string): number {
-  const match = version.match(/^(\d{4})\.(\d{2})\.(\d{2})/)
-  if (!match) return 0
-  return Number(match[1] + match[2] + match[3])
-}
-
-async function readYtdlpVersion(binaryPath: string): Promise<string | null> {
-  try {
-    const { stdout } = await execFileAsync(binaryPath, ['--version'], { timeout: 20_000 })
-    return stdout.trim().split('\n')[0] || null
-  }
-  catch {
-    return null
-  }
-}
-
 function httpError(statusCode: number, message: string) {
   return createError({ statusCode, message })
-}
-
-async function resolveYtdlpBinary(configuredPath: string): Promise<ResolvedYtdlp> {
-  if (cachedYtdlp) return cachedYtdlp
-
-  // Absolute LOUIS_YTDLP_PATH (desktop bundled binary) wins over newer PATH copies.
-  if (configuredPath && path.isAbsolute(configuredPath)) {
-    const version = await readYtdlpVersion(configuredPath)
-    if (version) {
-      cachedYtdlp = { path: configuredPath, version }
-      return cachedYtdlp
-    }
-  }
-
-  const candidates = [...new Set([configuredPath, ...YTDLP_FALLBACK_PATHS, 'yt-dlp'])]
-  let best: ResolvedYtdlp | null = null
-  let bestDate = 0
-
-  for (const candidate of candidates) {
-    const version = await readYtdlpVersion(candidate)
-    if (!version) continue
-    const date = parseYtdlpVersionDate(version)
-    if (date > bestDate) {
-      bestDate = date
-      best = { path: candidate, version }
-    }
-  }
-
-  if (!best) {
-    throw httpError(
-      500,
-      'yt-dlp not found. Install it (Docker image includes it; native: apt install yt-dlp, pip install yt-dlp, or set LOUIS_YTDLP_PATH).',
-    )
-  }
-
-  cachedYtdlp = best
-  return best
 }
 
 /** @deprecated Prefer importing from `#shared/myo-editor/ytdlpErrors`. */
@@ -276,8 +216,8 @@ async function downloadYoutubeAudioUncached(
     cacheMode: AudioCacheMode
   },
 ): Promise<DownloadedAudio> {
-  const { configuredPath, audioWorkDir, cacheDir, cacheMode } = ctx
-  const ytdlp = await resolveYtdlpBinary(configuredPath)
+  const { audioWorkDir, cacheDir, cacheMode } = ctx
+  const ytdlp = await resolveYtdlpBinary(event)
 
   // Re-check cache after winning the singleflight race (coalesced waiters already returned).
   const requiredExt = options.transcode ? '.m4a' : undefined

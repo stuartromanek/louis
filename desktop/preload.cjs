@@ -19,4 +19,5 @@ contextBridge.exposeInMainWorld('louisDesktop', {
   getRedirectUri: () => ipcRenderer.invoke('louis:get-redirect-uri'),
   openExternal: (/** @type {string} */ url) => ipcRenderer.invoke('louis:open-external', url),
   focusMainWindow: () => ipcRenderer.invoke('louis:focus-main-window'),
+  restartNitro: () => ipcRenderer.invoke('louis:restart-nitro'),
 })

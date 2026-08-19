@@ -358,7 +358,7 @@
   font-size: var(--text-maru-label);
   line-height: var(--text-maru-label--line-height);
   letter-spacing: 0.01em;
-  font-weight: 500;
+  font-weight: 700;
   color: var(--color-maru-black);
 }
 
@@ -702,7 +702,7 @@
   line-height: 1.35;
   letter-spacing: 0.01em;
   font-weight: 400;
-  color: var(--color-maru-black);
+  color: var(--color-maru-gray);
   text-wrap: pretty;
 }
 
@@ -715,14 +715,10 @@
 }
 
 .prefs-projector__hint-link {
-  color: var(--color-maru-blue);
+  color: var(--color-maru-black);
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 0.12em;
-}
-
-.prefs-projector__hint-link:hover {
-  color: var(--color-maru-black);
 }
 
 .prefs-projector__hint-link:focus-visible {
@@ -742,7 +738,36 @@
 }
 
 .prefs-projector__section .desktop-api-keys {
-  gap: 1.25rem;
+  gap: 2rem;
+}
+
+.prefs-projector__table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 3px solid var(--color-maru-black);
+  background: var(--color-maru-white);
+  box-shadow: 3px 3px 0 var(--color-maru-black);
+}
+
+.prefs-projector__table th,
+.prefs-projector__table td {
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: baseline;
+  border: 3px solid var(--color-maru-black);
+}
+
+.prefs-projector__table thead th {
+  background: var(--color-maru-gray-light);
+}
+
+.prefs-projector__table tbody th {
+  white-space: nowrap;
+}
+
+.prefs-projector__table td {
+  color: var(--color-maru-gray);
+  overflow-wrap: anywhere;
 }
 
 .prefs-projector__section-title {
@@ -782,6 +807,7 @@
 
 .prefs-projector__file-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   width: 100%;
   align-items: stretch;
@@ -790,6 +816,49 @@
 .prefs-projector__file-row .prefs-projector__input {
   flex: 1;
   min-width: 0;
+}
+
+.prefs-projector__input[readonly] {
+  cursor: text;
+}
+
+.prefs-projector__select {
+  flex-shrink: 0;
+  align-self: stretch;
+  appearance: none;
+  min-width: 5.5rem;
+  min-height: 2.5rem;
+  padding: 0.35rem 1.85rem 0.35rem 0.7rem;
+  border: 3px solid var(--color-maru-black);
+  border-radius: var(--radius-maru);
+  background-color: var(--color-maru-white);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--color-maru-black) 50%),
+    linear-gradient(135deg, var(--color-maru-black) 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.05rem) calc(50% - 0.15rem),
+    calc(100% - 0.7rem) calc(50% - 0.15rem);
+  background-size: 0.35rem 0.35rem, 0.35rem 0.35rem;
+  background-repeat: no-repeat;
+  box-shadow: 3px 3px 0 var(--color-maru-black);
+  font-family: var(--font-maru);
+  font-size: var(--text-maru-label);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--color-maru-black);
+  cursor: pointer;
+}
+
+.prefs-projector__select:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 0 0 2px var(--color-maru-blue),
+    3px 3px 0 var(--color-maru-black);
+}
+
+.prefs-projector__select:disabled {
+  opacity: 0.7;
+  cursor: default;
 }
 
 .prefs-projector__browse {
@@ -805,11 +874,6 @@
     box-shadow 0.15s ease-out,
     translate 0.15s ease-out,
     scale 0.15s ease-out;
-}
-
-.prefs-projector__use-default {
-  align-self: flex-start;
-  margin-top: 0.5rem;
 }
 
 .prefs-projector__browse .maru-button__label,
@@ -860,6 +924,10 @@
 
 .prefs-projector__copy {
   min-width: 4.75rem;
+}
+
+.prefs-projector__copy--wide {
+  min-width: 8.75rem;
 }
 
 .prefs-projector__copy-label {

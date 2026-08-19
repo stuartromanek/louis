@@ -8,6 +8,7 @@ import {
   getYtdlpCookiesStatus,
   type YtdlpCookiesStatus,
 } from './ytdlp-cookies'
+import { findYtdlpBinary } from './ytdlp-binary'
 
 const execFileAsync = promisify(execFile)
 
@@ -108,28 +109,23 @@ async function checkWritableDir(dir: string): Promise<{ writable: boolean, error
 }
 
 export async function getSystemDepsStatus(event?: H3Event): Promise<SystemDepsStatus> {
-  const config = event ? useRuntimeConfig(event) : useRuntimeConfig()
   const audioConfig = resolveAudioWorkDirConfig(event)
-  const configuredYtdlp = config.ytdlpPath || 'yt-dlp'
   const audioWorkDir = audioConfig.audioWorkDir
-
-  const ytdlpCandidates = [...new Set([
-    configuredYtdlp,
-    '/usr/local/bin/yt-dlp',
-    '/usr/bin/yt-dlp',
-    'yt-dlp',
-  ])]
 
   // Prefer bare `ffmpeg` so a desktop-prepended PATH bin dir wins over fixed system paths.
   const ffmpegCandidates = ['ffmpeg', '/usr/bin/ffmpeg', '/usr/local/bin/ffmpeg']
 
-  const [ytdlp, ffmpeg, audioDir, audioCache, ytdlpCookies] = await Promise.all([
-    resolveBinary(ytdlpCandidates),
+  const [foundYtdlp, ffmpeg, audioDir, audioCache, ytdlpCookies] = await Promise.all([
+    findYtdlpBinary(event),
     resolveBinary(ffmpegCandidates),
     checkWritableDir(audioWorkDir),
     getAudioWorkDirStats(audioWorkDir, audioConfig.audioJobMaxAgeMs),
     getYtdlpCookiesStatus(event),
   ])
+
+  const ytdlp: BinaryStatus = foundYtdlp
+    ? { available: true, path: foundYtdlp.path, version: foundYtdlp.version }
+    : { available: false, error: 'yt-dlp not found' }
 
   return {
     ytdlp,

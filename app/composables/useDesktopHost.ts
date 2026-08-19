@@ -17,6 +17,7 @@ type LouisDesktopBridge = {
   getRedirectUri: () => Promise<string>
   openExternal: (url: string) => Promise<void>
   focusMainWindow: () => Promise<boolean>
+  restartNitro?: () => Promise<void>
 }
 
 declare global {
