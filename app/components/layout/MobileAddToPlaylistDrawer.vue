@@ -5,6 +5,7 @@ import { YOTO_MYO_KEY } from '~/components/yoto-myo/keys'
 import { MOBILE_EDITOR_CHROME_KEY } from '~/composables/useMobileEditorChrome'
 import { pickerVideoToPlaylistTrack } from '~/components/playlist/types'
 import type { InsertTracksResult } from '~/components/myo-editor/useMyoEditor'
+import { classifyInsertTracksOutcome } from '#shared/myo-editor/standalonePlaylist'
 import type { YotoMyoCard as YotoMyoCardType } from '~/components/yoto-myo/types'
 import type { YoutubeVideoSummary } from '~/components/youtube-picker/types'
 
@@ -65,23 +66,26 @@ function finishAdd(
     return
   }
 
+  const outcome = classifyInsertTracksOutcome(result)
   if (result.added > 0) {
     playEvent('drop')
     clearResultSelection()
     closeAddDrawer()
     if (openDetail) chrome.openPlaylist()
+  }
+
+  if (outcome.kind === 'mixed' || outcome.kind === 'overflow') {
+    showError(outcome.message, 0, outcome.title)
+    if (result.added === 0) closeAddDrawer()
+    return
+  }
+
+  if (outcome.kind === 'added') {
     showAddedToPlaylist(addedLabel(videos, result.added), destinationTitle)
     return
   }
 
-  if (result.overflow > 0) {
-    const extra = result.overflow === 1 ? 'track' : 'tracks'
-    showError(`Couldn't add ${result.overflow} more ${extra}. Yoto playlists allow up to 100 tracks.`)
-    closeAddDrawer()
-    return
-  }
-
-  if (result.skipped > 0) {
+  if (outcome.kind === 'duplicate') {
     showDuplicateTrack(videos[0]?.title ?? 'Track')
     closeAddDrawer()
   }

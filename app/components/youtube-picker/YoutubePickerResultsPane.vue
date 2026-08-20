@@ -7,6 +7,10 @@ import MaruHeading from '~/components/layout/MaruHeading.vue'
 import YoutubePickerEmptyState from './YoutubePickerEmptyState.vue'
 import YoutubePickerLoadMore from './YoutubePickerLoadMore.vue'
 import YoutubePickerResults from './YoutubePickerResults.vue'
+import {
+  PLAYLIST_BANNER_TEST_SKIPPED,
+  useLeftoverOutcomeFixtures,
+} from '~/components/playlist/leftoverOutcomeFixtures'
 
 export type ResultsPaneMode = 'initial' | 'loading' | 'no-results' | 'results'
 
@@ -22,6 +26,7 @@ const props = defineProps<{
   channel?: YoutubeChannelSummary | null
   searchSource?: YoutubePickerSource
   skippedUnavailable?: number
+  skippedMissingDuration?: number
   selectedCount?: number
   allImportableSelected?: boolean
   importableCount?: number
@@ -56,6 +61,31 @@ const loadingMeta = computed(() => {
   }
 })
 
+const leftoverFixtures = useLeftoverOutcomeFixtures()
+
+const skippedUnavailableCount = computed(() =>
+  leftoverFixtures.playlistBanner.value
+    ? PLAYLIST_BANNER_TEST_SKIPPED.skippedUnavailable
+    : (props.skippedUnavailable ?? 0),
+)
+
+const skippedMissingDurationCount = computed(() =>
+  leftoverFixtures.playlistBanner.value
+    ? PLAYLIST_BANNER_TEST_SKIPPED.skippedMissingDuration
+    : (props.skippedMissingDuration ?? 0),
+)
+
+const skipMeta = computed(() => {
+  const parts: string[] = []
+  if (skippedUnavailableCount.value) {
+    parts.push(`${skippedUnavailableCount.value} unavailable skipped`)
+  }
+  if (skippedMissingDurationCount.value) {
+    parts.push(`${skippedMissingDurationCount.value} without duration`)
+  }
+  return parts.join(' · ')
+})
+
 const sourceBanner = computed(() => {
   if (props.playlist) {
     return {
@@ -73,6 +103,13 @@ const sourceBanner = computed(() => {
       countLabel: typeof props.channel.videoCount === 'number'
         ? `${props.channel.videoCount} videos`
         : '',
+    }
+  }
+  if (leftoverFixtures.playlistBanner.value) {
+    return {
+      kind: 'playlist' as const,
+      title: 'Test playlist',
+      countLabel: '12 source tracks',
     }
   }
   return null
@@ -172,10 +209,10 @@ const sourceBanner = computed(() => {
             {{ sourceBanner.title }}<template v-if="sourceBanner.countLabel"> · {{ sourceBanner.countLabel }}</template>
           </p>
           <p
-            v-if="skippedUnavailable"
-            class="type-meta m-0 text-maru-black/75"
+            v-if="skipMeta"
+            class="type-meta m-0 text-maru-black/75 tabular-nums"
           >
-            {{ skippedUnavailable }} unavailable skipped
+            {{ skipMeta }}
           </p>
         </div>
       </section>

@@ -135,19 +135,31 @@ export function playlistImportItemToResultVideo(
   }
 }
 
+function hasKnownDuration(item: YoutubePlaylistImportItem): boolean {
+  return typeof item.durationSeconds === 'number'
+    && Number.isFinite(item.durationSeconds)
+    && item.durationSeconds > 0
+}
+
 export function mapPlaylistImportItems(
   items: YoutubePlaylistImportItem[],
-): { videos: YoutubePlaylistResultVideo[], skippedUnavailable: number } {
+): {
+  videos: YoutubePlaylistResultVideo[]
+  skippedUnavailable: number
+  skippedMissingDuration: number
+} {
   const videos: YoutubePlaylistResultVideo[] = []
   let skippedUnavailable = 0
+  let skippedMissingDuration = 0
   for (const item of items) {
     if (!item.available) {
       skippedUnavailable += 1
       continue
     }
     videos.push(playlistImportItemToResultVideo(item))
+    if (!hasKnownDuration(item)) skippedMissingDuration += 1
   }
-  return { videos, skippedUnavailable }
+  return { videos, skippedUnavailable, skippedMissingDuration }
 }
 
 export function importableResultKeys<T extends { id: string, resultKey?: string, durationSeconds?: number }>(

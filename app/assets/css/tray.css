@@ -198,6 +198,14 @@
   background: var(--color-maru-red-lighter);
 }
 
+.tray--toast.tray--titled:has(.toast__stack--error) .tray__header {
+  background: var(--color-maru-red-lighter);
+}
+
+.tray--toast.tray--titled:has(.toast__stack--error) .tray__body {
+  background: var(--color-maru-white);
+}
+
 .toast__stack--error .toast__message {
   font-weight: 500;
 }
@@ -214,6 +222,7 @@
 .tray--toast.tray--titled .tray__header {
   border-bottom: 3px solid var(--color-maru-black);
   padding: 0.7rem 0.85rem 0.55rem;
+  border-radius: calc(var(--radius-maru) - 3px) calc(var(--radius-maru) - 3px) 0 0;
 }
 
 .tray--toast.tray--titled .tray__title {

@@ -4,6 +4,7 @@ import type { PlaylistTrack } from './types.ts'
 import {
   canAcceptPlaylistTracks,
   classifyCreateStartFailure,
+  classifyInsertTracksOutcome,
   getStandalonePlaylistCreateError,
   getStandalonePlaylistValidationError,
   isPlaylistEditorActive,
@@ -155,5 +156,24 @@ describe('standalone playlist drafts', () => {
     assert.equal(shouldWarnBeforeUnload(true, false), true)
     assert.equal(shouldWarnBeforeUnload(false, false), false)
     assert.equal(shouldWarnBeforeUnload(true, true), false)
+  })
+
+  it('classifies insert outcomes so mixed adds are reported together', () => {
+    assert.equal(classifyInsertTracksOutcome({ added: 2, skipped: 0, overflow: 0 }).kind, 'added')
+    assert.equal(classifyInsertTracksOutcome({ added: 0, skipped: 1, overflow: 0 }).kind, 'duplicate')
+    const overflow = classifyInsertTracksOutcome({ added: 0, skipped: 0, overflow: 3 })
+    assert.equal(overflow.kind, 'overflow')
+    if (overflow.kind === 'overflow') {
+      assert.match(overflow.message, /Couldn't add 3 more tracks/)
+    }
+    const mixed = classifyInsertTracksOutcome({ added: 6, skipped: 2, overflow: 12 })
+    assert.equal(mixed.kind, 'mixed')
+    if (mixed.kind === 'mixed') {
+      assert.equal(mixed.title, 'Couldn\'t add all tracks')
+      assert.equal(
+        mixed.message,
+        'Added 6. 2 were already on this playlist. Couldn\'t add 12 more (100-track limit).',
+      )
+    }
   })
 })

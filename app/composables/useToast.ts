@@ -22,6 +22,7 @@ export type ToastDuplicatePayload = ToastPlacement & {
 export type ToastErrorPayload = ToastPlacement & {
   kind: 'error'
   message: string
+  title?: string
 }
 
 export type ToastInstallHelpPayload = ToastPlacement & {
@@ -106,13 +107,15 @@ export function useToast() {
     scheduleAutoClose(durationMs)
   }
 
-  /** Technical errors stay until dismissed (durationMs <= 0). */
-  function showError(message: string, durationMs = 0) {
+  /** Technical errors stay until dismissed (durationMs <= 0). Optional title paints the toast header bar. */
+  function showError(message: string, durationMs = 0, title?: string) {
     const text = message.trim()
     if (!text) return
+    const heading = title?.trim()
     payload.value = {
       kind: 'error',
       message: text,
+      ...(heading ? { title: heading } : {}),
       ...defaultToastPlacement(),
     }
     scheduleAutoClose(durationMs)

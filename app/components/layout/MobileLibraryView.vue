@@ -14,11 +14,15 @@ import {
   SAVE_PROGRESS_TEST_FIXTURE,
   useSaveProgressTestMode,
 } from '~/components/playlist/saveProgressTestFixture'
+import { useLeftoverOutcomeFixtures } from '~/components/playlist/leftoverOutcomeFixtures'
 import {
   getPlaylistCapacitySnapshot,
   YOTO_MYO_TRACK_COUNT_MESSAGE,
 } from '#shared/myo-editor/yotoMyoLimits'
-import { getStandalonePlaylistValidationError } from '#shared/myo-editor/standalonePlaylist'
+import {
+  getStandalonePlaylistValidationError,
+  PLAYLIST_NOT_ON_YOTO_YET_MESSAGE,
+} from '#shared/myo-editor/standalonePlaylist'
 import { formatDurationSeconds } from '#shared/myo-editor/youtubeDuration'
 import TrackArtThumb from '~/components/track-art/TrackArtThumb.vue'
 import { TRACK_ART_EDITOR_KEY } from '~/composables/useTrackArtEditor'
@@ -36,6 +40,8 @@ if (!yoto || !editor || !chrome) {
 
 const { playEvent } = useUiSound()
 const saveProgressTestMode = useSaveProgressTestMode()
+const leftoverFixtures = useLeftoverOutcomeFixtures()
+const uncertainRefreshBusy = ref(false)
 
 const { cards, status, cardsLoading, errorMessage, connected } = yoto
 const {
@@ -112,9 +118,24 @@ const canUpdate = computed(
 )
 
 const askingUpdatePrompt = computed(
-  () => Boolean(editor.updatePrompt.value)
-    && !editor.saveStarting.value
-    && editor.updatePromptSurface.value === 'footer',
+  () => leftoverFixtures.createPrompts.value
+    || (
+      Boolean(editor.updatePrompt.value)
+      && !editor.saveStarting.value
+      && editor.updatePromptSurface.value === 'footer'
+    ),
+)
+
+const updatePromptKind = computed(() =>
+  leftoverFixtures.createPrompts.value ? 'capacity' : editor.updatePrompt.value,
+)
+
+const updatePromptIntent = computed(() =>
+  leftoverFixtures.createPrompts.value || isNewPlaylist.value ? 'create' : 'update',
+)
+
+const showUncertainCover = computed(
+  () => leftoverFixtures.uncertainCreate.value || editor.showUncertainCreateCover.value,
 )
 
 const primaryLabel = computed(() => {
@@ -132,6 +153,7 @@ const footerHint = computed(() => {
   if (isPodcast.value) return 'Podcasts cannot be edited yet.'
   if (createOutcomeUncertain.value) return 'Check Playlists before trying again.'
   if (overTrackLimit.value) return YOTO_MYO_TRACK_COUNT_MESSAGE
+  if (isNewPlaylist.value && cardTitle.value.trim()) return PLAYLIST_NOT_ON_YOTO_YET_MESSAGE
   return ''
 })
 
@@ -165,13 +187,20 @@ function onStartNewPlaylist() {
 }
 
 function onPromptCancel() {
-  if (editor.saveStarting.value || editor.playlistManageBusy.value) return
+  if (editor.saveStarting.value || editor.playlistManageBusy.value || uncertainRefreshBusy.value) return
   playEvent('resetPlaylist')
   if (editor.playlistManagePrompt.value) {
     editor.cancelPlaylistManage()
     return
   }
-  cancelUpdatePrompt()
+  if (leftoverFixtures.createPrompts.value) return
+  if (editor.updatePrompt.value) {
+    cancelUpdatePrompt()
+    return
+  }
+  if (showUncertainCover.value) {
+    editor.dismissUncertainCreateCover()
+  }
 }
 
 function onPromptKeep() {
@@ -181,12 +210,25 @@ function onPromptKeep() {
 
 async function onPromptConfirm() {
   playEvent('buttonPrimary')
+  if (askingUpdatePrompt.value) {
+    confirmUpdatePrompt()
+    return
+  }
   if (editor.playlistManagePrompt.value === 'delete') {
     const ok = await editor.confirmDelete()
     if (ok) backToLibrary()
     return
   }
-  confirmUpdatePrompt()
+  if (showUncertainCover.value) {
+    if (uncertainRefreshBusy.value) return
+    uncertainRefreshBusy.value = true
+    try {
+      await yoto.refresh({ quiet: true })
+    }
+    finally {
+      uncertainRefreshBusy.value = false
+    }
+  }
 }
 
 function onReset() {
@@ -664,7 +706,12 @@ onMounted(() => {
           v-else-if="!loading"
           class="empty-state-meta text-center py-8"
         >
-          No tracks yet. Add songs from Search, or paste a video, playlist, or channel URL.
+          <template v-if="isNewPlaylist">
+            {{ PLAYLIST_NOT_ON_YOTO_YET_MESSAGE }} Add songs from Search, or paste a video, playlist, or channel URL.
+          </template>
+          <template v-else>
+            No tracks yet. Add songs from Search, or paste a video, playlist, or channel URL.
+          </template>
         </p>
 
         <Tray
@@ -772,13 +819,13 @@ onMounted(() => {
       </div>
 
       <PlaylistUpdatePrompt
-        v-if="askingUpdatePrompt && editor.updatePrompt.value"
-        :kind="editor.updatePrompt.value"
+        v-if="askingUpdatePrompt && updatePromptKind"
+        :kind="updatePromptKind"
         surface="panel"
         id-prefix="mobile-card-update"
         :card-count="editor.updatePromptCardCount.value"
         :busy="editor.saveStarting.value"
-        :intent="isNewPlaylist ? 'create' : 'update'"
+        :intent="updatePromptIntent"
         @cancel="onPromptCancel"
         @keep="onPromptKeep"
         @confirm="onPromptConfirm"
@@ -790,6 +837,15 @@ onMounted(() => {
         id-prefix="mobile-card-delete"
         :playlist-title="cardTitle"
         :busy="editor.playlistManageBusy.value"
+        @cancel="onPromptCancel"
+        @confirm="onPromptConfirm"
+      />
+      <PlaylistUpdatePrompt
+        v-else-if="showUncertainCover"
+        kind="uncertain"
+        surface="panel"
+        id-prefix="mobile-uncertain-create"
+        :busy="uncertainRefreshBusy"
         @cancel="onPromptCancel"
         @confirm="onPromptConfirm"
       />

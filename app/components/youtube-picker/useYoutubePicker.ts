@@ -44,6 +44,7 @@ export function useYoutubePicker(maxResults = 12) {
   const playlistSummary = ref<YoutubePlaylistSummary | null>(null)
   const activePlaylistId = ref<string | null>(null)
   const skippedUnavailable = ref(0)
+  const skippedMissingDuration = ref(0)
   const channelSummary = ref<YoutubeChannelSummary | null>(null)
   const activeChannelId = ref<string | null>(null)
   const searchSource = ref<YoutubePickerSource>('text')
@@ -62,20 +63,27 @@ export function useYoutubePicker(maxResults = 12) {
   function fetchErrorMessage(err: unknown, fallback: string): string {
     const fetchErr = err as {
       statusMessage?: string
-      data?: { message?: string, statusMessage?: string }
+      data?: string | { message?: string, statusMessage?: string }
       message?: string
     }
-    return fetchErr.data?.message
-      ?? fetchErr.data?.statusMessage
+    const data = fetchErr.data
+    const fromData = typeof data === 'string'
+      ? data
+      : data?.message || data?.statusMessage
+    const candidate = fromData
       ?? fetchErr.statusMessage
       ?? fetchErr.message
       ?? fallback
+    const generic = /^(Not Found|Bad Request|Unauthorized|Forbidden|Internal Server Error)$/i
+    if (generic.test(candidate.trim())) return fallback
+    return candidate
   }
 
   function resetPlaylistState() {
     playlistSummary.value = null
     activePlaylistId.value = null
     skippedUnavailable.value = 0
+    skippedMissingDuration.value = 0
   }
 
   function resetChannelState() {
@@ -130,6 +138,7 @@ export function useYoutubePicker(maxResults = 12) {
     playlistSummary.value = null
     activePlaylistId.value = playlistId
     skippedUnavailable.value = 0
+    skippedMissingDuration.value = 0
     resetChannelState()
     searchSource.value = 'playlist'
     clearResultSelection()
@@ -143,6 +152,7 @@ export function useYoutubePicker(maxResults = 12) {
       playlistSummary.value = data.playlist ?? null
       results.value = mapped.videos
       skippedUnavailable.value = mapped.skippedUnavailable
+      skippedMissingDuration.value = mapped.skippedMissingDuration
       nextPageToken.value = data.nextPageToken
       precheckImportable(mapped.videos, true)
       await ensureMinLoadingTime(loadingStartedAt)
@@ -151,7 +161,7 @@ export function useYoutubePicker(maxResults = 12) {
     }
     catch (err: unknown) {
       if (generation !== searchGeneration) return
-      errorMessage.value = fetchErrorMessage(err, 'Failed to load YouTube playlist')
+      errorMessage.value = fetchErrorMessage(err, 'Playlist not found or not public')
       results.value = []
       resetPasteState()
       await ensureMinLoadingTime(loadingStartedAt)
@@ -171,14 +181,14 @@ export function useYoutubePicker(maxResults = 12) {
       const mapped = mapPlaylistImportItems(data.items)
       results.value = [...results.value, ...mapped.videos]
       skippedUnavailable.value += mapped.skippedUnavailable
+      skippedMissingDuration.value += mapped.skippedMissingDuration
       nextPageToken.value = data.nextPageToken
       if (data.playlist) playlistSummary.value = data.playlist
       precheckImportable(mapped.videos, false)
       playEvent('loadMoreComplete')
     }
     catch (err: unknown) {
-      errorMessage.value = fetchErrorMessage(err, 'Failed to load the next page')
-      status.value = 'error'
+      errorMessage.value = fetchErrorMessage(err, 'Couldn\'t load more')
     }
     finally {
       loadingMore.value = false
@@ -321,8 +331,7 @@ export function useYoutubePicker(maxResults = 12) {
       playEvent('loadMoreComplete')
     }
     catch (err: unknown) {
-      errorMessage.value = fetchErrorMessage(err, 'Failed to load the next page')
-      status.value = 'error'
+      errorMessage.value = fetchErrorMessage(err, 'Couldn\'t load more')
     }
     finally {
       loadingMore.value = false
@@ -418,8 +427,7 @@ export function useYoutubePicker(maxResults = 12) {
       nextPageToken.value = data.nextPageToken
     }
     catch (err: unknown) {
-      errorMessage.value = fetchErrorMessage(err, 'Search failed')
-      status.value = 'error'
+      errorMessage.value = fetchErrorMessage(err, 'Couldn\'t load more')
     }
     finally {
       loadingMore.value = false
@@ -522,6 +530,7 @@ export function useYoutubePicker(maxResults = 12) {
     playlistSummary,
     channelSummary,
     skippedUnavailable,
+    skippedMissingDuration,
     selectedCount,
     allImportableSelected,
     importableCount: computed(() => importableKeys.value.length),

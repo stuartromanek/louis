@@ -13,6 +13,7 @@ import {
   SAVE_PROGRESS_TEST_FIXTURE,
   useSaveProgressTestMode,
 } from './saveProgressTestFixture'
+import { useLeftoverOutcomeFixtures } from './leftoverOutcomeFixtures'
 
 const props = withDefaults(defineProps<{
   scrollToVideoId?: string | null
@@ -36,6 +37,8 @@ const { playlist, isPlaylistLocked, saveProgress, loading, cardTitle, selectedCa
 const { enterIndex } = usePlaylistEnterStagger(playlist)
 
 const saveProgressTestMode = useSaveProgressTestMode()
+const leftoverFixtures = useLeftoverOutcomeFixtures()
+const uncertainRefreshBusy = ref(false)
 
 const displayedSaveProgress = computed(() =>
   saveProgressTestMode.value ? SAVE_PROGRESS_TEST_FIXTURE : saveProgress.value,
@@ -46,21 +49,34 @@ const showSaveProgressOverlay = computed(() =>
 )
 
 const showUpdatePrompt = computed(() => {
+  if (leftoverFixtures.createPrompts.value) return true
   const kind = editor.updatePrompt.value
   const surface = editor.updatePromptSurface.value
   if (!kind || editor.saveStarting.value) return false
   return surface === 'footer' || surface === 'dialog'
 })
 
+const updatePromptKind = computed(() =>
+  leftoverFixtures.createPrompts.value ? 'capacity' : editor.updatePrompt.value,
+)
+
+const updatePromptIntent = computed(() =>
+  leftoverFixtures.createPrompts.value || editor.isNewPlaylist.value ? 'create' : 'update',
+)
+
 const showRenamePrompt = computed(() => editor.playlistManagePrompt.value === 'rename')
 const showDeletePrompt = computed(() => editor.playlistManagePrompt.value === 'delete')
+const showUncertainCover = computed(
+  () => leftoverFixtures.uncertainCreate.value || editor.showUncertainCreateCover.value,
+)
 
 const showPlaylistCover = computed(() =>
   showSaveProgressOverlay.value
   || showUpdatePrompt.value
   || editor.saveStarting.value
   || showRenamePrompt.value
-  || showDeletePrompt.value,
+  || showDeletePrompt.value
+  || showUncertainCover.value,
 )
 
 const coverTone = computed(() => (
@@ -70,13 +86,20 @@ const coverTone = computed(() => (
 ))
 
 function onPromptCancel() {
-  if (editor.saveStarting.value || editor.playlistManageBusy.value) return
+  if (editor.saveStarting.value || editor.playlistManageBusy.value || uncertainRefreshBusy.value) return
   playEvent('resetPlaylist')
   if (editor.playlistManagePrompt.value) {
     editor.cancelPlaylistManage()
     return
   }
-  editor.cancelUpdatePrompt()
+  if (leftoverFixtures.createPrompts.value) return
+  if (editor.updatePrompt.value) {
+    editor.cancelUpdatePrompt()
+    return
+  }
+  if (showUncertainCover.value) {
+    editor.dismissUncertainCreateCover()
+  }
 }
 
 function onPromptKeep() {
@@ -86,11 +109,28 @@ function onPromptKeep() {
 
 function onPromptConfirm() {
   playEvent('buttonPrimary')
+  if (showUpdatePrompt.value) {
+    editor.confirmUpdatePrompt()
+    return
+  }
   if (editor.playlistManagePrompt.value === 'delete') {
     void editor.confirmDelete()
     return
   }
-  editor.confirmUpdatePrompt()
+  if (showUncertainCover.value) {
+    void refreshPlaylistsAfterUncertainCreate()
+  }
+}
+
+async function refreshPlaylistsAfterUncertainCreate() {
+  if (!yoto || uncertainRefreshBusy.value) return
+  uncertainRefreshBusy.value = true
+  try {
+    await yoto.refresh({ quiet: true })
+  }
+  finally {
+    uncertainRefreshBusy.value = false
+  }
 }
 
 const isDropzoneLocked = computed(() => isPlaylistLocked.value || saveProgressTestMode.value)
@@ -429,7 +469,7 @@ watch(() => props.scrollToVideoId, async (id) => {
       class="playlist-dropzone__lock playlist-dropzone__cover absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 p-4 text-center"
       :class="coverTone"
       aria-live="polite"
-      :aria-busy="(showSaveProgressOverlay && !saveProgressTestMode) || editor.playlistManageBusy.value"
+      :aria-busy="(showSaveProgressOverlay && !saveProgressTestMode) || editor.playlistManageBusy.value || uncertainRefreshBusy"
     >
       <template v-if="showSaveProgressOverlay && displayedSaveProgress">
         <div class="playlist-dropzone__cover-inner">
@@ -446,13 +486,13 @@ watch(() => props.scrollToVideoId, async (id) => {
         </div>
       </template>
       <PlaylistUpdatePrompt
-        v-else-if="showUpdatePrompt && editor.updatePrompt.value"
-        :kind="editor.updatePrompt.value"
+        v-else-if="showUpdatePrompt && updatePromptKind"
+        :kind="updatePromptKind"
         surface="panel"
         id-prefix="playlist-update"
         :card-count="editor.updatePromptCardCount.value"
         :busy="editor.saveStarting.value"
-        :intent="editor.isNewPlaylist.value ? 'create' : 'update'"
+        :intent="updatePromptIntent"
         @cancel="onPromptCancel"
         @keep="onPromptKeep"
         @confirm="onPromptConfirm"
@@ -470,6 +510,15 @@ watch(() => props.scrollToVideoId, async (id) => {
         id-prefix="playlist-delete"
         :playlist-title="cardTitle"
         :busy="editor.playlistManageBusy.value"
+        @cancel="onPromptCancel"
+        @confirm="onPromptConfirm"
+      />
+      <PlaylistUpdatePrompt
+        v-else-if="showUncertainCover"
+        kind="uncertain"
+        surface="panel"
+        id-prefix="playlist-uncertain-create"
+        :busy="uncertainRefreshBusy"
         @cancel="onPromptCancel"
         @confirm="onPromptConfirm"
       />

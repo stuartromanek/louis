@@ -25,8 +25,11 @@ const trayFallback = defaultToastPlacement()
 const trayPlacement = computed(() => payload.value?.edge ?? trayFallback.edge)
 const trayAlign = computed(() => payload.value?.align ?? trayFallback.align)
 const trayTitle = computed(() => {
-  if (isInstallHelp.value) return 'Add to Home Screen'
-  if (isDuplicateToast.value) return 'Duplicate Track added'
+  const data = payload.value
+  if (!data) return undefined
+  if (data.kind === 'install-help') return 'Add to Home Screen'
+  if (data.kind === 'duplicate') return 'Duplicate Track added'
+  if (data.kind === 'error') return data.title
   return undefined
 })
 

@@ -61,6 +61,7 @@ const {
   resetSearch,
   playlistSummary,
   skippedUnavailable,
+  skippedMissingDuration,
   selectedCount,
   allImportableSelected,
   importableCount,
@@ -193,6 +194,7 @@ onUnmounted(() => {
         :channel="channelSummary"
         :search-source="searchSource"
         :skipped-unavailable="skippedUnavailable"
+        :skipped-missing-duration="skippedMissingDuration"
         :selected-count="selectedCount"
         :all-importable-selected="allImportableSelected"
         :importable-count="importableCount"

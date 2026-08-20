@@ -3,6 +3,7 @@ import type { PlaylistTrack, SaveJobState } from './types.ts'
 export const NEW_PLAYLIST_SAVE_KEY = 'new-playlist-draft'
 export const UNCERTAIN_CREATE_START_MESSAGE
   = 'Could not confirm whether Louis started creating this playlist. Check Playlists before trying again.'
+export const PLAYLIST_NOT_ON_YOTO_YET_MESSAGE = 'This playlist is not on Yoto yet.'
 
 export type SaveOperation = NonNullable<SaveJobState['operation']>
 
@@ -159,4 +160,54 @@ export function classifyCreateStartFailure(error: unknown): {
 
 export function shouldWarnBeforeUnload(isDirty: boolean, isLocked: boolean): boolean {
   return isDirty && !isLocked
+}
+
+export type InsertTracksOutcome =
+  | { kind: 'none' }
+  | { kind: 'added' }
+  | { kind: 'duplicate' }
+  | { kind: 'overflow', title: string, message: string }
+  | { kind: 'mixed', title: string, message: string }
+
+export function classifyInsertTracksOutcome(result: {
+  added: number
+  skipped: number
+  overflow: number
+}): InsertTracksOutcome {
+  const added = Math.max(0, result.added)
+  const skipped = Math.max(0, result.skipped)
+  const overflow = Math.max(0, result.overflow)
+  if (added === 0 && skipped === 0 && overflow === 0) return { kind: 'none' }
+
+  const categories = Number(added > 0) + Number(skipped > 0) + Number(overflow > 0)
+  if (categories > 1) {
+    const parts: string[] = []
+    if (added > 0) parts.push(`Added ${added}.`)
+    if (skipped > 0) {
+      parts.push(
+        skipped === 1
+          ? '1 was already on this playlist.'
+          : `${skipped} were already on this playlist.`,
+      )
+    }
+    if (overflow > 0) {
+      parts.push(`Couldn't add ${overflow} more (100-track limit).`)
+    }
+    return {
+      kind: 'mixed',
+      title: 'Couldn\'t add all tracks',
+      message: parts.join(' '),
+    }
+  }
+
+  if (overflow > 0) {
+    const extra = overflow === 1 ? 'track' : 'tracks'
+    return {
+      kind: 'overflow',
+      title: 'Playlist is full',
+      message: `Couldn't add ${overflow} more ${extra}. Yoto playlists allow up to 100 tracks.`,
+    }
+  }
+  if (skipped > 0) return { kind: 'duplicate' }
+  return { kind: 'added' }
 }

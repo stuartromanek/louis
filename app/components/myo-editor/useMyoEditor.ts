@@ -86,6 +86,8 @@ export interface MyoEditorContext {
   selectedCardId: Ref<string | null>
   isNewPlaylist: Ref<boolean>
   createOutcomeUncertain: Ref<boolean>
+  showUncertainCreateCover: ComputedRef<boolean>
+  dismissUncertainCreateCover: () => void
   cardTitle: Ref<string>
   playlist: Ref<PlaylistTrack[]>
   isEditing: ComputedRef<boolean>
@@ -234,6 +236,7 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
   const selectedCardId = ref<string | null>(null)
   const isNewPlaylist = ref(false)
   const createOutcomeUncertain = ref(false)
+  const uncertainCreateCoverDismissed = ref(false)
   const cardTitle = ref('')
   const playlist = ref<PlaylistTrack[]>([])
   const baselinePlaylist = ref<PlaylistTrack[]>([])
@@ -241,6 +244,11 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
   const isPodcast = ref(false)
   const loading = ref(false)
   const errorMessage = ref('')
+
+  function setCreateOutcomeUncertain(value: boolean) {
+    if (value) uncertainCreateCoverDismissed.value = false
+    createOutcomeUncertain.value = value
+  }
   const activeSaves = ref(new Map<string, CardSaveState>())
   const pendingDrafts = ref(new Map<string, CardSaveSnapshot>())
   const pendingCreateTracks = ref<PlaylistTrack[]>([])
@@ -534,7 +542,7 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
 
     if (isCreate) {
       isNewPlaylist.value = false
-      createOutcomeUncertain.value = false
+      setCreateOutcomeUncertain(false)
       selectedCardId.value = cardId
       clearPendingDraft(NEW_PLAYLIST_SAVE_KEY)
       if (existing) {
@@ -607,7 +615,7 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     removePersistedSave(saveKey)
 
     if (saveKey === NEW_PLAYLIST_SAVE_KEY && outcomeUncertain) {
-      createOutcomeUncertain.value = true
+      setCreateOutcomeUncertain(true)
     }
 
     if (selectedSaveKey.value === saveKey) {
@@ -880,7 +888,7 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     isPodcast.value = false
     originalCardDetail.value = null
     errorMessage.value = ''
-    createOutcomeUncertain.value = false
+    setCreateOutcomeUncertain(false)
     pendingCreateTracks.value = []
     cancelUpdatePrompt()
 
@@ -945,7 +953,7 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
       }
       catch (err: unknown) {
         const failure = classifyCreateStartFailure(err)
-        createOutcomeUncertain.value = failure.outcomeUncertain
+        setCreateOutcomeUncertain(failure.outcomeUncertain)
         errorMessage.value = failure.message
         playEvent('saveError')
         return false
@@ -1058,7 +1066,7 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     baselinePlaylist.value = []
     originalCardDetail.value = null
     errorMessage.value = ''
-    createOutcomeUncertain.value = false
+    setCreateOutcomeUncertain(false)
     cancelPlaylistManage(true)
     return true
   }
@@ -1070,7 +1078,7 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     errorMessage.value = ''
     if (isNewPlaylist.value) {
       cardTitle.value = ''
-      createOutcomeUncertain.value = false
+      setCreateOutcomeUncertain(false)
       pendingCreateTracks.value = []
       clearPendingDraft(NEW_PLAYLIST_SAVE_KEY)
     }
@@ -1485,7 +1493,7 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     catch (err: unknown) {
       if (cardId === NEW_PLAYLIST_SAVE_KEY) {
         const failure = classifyCreateStartFailure(err)
-        createOutcomeUncertain.value = failure.outcomeUncertain
+        setCreateOutcomeUncertain(failure.outcomeUncertain)
         errorMessage.value = failure.message
         playEvent('saveError')
         return
@@ -1541,6 +1549,15 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     persistPendingDrafts()
   })
 
+  const showUncertainCreateCover = computed(
+    () => createOutcomeUncertain.value && !uncertainCreateCoverDismissed.value,
+  )
+
+  function dismissUncertainCreateCover() {
+    if (!createOutcomeUncertain.value) return
+    uncertainCreateCoverDismissed.value = true
+  }
+
   function flushDraftsOnHide() {
     if (document.visibilityState === 'hidden') persistPendingDrafts()
   }
@@ -1571,6 +1588,8 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     selectedCardId,
     isNewPlaylist,
     createOutcomeUncertain,
+    showUncertainCreateCover,
+    dismissUncertainCreateCover,
     cardTitle,
     playlist,
     isEditing,

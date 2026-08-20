@@ -2,6 +2,7 @@
 import { MYO_EDITOR_KEY } from '~/components/myo-editor/keys'
 import type { EmojiId } from '~/utils/emojiCatalog'
 import { useSelectedResultTracks } from '~/components/youtube-picker/useYoutubePicker'
+import { PLAYLIST_NOT_ON_YOTO_YET_MESSAGE } from '#shared/myo-editor/standalonePlaylist'
 
 withDefaults(defineProps<{
   fill?: boolean
@@ -66,7 +67,9 @@ const content = computed((): { emoji: EmojiId | null, title: string, description
     return {
       emoji: 'MusicalNotes',
       title: 'Drop videos here',
-      description: 'Drag tracks from YouTube Search, or paste a video, playlist, or channel URL in Search.',
+      description: editor?.isNewPlaylist?.value
+        ? `${PLAYLIST_NOT_ON_YOTO_YET_MESSAGE} Drag tracks from YouTube Search, or paste a video, playlist, or channel URL in Search.`
+        : 'Drag tracks from YouTube Search, or paste a video, playlist, or channel URL in Search.',
     }
   }
 

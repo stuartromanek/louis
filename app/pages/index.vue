@@ -108,6 +108,12 @@ import { isSortable, isSortableOperation } from '@dnd-kit/vue/sortable'
 import { pickerVideoToPlaylistTrack } from '~/components/playlist/types'
 import type { YoutubeVideoSummary } from '~/components/youtube-picker/types'
 import { videoResultKey } from '#shared/myo-editor/youtubePlaylistImport'
+import { classifyInsertTracksOutcome } from '#shared/myo-editor/standalonePlaylist'
+import {
+  OVERFLOW_TOAST_TEST_MESSAGE,
+  OVERFLOW_TOAST_TEST_TITLE,
+  useLeftoverOutcomeFixtures,
+} from '~/components/playlist/leftoverOutcomeFixtures'
 import { useSelectedResultTracks } from '~/components/youtube-picker/useYoutubePicker'
 import {
   PLAYLIST_DROPZONE_ID,
@@ -173,6 +179,15 @@ const router = useRouter()
 
 const { playEvent } = useUiSound()
 const { showDuplicateTrack, showError } = useToast()
+const leftoverFixtures = useLeftoverOutcomeFixtures()
+
+watch(
+  () => leftoverFixtures.overflowToast.value,
+  (on) => {
+    if (on) showError(OVERFLOW_TOAST_TEST_MESSAGE, 0, OVERFLOW_TOAST_TEST_TITLE)
+  },
+  { immediate: true },
+)
 const { clear: clearResultSelection, isSelected, setInFlightKeys, clearInFlight } = useYoutubeResultSelection()
 const selectedResultTracks = useSelectedResultTracks()
 const { shouldShowSplash, splashHoldsGate, splashDebug, markSplashSeen } = useAppSplash()
@@ -333,6 +348,7 @@ function applyResultDrop(videos: YoutubeVideoSummary[], sourceTitle: string, atI
     return
   }
 
+  const outcome = classifyInsertTracksOutcome(result)
   if (result.added > 0) {
     playEvent('drop')
     if (result.firstAddedId) scrollToVideoId.value = result.firstAddedId
@@ -341,13 +357,12 @@ function applyResultDrop(videos: YoutubeVideoSummary[], sourceTitle: string, atI
     }
   }
 
-  if (result.overflow > 0) {
-    const extra = result.overflow === 1 ? 'track' : 'tracks'
-    showError(`Couldn't add ${result.overflow} more ${extra}. Yoto playlists allow up to 100 tracks.`)
+  if (outcome.kind === 'mixed' || outcome.kind === 'overflow') {
+    showError(outcome.message, 0, outcome.title)
     return
   }
 
-  if (result.added === 0 && result.skipped > 0) {
+  if (outcome.kind === 'duplicate') {
     showDuplicateTrack(sourceTitle)
   }
 }

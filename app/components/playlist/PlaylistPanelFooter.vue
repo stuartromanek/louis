@@ -6,7 +6,10 @@ import {
   getPlaylistCapacitySnapshot,
   YOTO_MYO_TRACK_COUNT_MESSAGE,
 } from '#shared/myo-editor/yotoMyoLimits'
-import { getStandalonePlaylistValidationError } from '#shared/myo-editor/standalonePlaylist'
+import {
+  getStandalonePlaylistValidationError,
+  PLAYLIST_NOT_ON_YOTO_YET_MESSAGE,
+} from '#shared/myo-editor/standalonePlaylist'
 
 const editor = inject(MYO_EDITOR_KEY, null)
 const { playEvent } = useUiSound()
@@ -33,6 +36,7 @@ const footerHint = computed(() => {
   if (isPodcast?.value) return 'Podcasts cannot be edited yet.'
   if (createOutcomeUncertain?.value) return 'Check Playlists before trying again.'
   if (overTrackLimit.value) return YOTO_MYO_TRACK_COUNT_MESSAGE
+  if (isNewPlaylist?.value && (cardTitle?.value ?? '').trim()) return PLAYLIST_NOT_ON_YOTO_YET_MESSAGE
   return ''
 })
 

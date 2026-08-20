@@ -25,6 +25,25 @@ const testSaveProgressHref = computed(() => hrefWithQuery({
   testSaveProgress: testSaveProgressActive.value ? undefined : '',
 }))
 
+function queryFlag(key: string) {
+  return computed(() => route.query[key] !== undefined)
+}
+
+function queryFlagHref(key: string, active: { value: boolean }) {
+  return computed(() => hrefWithQuery({
+    [key]: active.value ? undefined : '',
+  }))
+}
+
+const testUncertainCreateActive = queryFlag('testUncertainCreate')
+const testUncertainCreateHref = queryFlagHref('testUncertainCreate', testUncertainCreateActive)
+const testCreatePromptsActive = queryFlag('testCreatePrompts')
+const testCreatePromptsHref = queryFlagHref('testCreatePrompts', testCreatePromptsActive)
+const testPlaylistBannerActive = queryFlag('testPlaylistBanner')
+const testPlaylistBannerHref = queryFlagHref('testPlaylistBanner', testPlaylistBannerActive)
+const testOverflowToastActive = queryFlag('testOverflowToast')
+const testOverflowToastHref = queryFlagHref('testOverflowToast', testOverflowToastActive)
+
 const desktopPrefsHref = computed(() => hrefWithQuery({
   desktopPrefs: desktopPrefsDebug.value ? '0' : '1',
 }))
@@ -90,6 +109,30 @@ function onRefreshCards() {
         class="dev-tools-strip__text font-maru-mono text-maru-black underline"
       >
         {{ testSaveProgressActive ? 'Disable' : 'Enable' }} ?testSaveProgress
+      </NuxtLink>
+      <NuxtLink
+        :to="testUncertainCreateHref"
+        class="dev-tools-strip__text font-maru-mono text-maru-black underline"
+      >
+        {{ testUncertainCreateActive ? 'Disable' : 'Enable' }} ?testUncertainCreate
+      </NuxtLink>
+      <NuxtLink
+        :to="testCreatePromptsHref"
+        class="dev-tools-strip__text font-maru-mono text-maru-black underline"
+      >
+        {{ testCreatePromptsActive ? 'Disable' : 'Enable' }} ?testCreatePrompts
+      </NuxtLink>
+      <NuxtLink
+        :to="testPlaylistBannerHref"
+        class="dev-tools-strip__text font-maru-mono text-maru-black underline"
+      >
+        {{ testPlaylistBannerActive ? 'Disable' : 'Enable' }} ?testPlaylistBanner
+      </NuxtLink>
+      <NuxtLink
+        :to="testOverflowToastHref"
+        class="dev-tools-strip__text font-maru-mono text-maru-black underline"
+      >
+        {{ testOverflowToastActive ? 'Disable' : 'Enable' }} ?testOverflowToast
       </NuxtLink>
       <NuxtLink
         :to="desktopPrefsHref"

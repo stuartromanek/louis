@@ -64,12 +64,28 @@ describe('playlist import results', () => {
     ])
 
     assert.equal(mapped.skippedUnavailable, 1)
+    assert.equal(mapped.skippedMissingDuration, 0)
     assert.deepEqual(
       mapped.videos.map(video => ({ id: video.id, resultKey: video.resultKey })),
       [
         { id: 'one', resultKey: 'item-one' },
         { id: 'two', resultKey: 'item-two' },
       ],
+    )
+  })
+
+  it('counts missing-duration rows that stay in the list', () => {
+    const mapped = mapPlaylistImportItems([
+      item('one'),
+      item('unknown', { durationSeconds: undefined }),
+      item('gone', { available: false }),
+    ])
+
+    assert.equal(mapped.skippedUnavailable, 1)
+    assert.equal(mapped.skippedMissingDuration, 1)
+    assert.deepEqual(
+      mapped.videos.map(video => video.id),
+      ['one', 'unknown'],
     )
   })
 

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-export type UpdatePromptKind = 'capacity' | 'normalize' | 'delete'
+import { UNCERTAIN_CREATE_START_MESSAGE } from '#shared/myo-editor/standalonePlaylist'
+
+export type UpdatePromptKind = 'capacity' | 'normalize' | 'delete' | 'uncertain'
 export type UpdatePromptSurface = 'footer' | 'dialog' | 'panel' | 'menu'
 
 const props = withDefaults(defineProps<{
@@ -34,10 +36,12 @@ const isCreate = computed(() => props.intent === 'create')
 const title = computed(() => {
   if (props.kind === 'capacity') return 'Over MYO limit'
   if (props.kind === 'delete') return 'Delete this playlist?'
+  if (props.kind === 'uncertain') return 'Could not confirm this playlist'
   return 'Normalize new track levels?'
 })
 
 const body = computed(() => {
+  if (props.kind === 'uncertain') return UNCERTAIN_CREATE_START_MESSAGE
   if (props.kind === 'delete') {
     const name = props.playlistTitle.trim() || 'this playlist'
     return `This removes ${name} from Yoto. This can’t be undone.`
@@ -53,9 +57,14 @@ const body = computed(() => {
     : 'Attempt to normalize the volume levels of the new tracks. Existing tracks stay as they are.'
 })
 
-const secondaryLabel = computed(() => (props.kind === 'normalize' ? 'Keep as-is' : 'Cancel'))
+const secondaryLabel = computed(() => {
+  if (props.kind === 'normalize') return 'Keep as-is'
+  if (props.kind === 'uncertain') return 'Dismiss'
+  return 'Cancel'
+})
 const primaryLabel = computed(() => {
   if (props.kind === 'delete') return props.busy ? 'Deleting…' : 'Delete'
+  if (props.kind === 'uncertain') return props.busy ? 'Refreshing…' : 'Refresh Playlists'
   if (props.kind === 'capacity') return isCreate.value ? 'Create anyway' : 'Update anyway'
   return 'Normalize new track levels'
 })

@@ -96,13 +96,13 @@ export default defineEventHandler(async (event): Promise<YoutubePlaylistImportRe
   if (!playlistItem) {
     throw createError({
       statusCode: 404,
-      message: 'Public YouTube playlist not found',
+      message: 'Playlist not found or not public',
     })
   }
   if (playlistItem?.status?.privacyStatus !== 'public') {
     throw createError({
       statusCode: 400,
-      message: 'Only public YouTube playlists can be imported',
+      message: 'Only public playlists can be imported',
     })
   }
 
