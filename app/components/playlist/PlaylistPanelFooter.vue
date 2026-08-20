@@ -19,17 +19,7 @@ const selectedCardId = editor?.selectedCardId
 const isPodcast = editor?.isPodcast
 const playlist = editor?.playlist
 
-const showCapacityConfirm = ref(false)
-
 const capacity = computed(() => getPlaylistCapacitySnapshot(playlist?.value ?? []))
-
-/** Same threshold as capacity meter red: at or over 100%. */
-const overCapacity = computed(() => {
-  const { trackCount, trackMax, knownDurationSeconds, durationMax } = capacity.value
-  const overTracks = trackMax > 0 && trackCount / trackMax >= 1
-  const overTime = durationMax > 0 && knownDurationSeconds / durationMax >= 1
-  return overTracks || overTime
-})
 
 const overTrackLimit = computed(
   () => capacity.value.trackCount > capacity.value.trackMax,
@@ -56,64 +46,37 @@ const canReset = computed(
   () => Boolean(isDirty?.value && !loading?.value && !isPlaylistLocked?.value && !saveProgressTestMode.value),
 )
 
-function closeCapacityConfirm() {
-  showCapacityConfirm.value = false
-}
+const askingUpdatePrompt = computed(
+  () => Boolean(editor?.updatePrompt.value) && !editor.saveStarting.value,
+)
+
+const updateBusy = computed(
+  () => Boolean(isPlaylistLocked?.value || saveProgressTestMode.value || editor?.saveStarting.value),
+)
 
 function onUpdate() {
-  if (!canUpdate.value) {
-    playEvent('disabled')
-    return
-  }
-
-  if (overCapacity.value) {
-    playEvent('buttonPrimary')
-    showCapacityConfirm.value = true
-    return
-  }
-
-  playEvent('buttonPrimary')
-  void editor?.updateCard()
-}
-
-function onConfirmRiskyUpdate() {
-  if (!canUpdate.value) {
+  if (!canUpdate.value || updateBusy.value) {
     playEvent('disabled')
     return
   }
   playEvent('buttonPrimary')
-  closeCapacityConfirm()
-  void editor?.updateCard({ acknowledgeCapacityRisk: true })
+  editor?.requestUpdate('footer')
 }
 
-function onCancelRiskyUpdate() {
+function onCancelUpdate() {
   playEvent('resetPlaylist')
-  closeCapacityConfirm()
+  editor?.cancelUpdatePrompt()
 }
 
 function onReset() {
-  if (!canReset.value) {
+  if (!canReset.value || updateBusy.value) {
     playEvent('disabled')
     return
   }
-  closeCapacityConfirm()
+  editor?.cancelUpdatePrompt()
   playEvent('resetPlaylist')
   editor?.resetChanges()
 }
-
-watch(
-  () => [
-    overCapacity.value,
-    canUpdate.value,
-    isPlaylistLocked?.value,
-    saveProgressTestMode.value,
-  ],
-  () => {
-    if (!overCapacity.value || !canUpdate.value || isPlaylistLocked?.value || saveProgressTestMode.value) {
-      closeCapacityConfirm()
-    }
-  },
-)
 </script>
 
 <template>
@@ -129,58 +92,36 @@ watch(
       <div class="w-full flex items-center gap-2 sm:gap-3 min-w-0">
         <PlaylistCapacityMeters />
         <div class="ml-auto flex items-center gap-2 sm:gap-3 shrink-0">
-          <button
-            type="button"
-            class="panel-footer-btn panel-footer-btn--short panel-footer-btn--secondary shrink-0"
-            :aria-disabled="!canReset"
-            :tabindex="canReset ? 0 : -1"
-            @click="onReset"
-          >
-            <span class="panel-footer-btn__label">Reset</span>
-          </button>
-          <button
-            type="button"
-            class="panel-footer-btn panel-footer-btn--short panel-footer-btn--primary shrink-0"
-            :aria-disabled="!canUpdate"
-            :tabindex="canUpdate ? 0 : -1"
-            @click="onUpdate"
-          >
-            <span class="panel-footer-btn__label">{{ isPlaylistLocked?.value || saveProgressTestMode ? 'Updating...' : 'Update' }}</span>
-          </button>
+          <template v-if="askingUpdatePrompt">
+            <button
+              type="button"
+              class="panel-footer-btn panel-footer-btn--short panel-footer-btn--secondary shrink-0"
+              @click="onCancelUpdate"
+            >
+              <span class="panel-footer-btn__label">Cancel</span>
+            </button>
+          </template>
+          <template v-else>
+            <button
+              type="button"
+              class="panel-footer-btn panel-footer-btn--short panel-footer-btn--secondary shrink-0"
+              :aria-disabled="!canReset || updateBusy"
+              :tabindex="canReset && !updateBusy ? 0 : -1"
+              @click="onReset"
+            >
+              <span class="panel-footer-btn__label">Reset</span>
+            </button>
+            <button
+              type="button"
+              class="panel-footer-btn panel-footer-btn--short panel-footer-btn--primary shrink-0"
+              :aria-disabled="!canUpdate || updateBusy"
+              :tabindex="canUpdate && !updateBusy ? 0 : -1"
+              @click="onUpdate"
+            >
+              <span class="panel-footer-btn__label">{{ updateBusy ? 'Updating...' : 'Update' }}</span>
+            </button>
+          </template>
         </div>
-      </div>
-    </div>
-
-    <div
-      class="footer-capacity-confirm"
-      :class="{ 'footer-capacity-confirm--open': showCapacityConfirm }"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="footer-capacity-confirm-title"
-      :aria-hidden="showCapacityConfirm ? undefined : 'true'"
-      :inert="showCapacityConfirm ? undefined : true"
-    >
-      <p
-        id="footer-capacity-confirm-title"
-        class="footer-capacity-confirm__copy font-maru-mono text-pretty"
-      >
-        Over MYO limit — update may fail.
-      </p>
-      <div class="footer-capacity-confirm__actions">
-        <button
-          type="button"
-          class="panel-footer-btn panel-footer-btn--short panel-footer-btn--secondary shrink-0"
-          @click="onCancelRiskyUpdate"
-        >
-          <span class="panel-footer-btn__label">Cancel</span>
-        </button>
-        <button
-          type="button"
-          class="panel-footer-btn panel-footer-btn--short panel-footer-btn--primary shrink-0"
-          @click="onConfirmRiskyUpdate"
-        >
-          <span class="panel-footer-btn__label">Update anyway</span>
-        </button>
       </div>
     </div>
   </div>

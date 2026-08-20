@@ -19,6 +19,15 @@ import {
 } from './draftPersistence'
 import type { SaveJobState, YotoCardDetail } from './types'
 import { getPlaylistPreflightLimitError } from '#shared/myo-editor/yotoMyoLimits'
+import {
+  collectPendingUpdateTargets,
+  planPendingUpdates,
+  type PendingUpdateTarget,
+} from '#shared/myo-editor/planPendingUpdates'
+
+export type UpdatePromptKind = 'capacity' | 'normalize'
+export type UpdatePromptSurface = 'footer' | 'dialog'
+type UpdatePromptScope = 'selected' | 'pending'
 
 export interface SaveProgress {
   phase: SaveJobState['status']
@@ -63,12 +72,29 @@ export interface MyoEditorContext {
   errorMessage: Ref<string>
   isDirty: ComputedRef<boolean>
   pendingPlaylistUpdateCount: ComputedRef<number>
+  /** Card ids with stashed unpublished drafts (not including the live selection). */
+  pendingDraftCardIds: ComputedRef<string[]>
+  /** Title for a single pending update (live dirty card, else first stash). */
+  pendingUpdateTitle: ComputedRef<string>
+  /** How many playlists the current capacity/normalize prompt applies to. */
+  updatePromptCardCount: Ref<number>
   isCardSaving: (cardId: string) => boolean
   isKnownPodcast: (cardId: string) => boolean
   selectCard: (card: YotoMyoCard) => Promise<void>
   clearSelection: (force?: boolean) => boolean
   resetChanges: () => void
-  updateCard: (options?: { acknowledgeCapacityRisk?: boolean }) => Promise<void>
+  /** Start Update for the selected card: capacity, then normalize if extracting, then save. */
+  requestUpdate: (surface?: UpdatePromptSurface) => void
+  /** Start Update for every pending dirty playlist without requiring a selected card. */
+  requestUpdatePending: (surface?: UpdatePromptSurface) => void
+  cancelUpdatePrompt: () => void
+  confirmUpdatePrompt: () => void
+  keepVolumeAsIs: () => void
+  updatePrompt: Ref<UpdatePromptKind | null>
+  updatePromptSurface: Ref<UpdatePromptSurface | null>
+  /** True after Normalize / Keep as-is until the save overlay owns the playlist. */
+  saveStarting: Ref<boolean>
+  updateCard: (options?: { acknowledgeCapacityRisk?: boolean, normalizeVolume?: boolean }) => Promise<void>
   setTrackArt: (trackId: string, icon16x16: string, previewUrl: string) => void
   /** Local apply + optional instant icon patch for tracks already on the saved card. */
   persistTrackArt: (
@@ -317,6 +343,19 @@ export function useMyoEditor() {
     return draftCount + (pendingDrafts.value.has(selectedId!) ? 0 : 1)
   })
 
+  const pendingDraftCardIds = computed(() => [...pendingDrafts.value.keys()])
+
+  const pendingUpdateTitle = computed(() => {
+    if (selectedCardId.value && isDirty.value && !isPodcast.value) {
+      return cardTitle.value.trim()
+    }
+    for (const snapshot of pendingDrafts.value.values()) {
+      const title = snapshot.cardTitle.trim()
+      if (title) return title
+    }
+    return ''
+  })
+
   const selectedSaveState = computed(() => {
     const cardId = selectedCardId.value
     if (!cardId) return null
@@ -531,7 +570,7 @@ export function useMyoEditor() {
   async function startSaveJob(
     cardId: string,
     snapshot: CardSaveSnapshot,
-    options?: { acknowledgeCapacityRisk?: boolean },
+    options?: { acknowledgeCapacityRisk?: boolean, normalizeVolume?: boolean },
   ) {
     const { jobId } = await $fetch<{ jobId: string }>(
       `/api/yoto/content/${cardId}/save`,
@@ -542,6 +581,7 @@ export function useMyoEditor() {
           baselinePlaylist: snapshot.baseline,
           cardTitle: snapshot.cardTitle,
           acknowledgeCapacityRisk: options?.acknowledgeCapacityRisk === true,
+          normalizeVolume: options?.normalizeVolume === true,
         },
       },
     )
@@ -788,17 +828,158 @@ export function useMyoEditor() {
     }
   }
 
-  async function updateCard(options?: { acknowledgeCapacityRisk?: boolean }) {
-    const cardId = selectedCardId.value
-    if (!cardId || !isDirty.value || loading.value || isPlaylistLocked.value) return
+  const updatePrompt = ref<UpdatePromptKind | null>(null)
+  const updatePromptSurface = ref<UpdatePromptSurface | null>(null)
+  const updatePromptCardCount = ref(1)
+  const saveStarting = ref(false)
+  let pendingCapacityAck = false
+  let updateScope: UpdatePromptScope = 'selected'
 
-    if (isPodcast.value) {
-      errorMessage.value = 'Podcast cards cannot be edited yet.'
+  function livePendingInput() {
+    const cardId = selectedCardId.value
+    if (!cardId || loading.value) return null
+    return {
+      cardId,
+      snapshot: {
+        playlist: clonePlaylist(playlist.value),
+        baseline: clonePlaylist(baselinePlaylist.value),
+        cardTitle: cardTitle.value,
+      },
+      isDirty: isDirty.value,
+      isPodcast: isPodcast.value,
+      isSaving: isCardSaving(cardId),
+      cardDetail: originalCardDetail.value,
+    }
+  }
+
+  function collectAllPending(): PendingUpdateTarget[] {
+    return collectPendingUpdateTargets({
+      live: livePendingInput(),
+      drafts: pendingDrafts.value,
+      isPodcast: isKnownPodcast,
+      isSaving: isCardSaving,
+    })
+  }
+
+  function targetsForCurrentScope(): PendingUpdateTarget[] {
+    if (updateScope === 'selected') {
+      const live = livePendingInput()
+      if (!live) return []
+      return collectPendingUpdateTargets({
+        live,
+        drafts: new Map(),
+        isPodcast: isKnownPodcast,
+        isSaving: isCardSaving,
+      })
+    }
+    return collectAllPending()
+  }
+
+  function clearUpdatePrompt() {
+    updatePrompt.value = null
+    updatePromptSurface.value = null
+    saveStarting.value = false
+    updatePromptCardCount.value = 1
+  }
+
+  function cancelUpdatePrompt() {
+    clearUpdatePrompt()
+    pendingCapacityAck = false
+    updateScope = 'selected'
+  }
+
+  function beginPromptedUpdate(
+    surface: UpdatePromptSurface,
+    scope: UpdatePromptScope,
+    targets: PendingUpdateTarget[],
+  ) {
+    if (targets.length === 0) return
+    pendingCapacityAck = false
+    updateScope = scope
+    updatePromptSurface.value = surface
+    updatePromptCardCount.value = targets.length
+    if (planPendingUpdates(targets).overCapacity) {
+      updatePrompt.value = 'capacity'
       return
     }
+    continueAfterCapacity()
+  }
 
-    if (!options?.acknowledgeCapacityRisk) {
-      const limitError = getPlaylistPreflightLimitError(playlist.value)
+  function continueAfterCapacity() {
+    const targets = targetsForCurrentScope()
+    if (targets.length === 0) {
+      cancelUpdatePrompt()
+      return
+    }
+    updatePromptCardCount.value = targets.length
+    if (planPendingUpdates(targets).extractsYoutube) {
+      updatePrompt.value = 'normalize'
+      return
+    }
+    void startQueuedUpdates({
+      acknowledgeCapacityRisk: pendingCapacityAck,
+      normalizeVolume: false,
+    })
+  }
+
+  function requestUpdate(surface: UpdatePromptSurface = 'footer') {
+    const cardId = selectedCardId.value
+    if (!cardId || !isDirty.value || loading.value || isPlaylistLocked.value || isPodcast.value) return
+    const live = livePendingInput()
+    if (!live) return
+    beginPromptedUpdate(
+      surface,
+      'selected',
+      collectPendingUpdateTargets({
+        live,
+        drafts: new Map(),
+        isPodcast: isKnownPodcast,
+        isSaving: isCardSaving,
+      }),
+    )
+  }
+
+  function requestUpdatePending(surface: UpdatePromptSurface = 'dialog') {
+    if (hasActiveSaves.value) return
+    beginPromptedUpdate(surface, 'pending', collectAllPending())
+  }
+
+  function confirmUpdatePrompt() {
+    if (updatePrompt.value === 'capacity') {
+      pendingCapacityAck = true
+      continueAfterCapacity()
+      return
+    }
+    if (updatePrompt.value === 'normalize') {
+      saveStarting.value = true
+      void startQueuedUpdates({
+        acknowledgeCapacityRisk: pendingCapacityAck,
+        normalizeVolume: true,
+      })
+    }
+  }
+
+  function keepVolumeAsIs() {
+    if (updatePrompt.value !== 'normalize') return
+    saveStarting.value = true
+    void startQueuedUpdates({
+      acknowledgeCapacityRisk: pendingCapacityAck,
+      normalizeVolume: false,
+    })
+  }
+
+  async function startUpdateForCard(
+    target: PendingUpdateTarget,
+    options: { acknowledgeCapacityRisk?: boolean, normalizeVolume?: boolean },
+  ) {
+    const { cardId, snapshot } = target
+    if (isCardSaving(cardId) || isKnownPodcast(cardId)) return
+
+    const acknowledgeCapacityRisk = options.acknowledgeCapacityRisk === true && target.overCapacity
+    const normalizeVolume = options.normalizeVolume === true && target.extractsYoutube
+
+    if (!acknowledgeCapacityRisk) {
+      const limitError = getPlaylistPreflightLimitError(snapshot.playlist)
       if (limitError) {
         errorMessage.value = limitError
         playEvent('saveError')
@@ -806,23 +987,53 @@ export function useMyoEditor() {
       }
     }
 
-    errorMessage.value = ''
-
-    const snapshot: CardSaveSnapshot = {
-      playlist: clonePlaylist(playlist.value),
-      baseline: clonePlaylist(baselinePlaylist.value),
-      cardTitle: cardTitle.value,
+    if (selectedCardId.value === cardId) {
+      errorMessage.value = ''
     }
 
     try {
       await startSaveJob(cardId, snapshot, {
-        acknowledgeCapacityRisk: options?.acknowledgeCapacityRisk === true,
+        acknowledgeCapacityRisk,
+        normalizeVolume,
       })
     }
     catch (err: unknown) {
       const e = err as { statusMessage?: string; message?: string }
       errorMessage.value = e.statusMessage ?? e.message ?? 'Failed to update card'
     }
+  }
+
+  async function startQueuedUpdates(options: {
+    acknowledgeCapacityRisk?: boolean
+    normalizeVolume?: boolean
+  }) {
+    const targets = targetsForCurrentScope()
+    updatePrompt.value = null
+    updatePromptSurface.value = null
+    saveStarting.value = true
+
+    if (targets.length === 0) {
+      saveStarting.value = false
+      pendingCapacityAck = false
+      updatePromptCardCount.value = 1
+      updateScope = 'selected'
+      return
+    }
+
+    try {
+      await Promise.all(targets.map(target => startUpdateForCard(target, options)))
+    }
+    finally {
+      saveStarting.value = false
+      pendingCapacityAck = false
+      updatePromptCardCount.value = 1
+      updateScope = 'selected'
+    }
+  }
+
+  async function updateCard(options?: { acknowledgeCapacityRisk?: boolean, normalizeVolume?: boolean }) {
+    updateScope = 'selected'
+    await startQueuedUpdates(options ?? {})
   }
 
   onMounted(() => {
@@ -841,6 +1052,20 @@ export function useMyoEditor() {
   function flushDraftsOnHide() {
     if (document.visibilityState === 'hidden') persistPendingDrafts()
   }
+
+  watch(
+    [isDirty, isPlaylistLocked, isPodcast, selectedCardId, pendingPlaylistUpdateCount],
+    () => {
+      if (!updatePrompt.value) return
+      if (updateScope === 'pending') {
+        if (collectAllPending().length === 0) cancelUpdatePrompt()
+        return
+      }
+      if (!isDirty.value || isPlaylistLocked.value || isPodcast.value || !selectedCardId.value) {
+        cancelUpdatePrompt()
+      }
+    },
+  )
 
   // Keep durable drafts in sync while editing — debounced; flushed on hide/unmount.
   watch(
@@ -865,11 +1090,22 @@ export function useMyoEditor() {
     errorMessage,
     isDirty,
     pendingPlaylistUpdateCount,
+    pendingDraftCardIds,
+    pendingUpdateTitle,
     isCardSaving,
     isKnownPodcast,
     selectCard,
     clearSelection,
     resetChanges,
+    requestUpdate,
+    requestUpdatePending,
+    cancelUpdatePrompt,
+    confirmUpdatePrompt,
+    keepVolumeAsIs,
+    updatePrompt,
+    updatePromptSurface,
+    updatePromptCardCount,
+    saveStarting,
     updateCard,
     setTrackArt,
     persistTrackArt,

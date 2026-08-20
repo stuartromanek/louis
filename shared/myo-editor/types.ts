@@ -133,6 +133,7 @@ export type SaveJobPhase =
 export type SaveTrackStatus =
   | 'pending'
   | 'extracting'
+  | 'leveling'
   | 'uploading'
   | 'transcoding'
   | 'ready'

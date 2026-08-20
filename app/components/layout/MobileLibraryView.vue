@@ -33,7 +33,7 @@ if (!yoto || !editor || !chrome) {
 const { playEvent } = useUiSound()
 const saveProgressTestMode = useSaveProgressTestMode()
 
-const { cards, status, errorMessage, connected } = yoto
+const { cards, status, cardsLoading, errorMessage, connected } = yoto
 const {
   playlist,
   selectedCardId,
@@ -44,14 +44,15 @@ const {
   isPodcast,
   selectCard,
   resetChanges,
-  updateCard,
+  requestUpdate,
+  cancelUpdatePrompt,
   saveProgress,
   isKnownPodcast,
 } = editor
 
 const { libraryMode, openCard } = chrome
 
-const showCapacityConfirm = ref(false)
+const CARD_PLACEHOLDERS = [0, 1, 2, 3, 4, 5, 6, 7]
 
 const selectedCard = computed(
   () => cards.value.find(c => c.cardId === selectedCardId.value) ?? null,
@@ -79,13 +80,6 @@ const canUpdate = computed(
 )
 
 const capacity = computed(() => getPlaylistCapacitySnapshot(playlist.value))
-
-const overCapacity = computed(() => {
-  const { trackCount, trackMax, knownDurationSeconds, durationMax } = capacity.value
-  const overTracks = trackMax > 0 && trackCount / trackMax >= 1
-  const overTime = durationMax > 0 && knownDurationSeconds / durationMax >= 1
-  return overTracks || overTime
-})
 
 const overTrackLimit = computed(
   () => capacity.value.trackCount > capacity.value.trackMax,
@@ -118,7 +112,7 @@ function onReset() {
     playEvent('disabled')
     return
   }
-  showCapacityConfirm.value = false
+  cancelUpdatePrompt()
   clearPendingRemoveTimer()
   pendingRemoveTrackId.value = null
   trackLeavePending.value = false
@@ -131,35 +125,9 @@ function onUpdate() {
     playEvent('disabled')
     return
   }
-  if (overCapacity.value) {
-    playEvent('buttonPrimary')
-    showCapacityConfirm.value = true
-    return
-  }
   playEvent('buttonPrimary')
-  void updateCard()
+  requestUpdate('footer')
 }
-
-function onConfirmRiskyUpdate() {
-  if (!canUpdate.value) {
-    playEvent('disabled')
-    return
-  }
-  playEvent('buttonPrimary')
-  showCapacityConfirm.value = false
-  void updateCard({ acknowledgeCapacityRisk: true })
-}
-
-function onCancelRiskyUpdate() {
-  playEvent('resetPlaylist')
-  showCapacityConfirm.value = false
-}
-
-watch(() => chrome.isPhone.value, (phone) => {
-  if (!phone) {
-    showCapacityConfirm.value = false
-  }
-})
 
 function moveTrack(index: number, delta: number) {
   if (tracksLocked.value) {
@@ -319,7 +287,7 @@ onUnmounted(() => {
         v-if="status === 'loading'"
         class="empty-state flex-1 empty-state-meta"
       >
-        Loading MYO cards...
+        Checking Yoto…
       </p>
       <p
         v-else-if="status === 'unconfigured' || status === 'error'"
@@ -336,6 +304,25 @@ onUnmounted(() => {
           Connect your Yoto account to load your MYO cards.
         </p>
       </div>
+      <ul
+        v-else-if="cardsLoading"
+        class="mobile-library-grid list-none m-0 p-2 overflow-y-auto flex-1 min-h-0"
+        aria-busy="true"
+        aria-label="Loading MYO cards"
+      >
+        <li
+          v-for="n in CARD_PLACEHOLDERS"
+          :key="`ph-${n}`"
+          aria-hidden="true"
+        >
+          <div class="mobile-library-tile mobile-library-tile--placeholder">
+            <div class="mobile-library-tile__art-wrap">
+              <div class="mobile-library-tile__art mobile-library-tile__art--empty library-placeholder__pulse" />
+            </div>
+            <span class="mobile-library-tile__title library-placeholder__title">&nbsp;</span>
+          </div>
+        </li>
+      </ul>
       <p
         v-else-if="cards.length === 0"
         class="empty-state flex-1 empty-state-meta"
@@ -587,34 +574,6 @@ onUnmounted(() => {
           </div>
         </Tray>
       </div>
-
-      <div
-        v-if="showCapacityConfirm"
-        class="footer-capacity-confirm footer-capacity-confirm--open"
-        role="dialog"
-        aria-modal="true"
-      >
-        <p class="footer-capacity-confirm__copy font-maru-mono text-pretty">
-          Over MYO limit — update may fail.
-        </p>
-        <div class="footer-capacity-confirm__actions">
-          <button
-            type="button"
-            class="panel-footer-btn panel-footer-btn--short panel-footer-btn--secondary"
-            @click="onCancelRiskyUpdate"
-          >
-            <span class="panel-footer-btn__label">Cancel</span>
-          </button>
-          <button
-            type="button"
-            class="panel-footer-btn panel-footer-btn--short panel-footer-btn--primary"
-            @click="onConfirmRiskyUpdate"
-          >
-            <span class="panel-footer-btn__label">Update anyway</span>
-          </button>
-        </div>
-      </div>
-
     </div>
   </div>
 </template>

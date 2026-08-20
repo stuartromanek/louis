@@ -60,10 +60,6 @@ Spike replacing YouTube Data API v3 search/metadata with bundled/`PATH` yt-dlp (
 
 Cut intros/outros (and similar) before save. Non-trivial UX; trim points per track in the playlist editor.
 
-### Audio normalize
-
-Level volumes across tracks in a playlist so mixed YouTube sources play at a consistent loudness on the Yoto.
-
 ## Done / shipped
 
 Tracked in git history and the README feature list rather than here.

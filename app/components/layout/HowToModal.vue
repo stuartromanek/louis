@@ -58,6 +58,7 @@ const sections = [
       'On desktop, drag to reorder; on a phone, use the track menu to move or remove',
       'Watch capacity meters for track count and length',
       'Tap Update in the playlist footer (desktop) or Menu / card detail (phone) — saving can take a few minutes',
+      'If Update downloads YouTube audio, you can normalize those new tracks; existing card tracks stay as they are',
     ],
   },
 ] as const

@@ -135,7 +135,9 @@
   --tray-stagger-base: 40ms;
   --tray-stagger-step: 60ms;
   --dur-tray-stagger: 320ms;
+  --dur-tray-stagger-exit: 220ms;
   --dur-tray-enter: 280ms;
+  --dur-tray-exit: 320ms;
   --dur-toast-dismiss-enter: 560ms;
   z-index: 95;
 }
@@ -200,32 +202,36 @@
   font-weight: 500;
 }
 
-.pwa-install-help__steps {
+/* Titled toasts: header bar + typed body (install-help chrome). */
+.tray--toast.tray--titled .tray__face {
+  padding-bottom: 0;
+}
+
+.tray--toast.tray--titled .tray__handle {
+  background: var(--color-maru-black);
+}
+
+.tray--toast.tray--titled .tray__header {
+  border-bottom: 3px solid var(--color-maru-black);
+  padding: 0.7rem 0.85rem 0.55rem;
+}
+
+.tray--toast.tray--titled .tray__title {
+  translate: 0 0.12em;
+}
+
+.tray--toast.tray--titled .tray__body {
+  background: #fff5f0;
+  padding: 0.75rem 0.85rem 0.9rem;
+  border-radius: 0 0 var(--radius-maru) var(--radius-maru);
+}
+
+.tray--toast.tray--titled .tray__body :is(.toast__message, .pwa-install-help__steps) {
   line-height: var(--text-maru-empty-body--line-height);
 }
 
 .tray--toast:has(.pwa-install-help__steps) .tray__face {
   background: var(--color-maru-yellow);
-  padding-bottom: 0;
-}
-
-.tray--toast:has(.pwa-install-help__steps) .tray__handle {
-  background: var(--color-maru-black);
-}
-
-.tray--toast:has(.pwa-install-help__steps) .tray__header {
-  border-bottom: 3px solid var(--color-maru-black);
-  padding: 0.7rem 0.85rem 0.55rem;
-}
-
-.tray--toast:has(.pwa-install-help__steps) .tray__title {
-  translate: 0 0.12em;
-}
-
-.tray--toast:has(.pwa-install-help__steps) .tray__body {
-  background: #fff5f0;
-  padding: 0.75rem 0.85rem 0.9rem;
-  border-radius: 0 0 var(--radius-maru) var(--radius-maru);
 }
 
 .toast__dismiss {

@@ -20,8 +20,13 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - Desktop **Use default client** prefills Louis's bundled public Yoto PKCE client ID (setup wizard + Settings → Advanced).
 - **Add to Home** in the phone Menu and tablet/desktop status bar (browser install prompt, or a toast with Share / Install steps when the prompt is unavailable).
 - Settings → Advanced: **Check for updates** / **Update yt-dlp** installs the official nightly into persistent app data (Docker `/data/audio/bin`, Electron userData). `npm run dev` is check-only.
+- **Normalize new track levels?** at Update when this save will download YouTube audio — opt-in EBU R128 leveling (`I=-16`) for those extracts only. Existing card tracks stay unchanged.
+- Phone Menu can Update every pending dirty playlist without opening a card first. Capacity and normalize prompts are answered once for the whole batch, in the playlist cover (desktop) or by taking over Menu Update (phone).
+- Duplicate-track toast when adding a YouTube video that is already on the card (same playlist row or same YouTube id); it is not added again.
 
 ### Changed
+- Menu and the desktop status bar paint as soon as auth status is known; the library fetch no longer blocks chrome. Library / fan / add-to-card show placeholders while cards load.
+- Toasts default to bottom-end (top on iOS so they don't cover Safari's Share control).
 - Yoto OAuth scopes now include `user:icons:manage` (reconnect if icon upload/patch is denied).
 - Docker / GHCR: OAuth callback no longer defaults to `localhost` — unset `LOUIS_YOTO_REDIRECT_URI` uses the Host the browser actually opened (LAN / Portainer). Image and compose default `LOUIS_COOKIE_SECURE=false` for plain HTTP; set `true` behind TLS. Compose pulls `ghcr.io/stuartromanek/louis:latest`, uses named volume `louis-audio`, and no longer requires a Git-tracked `env_file`.
 
@@ -30,6 +35,7 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ### Fixed
 - Desktop Yoto session: expired access without refresh forces reconnect; save/reuse-test read scope from cookie or `yoto-session.json`.
+- Stale MYO metadata notes after delete/reorder no longer map old YouTube sources onto the wrong remaining tracks.
 
 ## [1.1.2] - 2026-08-08
 

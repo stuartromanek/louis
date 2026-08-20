@@ -9,6 +9,8 @@ type StoredPrefs = {
   searchPlaceholders?: string[]
   /** Pixel editor paint/erase ticks. Absent = on. */
   drawEditorSounds?: boolean
+  /** Icons tab grid size in the track art editor. Absent = 32. */
+  trackArtIconSize?: 32 | 64
 }
 
 type SessionPrefs = {
@@ -20,6 +22,7 @@ const showDebugPanelStored = ref<boolean | null>(null)
 /** null = never customized; [] = cleared to defaults; non-empty = custom list */
 const searchPlaceholdersStored = ref<string[] | null>(null)
 const drawEditorSoundsStored = ref<boolean | null>(null)
+const trackArtIconSizeStored = ref<32 | 64 | null>(null)
 const allowLongTracksStored = ref(false)
 
 let initialized = false
@@ -62,6 +65,9 @@ function persist() {
   if (drawEditorSoundsStored.value !== null) {
     toSave.drawEditorSounds = drawEditorSoundsStored.value
   }
+  if (trackArtIconSizeStored.value !== null) {
+    toSave.trackArtIconSize = trackArtIconSizeStored.value
+  }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave))
 }
 
@@ -90,6 +96,9 @@ function ensureInitialized() {
   }
   if (typeof stored.drawEditorSounds === 'boolean') {
     drawEditorSoundsStored.value = stored.drawEditorSounds
+  }
+  if (stored.trackArtIconSize === 32 || stored.trackArtIconSize === 64) {
+    trackArtIconSizeStored.value = stored.trackArtIconSize
   }
   const session = readSessionStored()
   if (session.allowLongTracks === true) {
@@ -148,6 +157,16 @@ export function useUserPreferences() {
     persist()
   }
 
+  const trackArtIconSize = computed(() => {
+    if (trackArtIconSizeStored.value === 64) return 64 as const
+    return 32 as const
+  })
+
+  function setTrackArtIconSize(value: 32 | 64) {
+    trackArtIconSizeStored.value = value
+    persist()
+  }
+
   const allowLongTracks = computed(() => allowLongTracksStored.value)
 
   function setAllowLongTracks(value: boolean) {
@@ -163,6 +182,8 @@ export function useUserPreferences() {
     setSearchPlaceholdersFromText,
     drawEditorSounds: readonly(drawEditorSounds),
     setDrawEditorSounds,
+    trackArtIconSize: readonly(trackArtIconSize),
+    setTrackArtIconSize,
     allowLongTracks: readonly(allowLongTracks),
     setAllowLongTracks,
   }

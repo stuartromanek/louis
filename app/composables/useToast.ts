@@ -3,7 +3,7 @@ import { detectPwaInstallPlatform } from '~/composables/usePwaInstall'
 export type ToastEdge = 'top' | 'bottom'
 export type ToastAlign = 'start' | 'center' | 'end'
 
-type ToastPlacement = {
+export type ToastPlacement = {
   edge: ToastEdge
   align: ToastAlign
 }
@@ -12,6 +12,11 @@ export type ToastAddedPayload = ToastPlacement & {
   kind: 'added'
   trackTitle: string
   cardTitle: string
+}
+
+export type ToastDuplicatePayload = ToastPlacement & {
+  kind: 'duplicate'
+  trackTitle: string
 }
 
 export type ToastErrorPayload = ToastPlacement & {
@@ -25,11 +30,24 @@ export type ToastInstallHelpPayload = ToastPlacement & {
 
 export type ToastPayload =
   | ToastAddedPayload
+  | ToastDuplicatePayload
   | ToastErrorPayload
   | ToastInstallHelpPayload
 
 /** Client-only timer handle — never touched during SSR. */
 const clientTimer: { id: ReturnType<typeof setTimeout> | null } = { id: null }
+
+/**
+ * iOS: top (Share / home indicator). Everyone else: bottom-end
+ * (desktop corner; phone is full-width). Callers can pass a patch to override.
+ */
+export function defaultToastPlacement(patch?: Partial<ToastPlacement>): ToastPlacement {
+  return {
+    edge: detectPwaInstallPlatform() === 'ios' ? 'top' : 'bottom',
+    align: 'end',
+    ...patch,
+  }
+}
 
 /**
  * Shared toast — top/bottom tray notifications.
@@ -74,8 +92,16 @@ export function useToast() {
       kind: 'added',
       trackTitle: trackTitle.trim() || 'Track',
       cardTitle: cardTitle.trim() || 'card',
-      edge: 'top',
-      align: 'end',
+      ...defaultToastPlacement(),
+    }
+    scheduleAutoClose(durationMs)
+  }
+
+  function showDuplicateTrack(trackTitle: string, durationMs = 4800) {
+    payload.value = {
+      kind: 'duplicate',
+      trackTitle: trackTitle.trim() || 'Track',
+      ...defaultToastPlacement(),
     }
     scheduleAutoClose(durationMs)
   }
@@ -87,8 +113,7 @@ export function useToast() {
     payload.value = {
       kind: 'error',
       message: text,
-      edge: 'top',
-      align: 'end',
+      ...defaultToastPlacement(),
     }
     scheduleAutoClose(durationMs)
   }
@@ -96,9 +121,7 @@ export function useToast() {
   function showInstallHelp() {
     payload.value = {
       kind: 'install-help',
-      // iOS Safari Share sits in the bottom toolbar — don't cover it.
-      edge: detectPwaInstallPlatform() === 'ios' ? 'top' : 'bottom',
-      align: 'end',
+      ...defaultToastPlacement(),
     }
     scheduleAutoClose(0)
   }
@@ -107,6 +130,7 @@ export function useToast() {
     open,
     payload,
     showAddedToCard,
+    showDuplicateTrack,
     showError,
     showInstallHelp,
     persistent,

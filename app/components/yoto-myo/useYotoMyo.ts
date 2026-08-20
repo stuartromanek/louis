@@ -20,6 +20,7 @@ const EXTERNAL_POLL_TIMEOUT_MS = 5 * 60 * 1000
 export function useYotoMyo() {
   const cards = ref<YotoMyoCard[]>([])
   const status = ref<YotoMyoStatus>('loading')
+  const cardsLoading = ref(false)
   const errorMessage = ref('')
   const configured = ref(false)
   const connected = ref(false)
@@ -44,7 +45,7 @@ export function useYotoMyo() {
   watch(() => route.query.yoto, consumeOAuthInterrupt)
 
   async function fetchCards() {
-    status.value = 'loading'
+    cardsLoading.value = true
     errorMessage.value = ''
 
     try {
@@ -66,6 +67,9 @@ export function useYotoMyo() {
       status.value = 'error'
       cards.value = []
     }
+    finally {
+      cardsLoading.value = false
+    }
   }
 
   async function checkStatus(options?: { quiet?: boolean }) {
@@ -83,6 +87,7 @@ export function useYotoMyo() {
 
       if (!data.configured) {
         status.value = 'unconfigured'
+        cardsLoading.value = false
         if (!quiet) {
           errorMessage.value = 'Yoto API not configured. Set LOUIS_YOTO_CLIENT_ID in .env'
         }
@@ -94,16 +99,19 @@ export function useYotoMyo() {
         if (!quiet || status.value === 'loading') {
           status.value = 'disconnected'
         }
+        cardsLoading.value = false
         if (!quiet) cards.value = []
         return
       }
 
+      status.value = 'idle'
       await fetchCards()
     }
     catch (err: unknown) {
       if (quiet) return
       errorMessage.value = extractErrorMessage(err)
       status.value = 'error'
+      cardsLoading.value = false
     }
   }
 
@@ -166,11 +174,16 @@ export function useYotoMyo() {
     connected.value = false
     hasWriteScope.value = false
     cards.value = []
+    cardsLoading.value = false
     status.value = 'disconnected'
     errorMessage.value = ''
   }
 
   async function refresh() {
+    if (connected.value) {
+      await fetchCards()
+      return
+    }
     await checkStatus()
   }
 
@@ -181,6 +194,7 @@ export function useYotoMyo() {
   return {
     cards,
     status,
+    cardsLoading,
     errorMessage,
     configured,
     connected,

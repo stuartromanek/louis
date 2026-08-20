@@ -88,6 +88,14 @@ export function getPlaylistCapacitySnapshot(playlist: PlaylistTrack[]): Playlist
   }
 }
 
+/** Same threshold as the red capacity meter: at or over 100% tracks or duration. */
+export function playlistIsAtOrOverCapacity(playlist: PlaylistTrack[]): boolean {
+  const { trackCount, trackMax, knownDurationSeconds, durationMax } = getPlaylistCapacitySnapshot(playlist)
+  const overTracks = trackMax > 0 && trackCount / trackMax >= 1
+  const overTime = durationMax > 0 && knownDurationSeconds / durationMax >= 1
+  return overTracks || overTime
+}
+
 /** Compact MYO duration readout: `12m`, `1h 05m`, `5h`. */
 export function formatCapacityDuration(totalSeconds: number): string {
   const whole = Math.max(0, Math.floor(totalSeconds))

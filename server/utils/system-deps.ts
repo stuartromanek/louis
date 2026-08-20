@@ -74,6 +74,9 @@ function expandBinaryCandidates(candidate: string): string[] {
   return out
 }
 
+/** Prefer bare `ffmpeg` so a desktop-prepended PATH bin dir wins over fixed system paths. */
+const FFMPEG_CANDIDATES = ['ffmpeg', '/usr/bin/ffmpeg', '/usr/local/bin/ffmpeg']
+
 async function resolveBinary(candidates: string[]): Promise<BinaryStatus> {
   const tried: string[] = []
   for (const candidate of candidates) {
@@ -108,16 +111,23 @@ async function checkWritableDir(dir: string): Promise<{ writable: boolean, error
   }
 }
 
+export async function resolveFfmpegStatus(): Promise<BinaryStatus> {
+  return resolveBinary(FFMPEG_CANDIDATES)
+}
+
+/** Absolute ffmpeg path (or `ffmpeg` on PATH), same resolution as health. */
+export async function resolveFfmpegBinary(): Promise<string | null> {
+  const status = await resolveFfmpegStatus()
+  return status.available ? status.path ?? null : null
+}
+
 export async function getSystemDepsStatus(event?: H3Event): Promise<SystemDepsStatus> {
   const audioConfig = resolveAudioWorkDirConfig(event)
   const audioWorkDir = audioConfig.audioWorkDir
 
-  // Prefer bare `ffmpeg` so a desktop-prepended PATH bin dir wins over fixed system paths.
-  const ffmpegCandidates = ['ffmpeg', '/usr/bin/ffmpeg', '/usr/local/bin/ffmpeg']
-
   const [foundYtdlp, ffmpeg, audioDir, audioCache, ytdlpCookies] = await Promise.all([
     findYtdlpBinary(event),
-    resolveBinary(ffmpegCandidates),
+    resolveFfmpegStatus(),
     checkWritableDir(audioWorkDir),
     getAudioWorkDirStats(audioWorkDir, audioConfig.audioJobMaxAgeMs),
     getYtdlpCookiesStatus(event),

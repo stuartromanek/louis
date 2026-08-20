@@ -2,9 +2,10 @@
 import type { YotoMyoCard } from './types'
 
 const props = defineProps<{
-  card: YotoMyoCard
+  card?: YotoMyoCard
   selected?: boolean
   loading?: boolean
+  placeholder?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -14,6 +15,7 @@ const emit = defineEmits<{
 const { playEvent } = useUiSound()
 
 function onSelect() {
+  if (props.placeholder || !props.card) return
   playEvent('select')
   emit('select', props.card)
 }
@@ -34,6 +36,7 @@ function formatTrackCount(count: number): string {
 }
 
 const detailLabel = computed(() => {
+  if (props.placeholder || !props.card) return ''
   const parts: string[] = []
   if (props.card.duration) parts.push(formatDuration(props.card.duration))
   if (props.card.trackCount) {
@@ -52,7 +55,17 @@ function hashCardId(id: string): number {
 }
 
 const cardMotion = computed(() => {
-  const h = hashCardId(props.card.cardId)
+  if (props.placeholder) {
+    return {
+      zIndex: 1,
+      '--card-rotate': '0deg',
+      '--wobble-amp': '0deg',
+      '--wobble-duration': '0s',
+      '--wobble-delay': '0s',
+      '--wobble-lift': '0px',
+    }
+  }
+  const h = hashCardId(props.card?.cardId ?? '')
   const rotation = ((h % 21) - 10) * 0.45
   const wobbleAmp = 0.65 + (h % 5) * 0.28
   const wobbleDuration = 2.8 + (h % 7) * 0.35
@@ -79,13 +92,30 @@ const cardMotionStyle = computed(() => {
   <li
     class="myo-playing-card-slot"
     :style="{ zIndex: cardMotion.zIndex }"
-    :class="{ 'myo-playing-card-slot--selected': selected }"
+    :class="{
+      'myo-playing-card-slot--selected': selected,
+      'myo-playing-card-slot--placeholder': placeholder,
+    }"
+    :aria-hidden="placeholder || undefined"
   >
     <div
       class="myo-playing-card-slot__motion"
+      :class="{ 'myo-playing-card-slot__motion--placeholder': placeholder }"
       :style="cardMotionStyle"
     >
+      <div
+        v-if="placeholder"
+        class="myo-playing-card myo-playing-card--placeholder"
+      >
+        <div class="myo-playing-card__face border-maru rounded-maru bg-maru-white overflow-hidden">
+          <div class="myo-playing-card__art library-placeholder__pulse" />
+          <div class="myo-playing-card__footer border-maru-top">
+            <p class="myo-playing-card__title library-placeholder__bar" />
+          </div>
+        </div>
+      </div>
       <button
+        v-else-if="card"
         type="button"
         class="myo-playing-card"
         :class="{
@@ -160,6 +190,19 @@ const cardMotionStyle = computed(() => {
   .myo-playing-card-slot__motion {
     animation: none;
   }
+}
+
+.myo-playing-card-slot__motion--placeholder {
+  animation: none;
+}
+
+.myo-playing-card--placeholder {
+  pointer-events: none;
+  cursor: default;
+}
+
+.myo-playing-card-slot--placeholder {
+  pointer-events: none;
 }
 
 .myo-playing-card-slot--selected {

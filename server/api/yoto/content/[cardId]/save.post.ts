@@ -9,6 +9,8 @@ interface SaveRequestBody {
   cardTitle: string
   /** When true, skip our MYO capacity gates and let Yoto decide. */
   acknowledgeCapacityRisk?: boolean
+  /** Level new YouTube extracts with ffmpeg loudnorm before upload. */
+  normalizeVolume?: boolean
 }
 
 export default defineEventHandler(async (event) => {
@@ -39,7 +41,7 @@ export default defineEventHandler(async (event) => {
     body.playlist,
     body.cardTitle?.trim() || 'My Card',
     Array.isArray(body.baselinePlaylist) ? body.baselinePlaylist : [],
-    { acknowledgeCapacityRisk: body.acknowledgeCapacityRisk === true },
+    { acknowledgeCapacityRisk: body.acknowledgeCapacityRisk === true, normalizeVolume: body.normalizeVolume === true },
   )
 
   return { jobId: job.id, status: job.status }

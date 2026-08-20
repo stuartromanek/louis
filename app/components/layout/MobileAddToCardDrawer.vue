@@ -3,7 +3,7 @@ import Tray from '~/components/ui/Tray.vue'
 import { MYO_EDITOR_KEY } from '~/components/myo-editor/keys'
 import { YOTO_MYO_KEY } from '~/components/yoto-myo/keys'
 import { MOBILE_EDITOR_CHROME_KEY } from '~/composables/useMobileEditorChrome'
-import { pickerVideoToPlaylistTrack } from '~/components/playlist/types'
+import { pickerVideoToPlaylistTrack, playlistHasTrack } from '~/components/playlist/types'
 import type { YotoMyoCard as YotoMyoCardType } from '~/components/yoto-myo/types'
 
 const yoto = inject(YOTO_MYO_KEY)
@@ -15,7 +15,7 @@ if (!yoto || !editor || !chrome) {
 }
 
 const { playEvent } = useUiSound()
-const { cards, status, connected } = yoto
+const { cards, status, cardsLoading, connected } = yoto
 const {
   playlist,
   selectedCardId,
@@ -25,7 +25,7 @@ const {
   selectCard,
 } = editor
 const { addDrawerVideo, closeAddDrawer, goToTab } = chrome
-const { showAddedToCard, showError } = useToast()
+const { showAddedToCard, showDuplicateTrack, showError } = useToast()
 
 const picking = ref(false)
 
@@ -75,9 +75,8 @@ async function onPickCard(card: YotoMyoCardType) {
     }
 
     const track = pickerVideoToPlaylistTrack(video)
-    if (playlist.value.some(item => item.id === track.id)) {
-      playEvent('disabled')
-      showError('That track is already on this card.')
+    if (playlistHasTrack(playlist.value, track)) {
+      showDuplicateTrack(track.title)
       closeAddDrawer()
       return
     }
@@ -106,17 +105,36 @@ function onGoLibrary() {
     height="auto"
   >
     <p
-      v-if="!connected || status === 'disconnected'"
+      v-if="status === 'loading'"
+      class="empty-state-meta mobile-add-drawer__status"
+    >
+      Checking Yoto…
+    </p>
+    <p
+      v-else-if="!connected || status === 'disconnected'"
       class="empty-state-meta mobile-add-drawer__status"
     >
       Connect Yoto to choose a card.
     </p>
-    <p
-      v-else-if="status === 'loading'"
-      class="empty-state-meta mobile-add-drawer__status"
+    <ul
+      v-else-if="cardsLoading"
+      class="mobile-add-drawer__scroller list-none m-0"
+      aria-busy="true"
+      aria-label="Loading cards"
     >
-      Loading cards...
-    </p>
+      <li
+        v-for="n in [0, 1, 2, 3]"
+        :key="`ph-${n}`"
+        aria-hidden="true"
+      >
+        <div class="mobile-add-drawer__card mobile-add-drawer__card--placeholder">
+          <div class="mobile-add-drawer__card-art-wrap">
+            <div class="mobile-add-drawer__card-art mobile-add-drawer__card-art--empty library-placeholder__pulse" />
+          </div>
+          <span class="mobile-add-drawer__card-title library-placeholder__title">&nbsp;</span>
+        </div>
+      </li>
+    </ul>
     <div
       v-else-if="selectableCards.length === 0"
       class="mobile-add-drawer__status flex flex-col gap-2"

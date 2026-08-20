@@ -1,5 +1,5 @@
 import type { PlaylistTrack } from '~/components/playlist/types'
-import { buildManifestLookup, parseProvenance } from './parseProvenance'
+import { buildManifestLookupForCard, parseProvenance } from './parseProvenance'
 import type { ClassifiedTrack, TrackSource, YotoCardDetail, YotoTrack } from './types'
 import { extractYoutubeIdFromUrl } from './youtubeUrl'
 import { playlistRowId } from '#shared/myo-editor/playlistRowId'
@@ -205,9 +205,10 @@ export interface CardToPlaylistResult {
 
 export async function cardToPlaylist(detail: YotoCardDetail): Promise<CardToPlaylistResult> {
   const isPodcast = Boolean(detail.feedUrl?.trim())
+  const flat = flattenCardTracks(detail)
   const manifest = parseProvenance(detail.metadataNote, detail.contentVersion)
-  const manifestLookup = buildManifestLookup(manifest)
-  const classified = flattenCardTracks(detail).map(track =>
+  const manifestLookup = buildManifestLookupForCard(manifest, flat.length)
+  const classified = flat.map(track =>
     classifyTrack(track, manifestLookup),
   )
   const [hydrated, iconPreviewByMediaId] = await Promise.all([

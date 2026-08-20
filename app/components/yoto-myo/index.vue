@@ -30,6 +30,7 @@ const editorLoading = editor?.loading
 const {
   cards,
   status,
+  cardsLoading,
   errorMessage,
   connected,
   connect,
@@ -52,7 +53,7 @@ function onSelectCard(card: YotoMyoCardType) {
 }
 
 const cardCountLabel = computed(() => {
-  if (!connected.value || status.value !== 'idle') return ''
+  if (!connected.value || status.value !== 'idle' || cardsLoading.value) return ''
   return `${cards.value.length} ${cards.value.length === 1 ? 'card' : 'cards'}`
 })
 
@@ -61,6 +62,8 @@ const emit = defineEmits<{
 }>()
 
 watch(cardCountLabel, value => emit('update:count', value), { immediate: true })
+
+const CARD_PLACEHOLDERS = [0, 1, 2, 3, 4, 5, 6, 7]
 </script>
 
 <template>
@@ -80,7 +83,7 @@ watch(cardCountLabel, value => emit('update:count', value), { immediate: true })
         v-if="status === 'loading'"
         class="empty-state-meta py-8 text-center"
       >
-        Loading MYO cards...
+        Checking Yoto…
       </p>
 
       <p
@@ -105,6 +108,19 @@ watch(cardCountLabel, value => emit('update:count', value), { immediate: true })
           </button>
         </div>
       </div>
+
+      <ul
+        v-else-if="cardsLoading"
+        class="myo-card-fan list-none m-0 p-0 flex-1 min-h-0"
+        aria-busy="true"
+        aria-label="Loading MYO cards"
+      >
+        <YotoMyoCard
+          v-for="n in CARD_PLACEHOLDERS"
+          :key="`ph-${n}`"
+          placeholder
+        />
+      </ul>
 
       <template v-else>
         <p
@@ -139,7 +155,7 @@ watch(cardCountLabel, value => emit('update:count', value), { immediate: true })
       </template>
     </div>
 
-    <div v-if="connected && status !== 'loading'" class="mt-3 flex gap-4">
+    <div v-if="connected" class="mt-3 flex gap-4">
       <button
         type="button"
         class="font-maru-mono font-maru-regular text-xs text-maru-gray underline"
@@ -172,7 +188,7 @@ watch(cardCountLabel, value => emit('update:count', value), { immediate: true })
         v-if="status === 'loading'"
         class="empty-state flex-1 min-h-0 w-full empty-state-meta"
       >
-        Loading MYO cards...
+        Checking Yoto…
       </p>
 
       <p
@@ -188,6 +204,19 @@ watch(cardCountLabel, value => emit('update:count', value), { immediate: true })
           Connect your Yoto account to load your MYO cards.
         </p>
       </div>
+
+      <ul
+        v-else-if="cardsLoading"
+        class="myo-card-fan list-none m-0 p-0 flex-1 min-h-0"
+        aria-busy="true"
+        aria-label="Loading MYO cards"
+      >
+        <YotoMyoCard
+          v-for="n in CARD_PLACEHOLDERS"
+          :key="`ph-${n}`"
+          placeholder
+        />
+      </ul>
 
       <template v-else>
         <p

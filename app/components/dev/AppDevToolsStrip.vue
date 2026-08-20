@@ -1,25 +1,38 @@
 <script setup lang="ts">
 import { YOTO_MYO_KEY } from '~/components/yoto-myo/keys'
 import { useUserPreferences } from '~/composables/useUserPreferences'
+import { useDesktopHost } from '~/composables/useDesktopHost'
 
 const route = useRoute()
 const yoto = inject(YOTO_MYO_KEY, null)
 const { showDebugPanel } = useUserPreferences()
+const { desktopPrefsDebug } = useDesktopHost()
+
+function hrefWithQuery(patch: Record<string, string | undefined>) {
+  const query = { ...route.query }
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === undefined) delete query[key]
+    else query[key] = value
+  }
+  return { path: route.path, query }
+}
 
 const testSaveProgressActive = computed(
   () => route.query.testSaveProgress !== undefined,
 )
 
-const testSaveProgressHref = computed(() => {
-  const query = { ...route.query }
-  if (testSaveProgressActive.value) {
-    delete query.testSaveProgress
-  }
-  else {
-    query.testSaveProgress = ''
-  }
-  return { path: route.path, query }
-})
+const testSaveProgressHref = computed(() => hrefWithQuery({
+  testSaveProgress: testSaveProgressActive.value ? undefined : '',
+}))
+
+const desktopPrefsHref = computed(() => hrefWithQuery({
+  desktopPrefs: desktopPrefsDebug.value ? '0' : '1',
+}))
+
+const desktopSetupHref = computed(() => hrefWithQuery({
+  desktopPrefs: '1',
+  desktopSetup: '1',
+}))
 
 type HealthChecks = {
   audioCache?: {
@@ -77,6 +90,18 @@ function onRefreshCards() {
         class="dev-tools-strip__text font-maru-mono text-maru-black underline"
       >
         {{ testSaveProgressActive ? 'Disable' : 'Enable' }} ?testSaveProgress
+      </NuxtLink>
+      <NuxtLink
+        :to="desktopPrefsHref"
+        class="dev-tools-strip__text font-maru-mono text-maru-black underline"
+      >
+        {{ desktopPrefsDebug ? 'Disable' : 'Enable' }} ?desktopPrefs=1
+      </NuxtLink>
+      <NuxtLink
+        :to="desktopSetupHref"
+        class="dev-tools-strip__text font-maru-mono text-maru-black underline"
+      >
+        Enable ?desktopSetup=1
       </NuxtLink>
       <button
         type="button"

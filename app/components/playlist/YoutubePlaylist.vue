@@ -7,6 +7,7 @@ import PlaylistCardLoading from './PlaylistCardLoading.vue'
 import PlaylistEmptyState from './PlaylistEmptyState.vue'
 import PlaylistItem from './PlaylistItem.vue'
 import PlaylistSaveProgress from './PlaylistSaveProgress.vue'
+import PlaylistUpdatePrompt from './PlaylistUpdatePrompt.vue'
 import {
   SAVE_PROGRESS_TEST_FIXTURE,
   useSaveProgressTestMode,
@@ -40,6 +41,33 @@ const displayedSaveProgress = computed(() =>
 const showSaveProgressOverlay = computed(() =>
   saveProgressTestMode.value || (isPlaylistLocked.value && !!saveProgress.value),
 )
+
+const showUpdatePrompt = computed(() => {
+  const kind = editor.updatePrompt.value
+  const surface = editor.updatePromptSurface.value
+  if (!kind || editor.saveStarting.value) return false
+  return surface === 'footer' || surface === 'dialog'
+})
+
+const showPlaylistCover = computed(() =>
+  showSaveProgressOverlay.value || showUpdatePrompt.value || editor.saveStarting.value,
+)
+
+function onPromptCancel() {
+  if (editor.saveStarting.value) return
+  playEvent('resetPlaylist')
+  editor.cancelUpdatePrompt()
+}
+
+function onPromptKeep() {
+  playEvent('buttonPrimary')
+  editor.keepVolumeAsIs()
+}
+
+function onPromptConfirm() {
+  playEvent('buttonPrimary')
+  editor.confirmUpdatePrompt()
+}
 
 const isDropzoneLocked = computed(() => isPlaylistLocked.value || saveProgressTestMode.value)
 
@@ -371,20 +399,35 @@ watch(() => props.scrollToVideoId, async (id) => {
     </div>
 
     <div
-      v-if="showSaveProgressOverlay && displayedSaveProgress"
-      class="playlist-dropzone__lock absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-maru-turquoise-light p-4 text-center"
+      v-if="showPlaylistCover"
+      class="playlist-dropzone__lock playlist-dropzone__cover absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-maru-turquoise-light p-4 text-center"
       aria-live="polite"
-      :aria-busy="!saveProgressTestMode"
+      :aria-busy="showSaveProgressOverlay && !saveProgressTestMode"
     >
-      <p
-        v-if="saveProgressTestMode"
-        class="type-caption uppercase tracking-wide text-maru-black/50"
-      >
-        Test mode — ?testSaveProgress
-      </p>
-      <PlaylistSaveProgress
-        :progress="displayedSaveProgress"
-        variant="overlay"
+      <template v-if="showSaveProgressOverlay && displayedSaveProgress">
+        <div class="playlist-dropzone__cover-inner">
+          <p
+            v-if="saveProgressTestMode"
+            class="type-caption uppercase tracking-wide text-maru-black/50"
+          >
+            Test mode — ?testSaveProgress
+          </p>
+          <PlaylistSaveProgress
+            :progress="displayedSaveProgress"
+            variant="overlay"
+          />
+        </div>
+      </template>
+      <PlaylistUpdatePrompt
+        v-else-if="showUpdatePrompt && editor.updatePrompt.value"
+        :kind="editor.updatePrompt.value"
+        surface="panel"
+        id-prefix="playlist-update"
+        :card-count="editor.updatePromptCardCount.value"
+        :busy="editor.saveStarting.value"
+        @cancel="onPromptCancel"
+        @keep="onPromptKeep"
+        @confirm="onPromptConfirm"
       />
     </div>
   </div>

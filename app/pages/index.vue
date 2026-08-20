@@ -90,7 +90,7 @@
 import { DragDropProvider, type DragEndEvent, type DragOverEvent, type DragStartEvent } from '@dnd-kit/vue'
 import { isSortable, isSortableOperation } from '@dnd-kit/vue/sortable'
 import type { PlaylistTrack } from '~/components/playlist/types'
-import { pickerVideoToPlaylistTrack } from '~/components/playlist/types'
+import { pickerVideoToPlaylistTrack, playlistHasTrack } from '~/components/playlist/types'
 import {
   PLAYLIST_DROPZONE_ID,
   configurePlaylistDndPlugins,
@@ -141,6 +141,7 @@ const route = useRoute()
 const router = useRouter()
 
 const { playEvent } = useUiSound()
+const { showDuplicateTrack } = useToast()
 const { shouldShowSplash, splashHoldsGate, splashDebug, markSplashSeen } = useAppSplash()
 const { open: prefsOpen } = usePreferencesShell()
 const { isDesktop, getConfig, desktopPrefsDebug } = useDesktopHost()
@@ -231,6 +232,13 @@ watch(
 )
 
 watch(
+  () => route.query.desktopSetup,
+  (value) => {
+    if (value === '1') void refreshDesktopSetupNeeded()
+  },
+)
+
+watch(
   [() => route.query.yoto, connected, status, appBootHold],
   ([yotoFlag]) => {
     if (welcomeHandled) return
@@ -264,7 +272,10 @@ function getItemData(entity: { data?: unknown } | null | undefined): DndItemData
 }
 
 function insertTrack(track: PlaylistTrack, atIndex?: number): boolean {
-  if (playlist.value.some(item => item.id === track.id)) return false
+  if (playlistHasTrack(playlist.value, track)) {
+    showDuplicateTrack(track.title)
+    return false
+  }
 
   if (atIndex === undefined || atIndex < 0 || atIndex >= playlist.value.length) {
     playlist.value = [...playlist.value, track]

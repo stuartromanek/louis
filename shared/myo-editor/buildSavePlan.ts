@@ -1,7 +1,7 @@
-import type { PlaylistTrack, SavePlan, SaveTrackAction, YotoCardDetail, YotoTrackReuseSnapshot } from './types'
-import { baselineRowIds, playlistRowId } from './playlistRowId'
-import { findOriginalTrack, isYotoHostedTrack } from './trackLookup'
-import { toYotoTrackReuseSnapshot } from './yotoTrackPayload'
+import type { PlaylistTrack, SavePlan, SaveTrackAction, YotoCardDetail, YotoTrackReuseSnapshot } from './types.ts'
+import { baselineRowIds, playlistRowId } from './playlistRowId.ts'
+import { findOriginalTrack, isYotoHostedTrack } from './trackLookup.ts'
+import { toYotoTrackReuseSnapshot } from './yotoTrackPayload.ts'
 
 function reuseSnapshotForTrack(
   track: PlaylistTrack,
@@ -133,4 +133,24 @@ export function buildSavePlan(
   }
 
   return { tracks, errors }
+}
+
+const EMPTY_CARD_DETAIL: YotoCardDetail = {
+  cardId: '',
+  title: '',
+  contentVersion: null,
+  metadataNote: null,
+  feedUrl: null,
+  metadata: null,
+  chapters: [],
+}
+
+/** True when this Update will download/transcode at least one YouTube track. */
+export function playlistSaveExtractsYoutube(
+  baselinePlaylist: PlaylistTrack[],
+  playlist: PlaylistTrack[],
+  detail: YotoCardDetail | null,
+): boolean {
+  const plan = buildSavePlan(baselinePlaylist, playlist, detail ?? EMPTY_CARD_DETAIL)
+  return plan.tracks.some(action => action.kind === 'extract-youtube')
 }

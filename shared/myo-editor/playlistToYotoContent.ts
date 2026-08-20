@@ -4,13 +4,12 @@ import type {
   TranscodedAudioResult,
   YotoTrackPayload,
 } from './types'
-import { buildProvenance } from './parseProvenance'
-import { resolveDisplayIcon, toYotoTrackPayload } from './yotoTrackPayload'
-import { YOTO_CARDS_CONTENT_VERSION } from './types'
+import { buildProvenance } from './parseProvenance.ts'
+import { resolveDisplayIcon, toYotoTrackPayload } from './yotoTrackPayload.ts'
 import {
   normalizeYotoAudioFormat,
   yotoChannelsOrStereo,
-} from './transcodedTrackDefaults'
+} from './transcodedTrackDefaults.ts'
 
 const TRACK_KEY = '01'
 
@@ -67,7 +66,7 @@ export function playlistToYotoContent(
   playlist: PlaylistTrack[],
   plan: SaveTrackAction[],
   uploadedByIndex: Map<number, TranscodedAudioResult>,
-  options?: {
+  _options?: {
     existingMetadataNote?: string | null
     existingContentVersion?: string | null
   },
@@ -150,12 +149,7 @@ export function playlistToYotoContent(
     })
   }
 
-  const provenance = provenanceInputs.length > 0
-    ? buildProvenance(provenanceInputs)
-    : {
-        note: options?.existingMetadataNote?.trim() || buildProvenance([]).note,
-        contentVersion: options?.existingContentVersion?.trim() || YOTO_CARDS_CONTENT_VERSION,
-      }
+  const provenance = buildProvenance(provenanceInputs)
 
   return {
     chapters,

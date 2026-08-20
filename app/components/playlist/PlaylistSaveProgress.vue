@@ -22,8 +22,8 @@ const operationLabel = computed(() =>
 
 const trackCountMeta = computed(() => saveTrackCountMeta(props.progress.tracks))
 
-const isExtracting = computed(() =>
-  props.progress.tracks.some(track => track.status === 'extracting'),
+const isIndeterminateOp = computed(() =>
+  props.progress.tracks.some(track => track.status === 'extracting' || track.status === 'leveling'),
 )
 
 const showRichChrome = computed(
@@ -42,7 +42,7 @@ function cancelProgressAnimation() {
 }
 
 watch(
-  () => [operationLabel.value, props.progress.operationProgress, isExtracting.value] as const,
+  () => [operationLabel.value, props.progress.operationProgress, isIndeterminateOp.value] as const,
   ([label, target, extracting]) => {
     cancelProgressAnimation()
 

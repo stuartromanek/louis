@@ -1,5 +1,5 @@
-import type { PlaylistTrack, YotoCardDetail, YotoTrackDetail } from './types'
-import { buildManifestLookup, parseProvenance } from './parseProvenance'
+import type { PlaylistTrack, YotoCardDetail, YotoTrackDetail } from './types.ts'
+import { buildManifestLookup, parseProvenance } from './parseProvenance.ts'
 
 export function flattenCardTracks(detail: YotoCardDetail): YotoTrackDetail[] {
   const tracks: YotoTrackDetail[] = []

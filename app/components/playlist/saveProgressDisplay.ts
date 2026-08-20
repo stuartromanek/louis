@@ -15,6 +15,7 @@ const OVERALL_LABELS: Record<SaveJobPhase, string> = {
 
 const ACTIVE_TRACK_STATUSES: SaveTrackStatus[] = [
   'extracting',
+  'leveling',
   'uploading',
   'transcoding',
 ]
@@ -31,6 +32,9 @@ export function saveOperationLabel(
   if (active) {
     if (active.status === 'extracting') {
       return `Downloading “${active.title}”`
+    }
+    if (active.status === 'leveling') {
+      return `Leveling “${active.title}”`
     }
     if (active.status === 'uploading') {
       return `Uploading “${active.title}”`

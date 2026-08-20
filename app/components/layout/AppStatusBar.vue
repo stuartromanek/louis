@@ -28,6 +28,7 @@ const needsReconnect = computed(
 )
 
 const authStatusLabel = computed(() => {
+  if (status.value === 'loading') return 'Checking Yoto…'
   if (status.value === 'unconfigured') return 'Yoto API not configured'
   if (status.value === 'error') return 'Yoto connection error'
   if (status.value === 'disconnected') return 'Not connected to Yoto'
@@ -82,7 +83,6 @@ function onRetry() {
 
 <template>
   <div
-    v-if="status !== 'loading'"
     class="status-bar panel-footer-lip panel-footer-lip--short border-maru rounded-maru bg-maru-magenta-lighter text-maru-black w-full px-3 sm:px-4"
   >
     <div class="status-bar__cluster status-bar__cluster--status min-w-0 items-center">
@@ -166,7 +166,7 @@ function onRetry() {
       </button>
 
       <button
-        v-if="connected && status === 'idle'"
+        v-if="connected"
         type="button"
         class="status-bar__action"
         @click="onDisconnect"

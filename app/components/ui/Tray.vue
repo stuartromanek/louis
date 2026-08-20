@@ -88,6 +88,7 @@ const rootClass = computed(() => ({
   'tray--reduced': prefersReducedMotion.value,
   'tray--top': props.placement === 'top',
   'tray--toast': props.variant === 'toast',
+  'tray--titled': Boolean(props.title),
   'tray--align-start': props.align === 'start',
   'tray--align-end': props.align === 'end',
 }))
@@ -243,7 +244,9 @@ function runSlideAnimation(direction: 'in' | 'out'): Promise<void> {
   const to = direction === 'in' ? 'translate3d(0, 0, 0)' : parkedTransform()
   const duration = prefersReducedMotion.value
     ? 0
-    : (direction === 'in' ? 320 : 220)
+    : (direction === 'in'
+        ? 320
+        : (props.variant === 'toast' ? 320 : 220))
 
   el.style.transition = 'none'
   el.style.transform = from
@@ -317,7 +320,9 @@ function beginClose() {
   phase.value = 'exiting'
   if (props.playSounds) playEvent('buttonClick')
 
-  const exitMs = prefersReducedMotion.value ? 40 : 220
+  const exitMs = prefersReducedMotion.value
+    ? 40
+    : (props.variant === 'toast' ? 320 : 220)
   void runSlideAnimation('out')
   after(exitMs, () => {
     phase.value = 'idle'

@@ -2,19 +2,13 @@
 import Tray from '~/components/ui/Tray.vue'
 import { MYO_EDITOR_KEY } from '~/components/myo-editor/keys'
 import { YOTO_MYO_KEY } from '~/components/yoto-myo/keys'
-import { MOBILE_EDITOR_CHROME_KEY } from '~/composables/useMobileEditorChrome'
-import {
-  getPlaylistCapacitySnapshot,
-} from '#shared/myo-editor/yotoMyoLimits'
+import { defaultToastPlacement } from '~/composables/useToast'
 
 const { open, payload, persistent, dismiss, showError } = useToast()
 const { platform } = usePwaInstall()
 const { playEvent } = useUiSound()
 const editor = inject(MYO_EDITOR_KEY, null)
 const yoto = inject(YOTO_MYO_KEY, null)
-const chrome = inject(MOBILE_EDITOR_CHROME_KEY, null)
-
-const showCapacityConfirm = ref(false)
 
 const trayOpen = computed({
   get: () => open.value,
@@ -24,19 +18,26 @@ const trayOpen = computed({
 })
 
 const isErrorToast = computed(() => payload.value?.kind === 'error')
+const isDuplicateToast = computed(() => payload.value?.kind === 'duplicate')
 const isInstallHelp = computed(() => payload.value?.kind === 'install-help')
 
-const trayPlacement = computed(() => payload.value?.edge ?? 'top')
-const trayAlign = computed(() => payload.value?.align ?? 'end')
-const trayTitle = computed(() => (
-  isInstallHelp.value ? 'Add to Home Screen' : undefined
-))
+const trayFallback = defaultToastPlacement()
+const trayPlacement = computed(() => payload.value?.edge ?? trayFallback.edge)
+const trayAlign = computed(() => payload.value?.align ?? trayFallback.align)
+const trayTitle = computed(() => {
+  if (isInstallHelp.value) return 'Add to Home Screen'
+  if (isDuplicateToast.value) return 'Duplicate Track added'
+  return undefined
+})
 
 const message = computed(() => {
   const data = payload.value
   if (!data) return ''
   if (data.kind === 'error') return data.message
   if (data.kind === 'install-help') return 'Add to Home Screen'
+  if (data.kind === 'duplicate') {
+    return `${data.trackTitle} is already on this playlist. It will not be added again.`
+  }
   return `${data.trackTitle} successfully added to ${data.cardTitle}`
 })
 
@@ -48,42 +49,14 @@ const canUpdatePlaylists = computed(() => Boolean(
   && !editor?.hasActiveSaves.value,
 ))
 
-const overCapacity = computed(() => {
-  const snapshot = getPlaylistCapacitySnapshot(editor?.playlist.value ?? [])
-  const { trackCount, trackMax, knownDurationSeconds, durationMax } = snapshot
-  const overTracks = trackMax > 0 && trackCount / trackMax >= 1
-  const overTime = durationMax > 0 && knownDurationSeconds / durationMax >= 1
-  return overTracks || overTime
-})
-
 function onUpdatePlaylists() {
   if (!editor || !canUpdatePlaylists.value) {
     playEvent('disabled')
     return
   }
   playEvent('buttonPrimary')
-  if (overCapacity.value) {
-    dismiss()
-    showCapacityConfirm.value = true
-    return
-  }
   dismiss()
-  void editor.updateCard()
-}
-
-function onConfirmRiskyUpdate() {
-  if (!editor || !canUpdatePlaylists.value) {
-    playEvent('disabled')
-    return
-  }
-  playEvent('buttonPrimary')
-  showCapacityConfirm.value = false
-  void editor.updateCard({ acknowledgeCapacityRisk: true })
-}
-
-function onCancelRiskyUpdate() {
-  playEvent('resetPlaylist')
-  showCapacityConfirm.value = false
+  editor.requestUpdate('dialog')
 }
 
 function onDismiss() {
@@ -107,16 +80,10 @@ watch(
 
 watch(open, (isOpen, wasOpen) => {
   if (isOpen) {
-    playEvent(isErrorToast.value ? 'saveError' : 'notification')
+    playEvent(isErrorToast.value ? 'saveError' : isDuplicateToast.value ? 'disabled' : 'notification')
     return
   }
   if (wasOpen && persistent.value) playEvent('toastDismiss')
-})
-
-watch(() => chrome?.isPhone.value, (phone) => {
-  if (phone === false) {
-    showCapacityConfirm.value = false
-  }
 })
 </script>
 
@@ -169,6 +136,16 @@ watch(() => chrome?.isPhone.value, (phone) => {
     </div>
 
     <div
+      v-else-if="payload?.kind === 'duplicate'"
+      class="toast__stack"
+    >
+      <p class="toast__message type-title m-0">
+        <span class="toast__emphasis font-maru-bold">{{ payload.trackTitle }}</span>
+        is already on this playlist. It will not be added again.
+      </p>
+    </div>
+
+    <div
       v-else-if="payload?.kind === 'error'"
       class="toast__stack toast__stack--error"
     >
@@ -196,39 +173,4 @@ watch(() => chrome?.isPhone.value, (phone) => {
       </template>
     </p>
   </Tray>
-
-  <Teleport to="body">
-    <div
-      v-if="showCapacityConfirm"
-      class="mobile-overflow-menu__confirm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="toast-capacity-title"
-    >
-      <div class="mobile-overflow-menu__confirm-card border-maru rounded-maru">
-        <p
-          id="toast-capacity-title"
-          class="type-body text-pretty m-0"
-        >
-          Over MYO limit — update may fail.
-        </p>
-        <div class="mobile-overflow-menu__confirm-actions">
-          <button
-            type="button"
-            class="panel-footer-btn panel-footer-btn--short panel-footer-btn--secondary"
-            @click="onCancelRiskyUpdate"
-          >
-            <span class="panel-footer-btn__label">Cancel</span>
-          </button>
-          <button
-            type="button"
-            class="panel-footer-btn panel-footer-btn--short panel-footer-btn--primary"
-            @click="onConfirmRiskyUpdate"
-          >
-            <span class="panel-footer-btn__label">Update anyway</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </Teleport>
 </template>

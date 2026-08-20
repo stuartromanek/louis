@@ -1,5 +1,5 @@
-import type { ProvenanceTrackEntry, YotoCardsManifest } from './types'
-import { YOTO_CARDS_CONTENT_VERSION } from './types'
+import type { ProvenanceTrackEntry, YotoCardsManifest } from './types.ts'
+import { YOTO_CARDS_CONTENT_VERSION } from './types.ts'
 
 interface NotePayload {
   yotoCards?: {
@@ -70,6 +70,21 @@ export function buildManifestLookup(
     map.set(manifestLookupKey(entry.chapterKey, entry.trackKey), entry)
   }
   return map
+}
+
+/**
+ * Chapter keys are reindexed on save (01, 02, …). A stale metadata note still
+ * maps old keys (e.g. deleted track 01:01) onto the new first chapter.
+ * Only apply the manifest when its row count matches the card.
+ */
+export function buildManifestLookupForCard(
+  manifest: YotoCardsManifest | null,
+  trackCount: number,
+): Map<string, ProvenanceTrackEntry> {
+  if (!manifest || manifest.tracks.length !== trackCount) {
+    return new Map()
+  }
+  return buildManifestLookup(manifest)
 }
 
 export function buildProvenance(

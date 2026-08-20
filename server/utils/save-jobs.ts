@@ -1,3 +1,5 @@
+import { mkdir } from 'node:fs/promises'
+import path from 'node:path'
 import type { H3Event } from 'h3'
 import type {
   PlaylistTrack,
@@ -23,6 +25,8 @@ import { createOrUpdateContent } from './yoto-content'
 import { mergeContentMetadata } from './yoto-metadata'
 import { fetchYotoCardDetail } from './yoto-card-detail'
 import { getYotoAccessToken } from './yoto'
+import { resolveAudioWorkDirConfig } from './audio-work-dir'
+import { loudnormAudioFile } from './ffmpeg-loudnorm'
 
 /** Process-local only — cleared on every container restart/redeploy. */
 const jobs = new Map<string, SaveJobState>()
@@ -58,6 +62,7 @@ function updateJob(jobId: string, patch: Partial<SaveJobState>) {
 function activeSaveTrackTitle(job: SaveJobState): string | undefined {
   const active = job.tracks.find(track => (
     track.status === 'extracting'
+    || track.status === 'leveling'
     || track.status === 'uploading'
     || track.status === 'transcoding'
   ))
@@ -92,10 +97,11 @@ export function startSaveJob(
   playlist: PlaylistTrack[],
   cardTitle: string,
   baselinePlaylist: PlaylistTrack[],
-  options?: { acknowledgeCapacityRisk?: boolean },
+  options?: { acknowledgeCapacityRisk?: boolean, normalizeVolume?: boolean },
 ): SaveJobState {
   const jobId = crypto.randomUUID()
   const acknowledgeCapacityRisk = options?.acknowledgeCapacityRisk === true
+  const normalizeVolume = options?.normalizeVolume === true
   const job: SaveJobState = {
     id: jobId,
     cardId,
@@ -119,6 +125,7 @@ export function startSaveJob(
         cardTitle,
         baselinePlaylist,
         acknowledgeCapacityRisk,
+        normalizeVolume,
       )
     }
     catch (err: unknown) {
@@ -143,6 +150,7 @@ async function runSaveJob(
   cardTitle: string,
   baselinePlaylist: PlaylistTrack[],
   acknowledgeCapacityRisk: boolean,
+  normalizeVolume: boolean,
 ) {
   const job = jobs.get(jobId)
   if (!job) return
@@ -218,6 +226,28 @@ async function runSaveJob(
         enforceMyoSizeLimit: !acknowledgeCapacityRisk,
       })
       pauseBeforeNextExtract = Boolean(downloaded.recoveredFromRetryableFailure)
+
+      let uploadPath = downloaded.filePath
+      let uploadName = downloaded.filename
+      if (normalizeVolume) {
+        updateTrack(job, index, 'leveling')
+        setJobProgress({
+          status: 'downloading',
+          progress: trackBase + trackSpan * 0.14,
+          operationProgress: 20,
+        })
+        const audioWorkDir = resolveAudioWorkDirConfig(event).audioWorkDir
+        const levelDir = path.join(audioWorkDir, 'jobs', jobId, String(index))
+        await mkdir(levelDir, { recursive: true })
+        const ext = path.extname(downloaded.filePath) || '.m4a'
+        const leveledPath = path.join(levelDir, `leveled${ext}`)
+        const leveled = await loudnormAudioFile(downloaded.filePath, leveledPath)
+        if (leveled) {
+          uploadPath = leveled
+          uploadName = path.basename(leveled)
+        }
+      }
+
       updateTrack(job, index, 'uploading')
       setJobProgress({
         status: 'uploading',
@@ -227,8 +257,8 @@ async function runSaveJob(
 
       const transcoded = await uploadAudioFile(
         accessToken,
-        downloaded.filePath,
-        downloaded.filename,
+        uploadPath,
+        uploadName,
         {
           onTranscodePoll: ({ percent }) => {
             updateTrack(job, index, 'transcoding')
@@ -365,7 +395,13 @@ async function runSaveJob(
     )
 
     for (const track of job.tracks) {
-      if (track.status === 'pending' || track.status === 'extracting' || track.status === 'uploading' || track.status === 'transcoding') {
+      if (
+        track.status === 'pending'
+        || track.status === 'extracting'
+        || track.status === 'leveling'
+        || track.status === 'uploading'
+        || track.status === 'transcoding'
+      ) {
         track.status = 'failed'
         track.error = message
       }

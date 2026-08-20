@@ -197,6 +197,99 @@
   min-height: 100%;
 }
 
+.playlist-update-prompt {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  background: var(--color-maru-turquoise-light);
+  color: var(--color-maru-black);
+  text-align: center;
+}
+
+.playlist-update-prompt__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 22rem;
+}
+
+.playlist-update-prompt__copy .type-title {
+  text-wrap: balance;
+}
+
+.playlist-update-prompt--menu {
+  position: static;
+  inset: auto;
+  padding: 0;
+  background: transparent;
+  gap: 0.75rem;
+}
+
+.playlist-update-prompt--menu .playlist-update-prompt__copy {
+  max-width: none;
+  width: 100%;
+  text-align: center;
+}
+
+.playlist-update-prompt--menu .playlist-update-prompt__actions {
+  justify-content: center;
+  width: 100%;
+}
+
+.playlist-update-prompt__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.playlist-update-prompt__copy,
+.playlist-update-prompt__actions {
+  opacity: 0;
+  translate: 0 8px;
+  filter: blur(4px);
+  animation: playlist-update-prompt-in 180ms cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+
+.playlist-update-prompt__actions {
+  animation-delay: 70ms;
+}
+
+.playlist-dropzone__cover-inner {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  animation: playlist-update-prompt-in 180ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes playlist-update-prompt-in {
+  to {
+    opacity: 1;
+    translate: 0 0;
+    filter: blur(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .playlist-update-prompt__copy,
+  .playlist-update-prompt__actions,
+  .playlist-dropzone__cover-inner {
+    animation: none;
+    opacity: 1;
+    translate: 0;
+    filter: none;
+  }
+}
+
 .playlist-garage-door {
   position: absolute;
   inset: 0;

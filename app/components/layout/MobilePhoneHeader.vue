@@ -6,13 +6,11 @@ import Tray from '~/components/ui/Tray.vue'
 import MaruEmoji from '~/components/ui/MaruEmoji.vue'
 import { MOBILE_EDITOR_CHROME_KEY } from '~/composables/useMobileEditorChrome'
 import PlaylistSaveProgress from '~/components/playlist/PlaylistSaveProgress.vue'
+import PlaylistUpdatePrompt from '~/components/playlist/PlaylistUpdatePrompt.vue'
 import {
   SAVE_PROGRESS_TEST_FIXTURE,
   useSaveProgressTestMode,
 } from '~/components/playlist/saveProgressTestFixture'
-import {
-  getPlaylistCapacitySnapshot,
-} from '#shared/myo-editor/yotoMyoLimits'
 import { usePreferencesShell } from '~/composables/usePreferencesShell'
 
 const yoto = inject(YOTO_MYO_KEY)
@@ -36,7 +34,6 @@ const { connected, status, refresh, disconnect, hasWriteScope, connect } = yoto
 
 const howToOpen = ref(false)
 const menuOpen = ref(false)
-const showCapacityConfirm = ref(false)
 const signOutArmed = ref(false)
 const signOutShaking = ref(false)
 let signOutShakeTimer: ReturnType<typeof setTimeout> | null = null
@@ -61,28 +58,20 @@ const updateInProgress = computed(
   () => Boolean(displayedSaveProgress.value),
 )
 
+const askingUpdatePrompt = computed(
+  () => Boolean(editor?.updatePrompt.value) && !editor.saveStarting.value,
+)
+
 /**
  * Ready for a new Update only after any in-flight saves finish.
- * Keeps Menu / Update UI from jumping to “next steps” mid-job.
+ * Pending drafts can save from Menu without opening a card.
  */
 const updateReady = computed(
   () => Boolean(
-    editor?.selectedCardId.value
-    && editor?.isDirty.value
-    && !editor?.loading.value
-    && !editor?.isPodcast.value
-    && !hasActiveSaves.value,
+    !hasActiveSaves.value
+    && (editor?.pendingPlaylistUpdateCount.value ?? 0) > 0,
   ),
 )
-
-const capacity = computed(() => getPlaylistCapacitySnapshot(editor?.playlist.value ?? []))
-
-const overCapacity = computed(() => {
-  const { trackCount, trackMax, knownDurationSeconds, durationMax } = capacity.value
-  const overTracks = trackMax > 0 && trackCount / trackMax >= 1
-  const overTime = durationMax > 0 && knownDurationSeconds / durationMax >= 1
-  return overTracks || overTime
-})
 
 const menuAriaLabel = computed(() => {
   if (updateInProgress.value) return 'Menu, update in progress'
@@ -92,22 +81,15 @@ const menuAriaLabel = computed(() => {
 })
 
 const pendingPlaylistUpdateCount = computed(
-  () => editor?.pendingPlaylistUpdateCount.value ?? (updateReady.value ? 1 : 0),
+  () => editor?.pendingPlaylistUpdateCount.value ?? 0,
 )
 
 const updateButtonLabel = computed(() => {
   if (hasActiveSaves.value && !updateInProgress.value) return 'Updating…'
   const count = pendingPlaylistUpdateCount.value
-  if (!updateReady.value) {
-    if (count > 0) {
-      return count === 1
-        ? 'Open a card to update'
-        : `Open cards to update (${count})`
-    }
-    return 'Playlists are up to date'
-  }
+  if (count <= 0) return 'Playlists are up to date'
   if (count > 1) return `Update ${count} Playlists`
-  const title = editor?.cardTitle.value?.trim()
+  const title = editor?.pendingUpdateTitle.value?.trim()
   return title ? `Update ${title}` : 'Update playlist'
 })
 
@@ -201,35 +183,27 @@ function toggleMenu() {
 }
 
 function onUpdate() {
-  if (!updateReady.value) {
-    playEvent('disabled')
-    return
-  }
-  if (overCapacity.value) {
-    menuOpen.value = false
-    playEvent('buttonPrimary')
-    showCapacityConfirm.value = true
-    return
-  }
-  playEvent('buttonPrimary')
-  // Keep the tray open so Update morphs into progress meters.
-  void editor?.updateCard()
-}
-
-function onConfirmRiskyUpdate() {
-  if (!updateReady.value) {
+  if (!updateReady.value || !editor) {
     playEvent('disabled')
     return
   }
   playEvent('buttonPrimary')
-  showCapacityConfirm.value = false
-  menuOpen.value = true
-  void editor?.updateCard({ acknowledgeCapacityRisk: true })
+  editor.requestUpdatePending('dialog')
 }
 
-function onCancelRiskyUpdate() {
+function onPromptCancel() {
   playEvent('resetPlaylist')
-  showCapacityConfirm.value = false
+  editor?.cancelUpdatePrompt()
+}
+
+function onPromptKeep() {
+  playEvent('buttonPrimary')
+  editor?.keepVolumeAsIs()
+}
+
+function onPromptConfirm() {
+  playEvent('buttonPrimary')
+  editor?.confirmUpdatePrompt()
 }
 
 watch(menuOpen, (open) => {
@@ -246,10 +220,24 @@ watch(menuOpen, (open) => {
 watch(() => chrome?.isPhone.value, (phone) => {
   if (phone === false) {
     menuOpen.value = false
-    showCapacityConfirm.value = false
     signOutArmed.value = false
   }
 })
+
+watch(
+  () => editor?.updatePrompt.value,
+  (prompt, prev) => {
+    if (!chrome?.isPhone.value) return
+    if (prompt === 'normalize' || prompt === 'capacity') {
+      menuOpen.value = true
+      return
+    }
+    // After a prompt resolves into a save, reopen so Update morphs into progress.
+    if (prev && !prompt && editor?.hasActiveSaves.value) {
+      menuOpen.value = true
+    }
+  },
+)
 
 onBeforeUnmount(() => {
   if (signOutShakeTimer) clearTimeout(signOutShakeTimer)
@@ -258,7 +246,6 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    v-if="status !== 'loading'"
     class="mobile-overflow-menu"
   >
     <button
@@ -291,7 +278,7 @@ onBeforeUnmount(() => {
     >
       <div class="mobile-overflow-menu__list">
         <button
-          v-if="connected && status === 'idle'"
+          v-if="connected"
           type="button"
           class="mobile-overflow-menu__item mobile-overflow-menu__item--signout"
           :class="{
@@ -407,7 +394,25 @@ onBeforeUnmount(() => {
           />
           <span class="mobile-overflow-menu__item-label">Retry</span>
         </button>
+        <div
+          v-if="askingUpdatePrompt && editor?.updatePrompt.value"
+          class="mobile-overflow-menu__item mobile-overflow-menu__item--update-normalize"
+          role="group"
+          :aria-label="editor.updatePrompt.value === 'capacity' ? 'Over MYO limit' : 'Normalize new track levels'"
+        >
+          <PlaylistUpdatePrompt
+            :kind="editor.updatePrompt.value"
+            surface="menu"
+            id-prefix="menu-update"
+            :card-count="editor.updatePromptCardCount.value"
+            :busy="Boolean(editor.saveStarting.value)"
+            @cancel="onPromptCancel"
+            @keep="onPromptKeep"
+            @confirm="onPromptConfirm"
+          />
+        </div>
         <button
+          v-else
           type="button"
           class="mobile-overflow-menu__item mobile-overflow-menu__item--update"
           :class="{
@@ -440,41 +445,6 @@ onBeforeUnmount(() => {
         </button>
       </div>
     </Tray>
-
-    <Teleport to="body">
-      <div
-        v-if="showCapacityConfirm"
-        class="mobile-overflow-menu__confirm"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="mobile-menu-capacity-title"
-      >
-        <div class="mobile-overflow-menu__confirm-card border-maru rounded-maru">
-          <p
-            id="mobile-menu-capacity-title"
-            class="type-body text-pretty m-0"
-          >
-            Over MYO limit — update may fail.
-          </p>
-          <div class="mobile-overflow-menu__confirm-actions">
-            <button
-              type="button"
-              class="panel-footer-btn panel-footer-btn--short panel-footer-btn--secondary"
-              @click="onCancelRiskyUpdate"
-            >
-              <span class="panel-footer-btn__label">Cancel</span>
-            </button>
-            <button
-              type="button"
-              class="panel-footer-btn panel-footer-btn--short panel-footer-btn--primary"
-              @click="onConfirmRiskyUpdate"
-            >
-              <span class="panel-footer-btn__label">Update anyway</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
 
     <HowToModal v-model:open="howToOpen" />
   </div>
