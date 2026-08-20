@@ -18,19 +18,19 @@ export function colorForIndex(index: number) {
 export const HOWTO_BEATS = [
   {
     title: 'Search',
-    body: 'Find a song, show, or artist.',
+    body: 'Find a song, or paste a video, playlist, or channel link.',
     art: howtoSearchArt,
     artAlt: 'Magnifying glass over a search window',
   },
   {
     title: 'Add',
-    body: 'Drop it onto your MYO card.',
+    body: 'Add it to a playlist.',
     art: howtoAddArt,
-    artAlt: 'App window loading a track onto a card',
+    artAlt: 'App window loading a track onto a playlist',
   },
   {
     title: 'Listen',
-    body: 'Play your card on the Yoto.',
+    body: 'Play it on your Yoto.',
     art: howtoListenArt,
     artAlt: 'Smiling face listening on headphones',
   },

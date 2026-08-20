@@ -18,15 +18,31 @@ import {
   writePodcastCardIds,
 } from './draftPersistence'
 import type { SaveJobState, YotoCardDetail } from './types'
-import { getPlaylistPreflightLimitError } from '#shared/myo-editor/yotoMyoLimits'
+import { getPlaylistPreflightLimitError, YOTO_MYO_MAX_TRACKS } from '#shared/myo-editor/yotoMyoLimits'
+import { playlistHasTrack } from '#shared/myo-editor/playlistTrackMatch'
 import {
   collectPendingUpdateTargets,
+  pendingTargetFrom,
   planPendingUpdates,
   type PendingUpdateTarget,
 } from '#shared/myo-editor/planPendingUpdates'
+import {
+  canAcceptPlaylistTracks,
+  classifyCreateStartFailure,
+  getStandalonePlaylistCreateError,
+  getStandalonePlaylistValidationError,
+  isPlaylistEditorActive,
+  NEW_PLAYLIST_SAVE_KEY,
+  notifyConfirmedPlaylistCreated,
+  resolveClientSaveTarget,
+  resolveSavedCardId,
+  UNNAMED_PLAYLIST_ADD_MESSAGE,
+  type ClientSaveTarget,
+} from '#shared/myo-editor/standalonePlaylist'
 
 export type UpdatePromptKind = 'capacity' | 'normalize'
 export type UpdatePromptSurface = 'footer' | 'dialog'
+export type PlaylistManagePrompt = 'rename' | 'delete'
 type UpdatePromptScope = 'selected' | 'pending'
 
 export interface SaveProgress {
@@ -44,7 +60,8 @@ export interface CardSaveSnapshot {
 }
 
 export interface CardSaveState {
-  cardId: string
+  saveKey: string
+  cardId?: string
   jobId: string
   status: SaveJobPhase
   progress: number
@@ -55,11 +72,24 @@ export interface CardSaveState {
   startedAt: number
 }
 
+export type InsertTracksResult =
+  | { ok: true, added: number, skipped: number, overflow: number, firstAddedId?: string }
+  | { ok: false, message: string }
+
+export interface UseMyoEditorOptions {
+  onPlaylistCreated?: (cardId: string) => void
+  onPlaylistRenamed?: (cardId: string, title: string) => void
+  onPlaylistDeleted?: (cardId: string) => void
+}
+
 export interface MyoEditorContext {
   selectedCardId: Ref<string | null>
+  isNewPlaylist: Ref<boolean>
+  createOutcomeUncertain: Ref<boolean>
   cardTitle: Ref<string>
   playlist: Ref<PlaylistTrack[]>
   isEditing: ComputedRef<boolean>
+  canAcceptTracks: ComputedRef<boolean>
   isPodcast: Ref<boolean>
   loading: Ref<boolean>
   updating: ComputedRef<boolean>
@@ -81,6 +111,12 @@ export interface MyoEditorContext {
   isCardSaving: (cardId: string) => boolean
   isKnownPodcast: (cardId: string) => boolean
   selectCard: (card: YotoMyoCard) => Promise<void>
+  startNewPlaylist: () => boolean
+  queuePendingCreateTracks: (tracks: PlaylistTrack[]) => void
+  pendingCreateTrackCount: ComputedRef<number>
+  confirmNewPlaylistName: (title: string) => Promise<boolean>
+  appendTracks: (tracks: PlaylistTrack[]) => InsertTracksResult
+  insertTracks: (tracks: PlaylistTrack[], atIndex?: number) => InsertTracksResult
   clearSelection: (force?: boolean) => boolean
   resetChanges: () => void
   /** Start Update for the selected card: capacity, then normalize if extracting, then save. */
@@ -102,6 +138,13 @@ export interface MyoEditorContext {
     icon16x16: string,
     previewUrl: string,
   ) => Promise<{ patched: boolean; error?: string }>
+  playlistManagePrompt: Ref<PlaylistManagePrompt | null>
+  playlistManageBusy: Ref<boolean>
+  startRename: () => boolean
+  startDelete: () => boolean
+  cancelPlaylistManage: () => void
+  confirmRename: (title: string) => Promise<boolean>
+  confirmDelete: () => Promise<boolean>
 }
 
 export const MYO_EDITOR_KEY: InjectionKey<MyoEditorContext> = Symbol('myoEditor')
@@ -149,16 +192,17 @@ function jobToSaveProgress(state: CardSaveState): SaveProgress {
 }
 
 function saveStateFromJob(
-  cardId: string,
+  saveKey: string,
   job: SaveJobState,
   snapshot: CardSaveSnapshot,
   startedAt: number,
 ): CardSaveState {
   return {
-    cardId,
+    saveKey,
+    cardId: job.cardId,
     jobId: job.id,
     status: job.status,
-    progress: monotonicOverallProgress(cardId, job.progress),
+    progress: monotonicOverallProgress(saveKey, job.progress),
     operationProgress: job.operationProgress ?? 0,
     error: job.error,
     tracks: job.tracks,
@@ -185,9 +229,11 @@ function clearProgressTracking(cardId: string) {
   maxOverallProgressByCard.delete(cardId)
 }
 
-export function useMyoEditor() {
+export function useMyoEditor(options: UseMyoEditorOptions = {}) {
   const { playEvent } = useUiSound()
   const selectedCardId = ref<string | null>(null)
+  const isNewPlaylist = ref(false)
+  const createOutcomeUncertain = ref(false)
   const cardTitle = ref('')
   const playlist = ref<PlaylistTrack[]>([])
   const baselinePlaylist = ref<PlaylistTrack[]>([])
@@ -197,6 +243,7 @@ export function useMyoEditor() {
   const errorMessage = ref('')
   const activeSaves = ref(new Map<string, CardSaveState>())
   const pendingDrafts = ref(new Map<string, CardSaveSnapshot>())
+  const pendingCreateTracks = ref<PlaylistTrack[]>([])
   const podcastCardIds = ref(new Set<string>(readPodcastCardIds()))
 
   function touchActiveSaves() {
@@ -235,7 +282,16 @@ export function useMyoEditor() {
       }
     }
     const selectedId = selectedCardId.value
-    if (selectedId && isDirty.value && !isPodcast.value) {
+    if (isNewPlaylist.value) {
+      if (playlist.value.length > 0 || cardTitle.value.trim()) {
+        out[NEW_PLAYLIST_SAVE_KEY] = {
+          playlist: clonePlaylist(playlist.value),
+          baseline: clonePlaylist(baselinePlaylist.value),
+          cardTitle: cardTitle.value,
+        }
+      }
+    }
+    else if (selectedId && isDirty.value && !isPodcast.value) {
       out[selectedId] = {
         playlist: clonePlaylist(playlist.value),
         baseline: clonePlaylist(baselinePlaylist.value),
@@ -272,19 +328,19 @@ export function useMyoEditor() {
     persistPendingDrafts()
   }
 
-  function getSaveState(cardId: string): CardSaveState | undefined {
-    return activeSaves.value.get(cardId)
+  function getSaveState(saveKey: string): CardSaveState | undefined {
+    return activeSaves.value.get(saveKey)
   }
 
-  function setSaveState(cardId: string, state: CardSaveState) {
-    activeSaves.value.set(cardId, state)
+  function setSaveState(saveKey: string, state: CardSaveState) {
+    activeSaves.value.set(saveKey, state)
     touchActiveSaves()
   }
 
-  function deleteSaveState(cardId: string) {
-    if (!activeSaves.value.has(cardId)) return
-    activeSaves.value.delete(cardId)
-    clearProgressTracking(cardId)
+  function deleteSaveState(saveKey: string) {
+    if (!activeSaves.value.has(saveKey)) return
+    activeSaves.value.delete(saveKey)
+    clearProgressTracking(saveKey)
     touchActiveSaves()
   }
 
@@ -319,31 +375,54 @@ export function useMyoEditor() {
     const stored = readPersistedDrafts()
     const next = new Map<string, CardSaveSnapshot>()
     for (const [cardId, snapshot] of Object.entries(stored)) {
-      next.set(cardId, {
+      const cloned = {
         playlist: clonePlaylist(snapshot.playlist),
         baseline: clonePlaylist(snapshot.baseline),
         cardTitle: snapshot.cardTitle,
-      })
+      }
+      if (cardId === NEW_PLAYLIST_SAVE_KEY) {
+        isNewPlaylist.value = true
+        selectedCardId.value = null
+        restoreSnapshot(cloned)
+        continue
+      }
+      next.set(cardId, cloned)
     }
     pendingDrafts.value = next
   }
 
-  const isEditing = computed(() => Boolean(selectedCardId.value))
-
-  const isDirty = computed(
-    () => playlistSnapshot(playlist.value) !== playlistSnapshot(baselinePlaylist.value),
+  const selectedSaveKey = computed(() =>
+    isNewPlaylist.value ? NEW_PLAYLIST_SAVE_KEY : selectedCardId.value,
   )
 
+  const isEditing = computed(() =>
+    isPlaylistEditorActive(selectedCardId.value, isNewPlaylist.value),
+  )
+
+  const isDirty = computed(() => {
+    if (isNewPlaylist.value) {
+      return playlist.value.length > 0
+        || Boolean(cardTitle.value.trim())
+        || pendingCreateTracks.value.length > 0
+    }
+    return playlistSnapshot(playlist.value) !== playlistSnapshot(baselinePlaylist.value)
+  })
+
   const pendingPlaylistUpdateCount = computed(() => {
-    const draftCount = pendingDrafts.value.size
+    let draftCount = 0
+    for (const key of pendingDrafts.value.keys()) {
+      if (key !== NEW_PLAYLIST_SAVE_KEY) draftCount++
+    }
+    if (isNewPlaylist.value) return draftCount
     const selectedId = selectedCardId.value
     const selectedIsDirty = Boolean(selectedId && isDirty.value)
     if (!selectedIsDirty) return draftCount
-    // Live dirty selection isn't in the draft map while being edited.
     return draftCount + (pendingDrafts.value.has(selectedId!) ? 0 : 1)
   })
 
-  const pendingDraftCardIds = computed(() => [...pendingDrafts.value.keys()])
+  const pendingDraftCardIds = computed(() =>
+    [...pendingDrafts.value.keys()].filter(id => id !== NEW_PLAYLIST_SAVE_KEY),
+  )
 
   const pendingUpdateTitle = computed(() => {
     if (selectedCardId.value && isDirty.value && !isPodcast.value) {
@@ -357,9 +436,9 @@ export function useMyoEditor() {
   })
 
   const selectedSaveState = computed(() => {
-    const cardId = selectedCardId.value
-    if (!cardId) return null
-    return getSaveState(cardId) ?? null
+    const saveKey = selectedSaveKey.value
+    if (!saveKey) return null
+    return getSaveState(saveKey) ?? null
   })
 
   const isPlaylistLocked = computed(() => {
@@ -375,9 +454,9 @@ export function useMyoEditor() {
   })
 
   const activeSaveProgress = computed(() => {
-    const selectedId = selectedCardId.value
-    if (selectedId) {
-      const selected = getSaveState(selectedId)
+    const selectedKey = selectedSaveKey.value
+    if (selectedKey) {
+      const selected = getSaveState(selectedKey)
       if (selected && !isTerminalStatus(selected.status)) {
         return selected.progress
       }
@@ -441,19 +520,49 @@ export function useMyoEditor() {
     cardTitle.value = titleFallback || detail.title
   }
 
-  async function finalizeSaveSuccess(cardId: string, titleFallback?: string) {
-    const isSelected = selectedCardId.value === cardId
+  async function finalizeSaveSuccess(saveKey: string, titleFallback?: string) {
+    const existing = getSaveState(saveKey)
+    const createdCardId = existing?.cardId?.trim()
+    const isCreate = saveKey === NEW_PLAYLIST_SAVE_KEY
+    const cardId = isCreate
+      ? resolveSavedCardId('create', null, createdCardId)
+      : saveKey
+    const isSelected = selectedSaveKey.value === saveKey
+      || (isCreate && isNewPlaylist.value)
+      || selectedCardId.value === cardId
     const displayStartedAt = Date.now()
 
-    if (isSelected) {
-      const existing = getSaveState(cardId)
+    if (isCreate) {
+      isNewPlaylist.value = false
+      createOutcomeUncertain.value = false
+      selectedCardId.value = cardId
+      clearPendingDraft(NEW_PLAYLIST_SAVE_KEY)
       if (existing) {
+        deleteSaveState(NEW_PLAYLIST_SAVE_KEY)
+        removePersistedSave(NEW_PLAYLIST_SAVE_KEY)
         setSaveState(cardId, {
           ...existing,
+          saveKey: cardId,
+          cardId,
           status: 'posting',
           progress: monotonicOverallProgress(cardId, 100),
           operationProgress: 100,
-          tracks: existing.tracks.map(track => ({
+        })
+      }
+      notifyConfirmedPlaylistCreated('create', cardId, options.onPlaylistCreated)
+    }
+
+    if (isSelected) {
+      const state = getSaveState(cardId) ?? existing
+      if (state) {
+        setSaveState(cardId, {
+          ...state,
+          saveKey: cardId,
+          cardId,
+          status: 'posting',
+          progress: monotonicOverallProgress(cardId, 100),
+          operationProgress: 100,
+          tracks: state.tracks.map(track => ({
             ...track,
             status: track.status === 'failed' ? 'failed' : 'ready',
           })),
@@ -491,28 +600,33 @@ export function useMyoEditor() {
     clearPendingDraft(cardId)
   }
 
-  function handleSaveFailed(cardId: string, message: string) {
+  function handleSaveFailed(saveKey: string, message: string, outcomeUncertain = false) {
     playEvent('saveError')
     const displayMessage = message.length > 420 ? `${message.slice(0, 417)}…` : message
-    deleteSaveState(cardId)
-    removePersistedSave(cardId)
+    deleteSaveState(saveKey)
+    removePersistedSave(saveKey)
 
-    if (selectedCardId.value === cardId) {
+    if (saveKey === NEW_PLAYLIST_SAVE_KEY && outcomeUncertain) {
+      createOutcomeUncertain.value = true
+    }
+
+    if (selectedSaveKey.value === saveKey) {
       errorMessage.value = displayMessage
     }
   }
 
-  function updateSaveStateFromJob(cardId: string, job: SaveJobState) {
-    const existing = getSaveState(cardId)
+  function updateSaveStateFromJob(saveKey: string, job: SaveJobState) {
+    const existing = getSaveState(saveKey)
     if (!existing) return
 
     const isComplete = job.status === 'complete'
 
-    setSaveState(cardId, {
+    setSaveState(saveKey, {
       ...existing,
+      cardId: job.cardId ?? existing.cardId,
       status: isComplete ? 'posting' : job.status,
       progress: monotonicOverallProgress(
-        cardId,
+        saveKey,
         isComplete ? 100 : job.progress,
       ),
       operationProgress: isComplete ? 100 : (job.operationProgress ?? existing.operationProgress),
@@ -521,45 +635,46 @@ export function useMyoEditor() {
     })
   }
 
-  async function pollSaveJob(cardId: string, jobId: string, titleFallback: string) {
+  async function pollSaveJob(saveKey: string, jobId: string, titleFallback: string) {
     if (pollingJobIds.has(jobId)) return
     pollingJobIds.add(jobId)
 
-    const existing = getSaveState(cardId)
+    const existing = getSaveState(saveKey)
     const startedAt = existing?.startedAt ?? Date.now()
 
     try {
       let job = await $fetch<SaveJobState>(`/api/yoto/jobs/${jobId}`)
-      updateSaveStateFromJob(cardId, job)
+      updateSaveStateFromJob(saveKey, job)
 
       while (!isTerminalStatus(job.status)) {
         if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
-          handleSaveFailed(cardId, 'Save timed out. Check your card in Yoto and try again.')
+          handleSaveFailed(saveKey, 'Save timed out. Check your playlist in Yoto and try again.')
           return
         }
 
         await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS))
         job = await $fetch<SaveJobState>(`/api/yoto/jobs/${jobId}`)
-        updateSaveStateFromJob(cardId, job)
+        updateSaveStateFromJob(saveKey, job)
       }
 
       if (job.status === 'failed') {
-        handleSaveFailed(cardId, job.error ?? 'Save failed')
+        handleSaveFailed(saveKey, job.error ?? 'Save failed', job.outcomeUncertain === true)
         return
       }
 
-      await finalizeSaveSuccess(cardId, titleFallback)
+      await finalizeSaveSuccess(saveKey, titleFallback)
     }
     catch (err: unknown) {
       const e = err as { statusCode?: number; statusMessage?: string; message?: string }
       if (e.statusCode === 404) {
-        deleteSaveState(cardId)
-        removePersistedSave(cardId)
+        deleteSaveState(saveKey)
+        removePersistedSave(saveKey)
         return
       }
       handleSaveFailed(
-        cardId,
+        saveKey,
         e.statusMessage ?? e.message ?? 'Failed to track save progress',
+        saveKey === NEW_PLAYLIST_SAVE_KEY,
       )
     }
     finally {
@@ -568,12 +683,13 @@ export function useMyoEditor() {
   }
 
   async function startSaveJob(
-    cardId: string,
+    target: ClientSaveTarget,
     snapshot: CardSaveSnapshot,
     options?: { acknowledgeCapacityRisk?: boolean, normalizeVolume?: boolean },
   ) {
+    const identity = resolveClientSaveTarget(target)
     const { jobId } = await $fetch<{ jobId: string }>(
-      `/api/yoto/content/${cardId}/save`,
+      identity.endpoint,
       {
         method: 'POST',
         body: {
@@ -588,7 +704,8 @@ export function useMyoEditor() {
 
     const startedAt = Date.now()
     const initialState: CardSaveState = {
-      cardId,
+      saveKey: identity.saveKey,
+      cardId: identity.operation === 'update' ? identity.cardId : undefined,
       jobId,
       status: 'planning',
       progress: 0,
@@ -597,29 +714,29 @@ export function useMyoEditor() {
       snapshot: cloneSnapshot(snapshot),
       startedAt,
     }
-    maxOverallProgressByCard.set(cardId, 0)
-    setSaveState(cardId, initialState)
-    addPersistedSave(cardId, jobId)
+    maxOverallProgressByCard.set(identity.saveKey, 0)
+    setSaveState(identity.saveKey, initialState)
+    addPersistedSave(identity.saveKey, jobId)
 
-    void pollSaveJob(cardId, jobId, snapshot.cardTitle)
+    void pollSaveJob(identity.saveKey, jobId, snapshot.cardTitle)
   }
 
   async function hydratePersistedSaves() {
     const persisted = readPersistedSaves()
 
-    for (const [cardId, { jobId, startedAt }] of Object.entries(persisted)) {
-      if (getSaveState(cardId)) continue
+    for (const [saveKey, { jobId, startedAt }] of Object.entries(persisted)) {
+      if (getSaveState(saveKey)) continue
 
       try {
         const job = await $fetch<SaveJobState>(`/api/yoto/jobs/${jobId}`)
 
         if (isTerminalStatus(job.status)) {
-          removePersistedSave(cardId)
+          removePersistedSave(saveKey)
           if (job.status === 'failed') {
-            handleSaveFailed(cardId, job.error ?? 'Save failed')
+            handleSaveFailed(saveKey, job.error ?? 'Save failed', job.outcomeUncertain === true)
           }
-          if (job.status === 'complete' && selectedCardId.value === cardId) {
-            await finalizeSaveSuccess(cardId)
+          if (job.status === 'complete' && selectedSaveKey.value === saveKey) {
+            await finalizeSaveSuccess(saveKey)
           }
           continue
         }
@@ -630,20 +747,20 @@ export function useMyoEditor() {
           cardTitle: '',
         }
         setSaveState(
-          cardId,
-          saveStateFromJob(cardId, job, placeholderSnapshot, startedAt),
+          saveKey,
+          saveStateFromJob(saveKey, job, placeholderSnapshot, startedAt),
         )
 
-        if (selectedCardId.value === cardId) {
+        if (selectedSaveKey.value === saveKey) {
           errorMessage.value = ''
         }
 
-        void pollSaveJob(cardId, jobId, '')
+        void pollSaveJob(saveKey, jobId, '')
       }
       catch (err: unknown) {
         const e = err as { statusCode?: number }
         if (e.statusCode === 404) {
-          removePersistedSave(cardId)
+          removePersistedSave(saveKey)
         }
       }
     }
@@ -652,14 +769,23 @@ export function useMyoEditor() {
   async function selectCard(card: YotoMyoCard) {
     if (loading.value) return
 
-    if (selectedCardId.value === card.cardId && !errorMessage.value) {
+    cancelPlaylistManage()
+
+    if (selectedCardId.value === card.cardId && !errorMessage.value && !isNewPlaylist.value) {
       return
     }
 
     const currentCardId = selectedCardId.value
     const currentCardSaving = currentCardId ? isCardSaving(currentCardId) : false
+    const newDraftSaving = isCardSaving(NEW_PLAYLIST_SAVE_KEY)
 
-    if (currentCardId && currentCardId !== card.cardId) {
+    if (isNewPlaylist.value) {
+      if (isDirty.value && !newDraftSaving) {
+        stashCurrentDraft(NEW_PLAYLIST_SAVE_KEY)
+      }
+      isNewPlaylist.value = false
+    }
+    else if (currentCardId && currentCardId !== card.cardId) {
       if (isDirty.value && !currentCardSaving) {
         stashCurrentDraft(currentCardId)
       }
@@ -727,11 +853,195 @@ export function useMyoEditor() {
     }
   }
 
+  const pendingCreateTrackCount = computed(() => pendingCreateTracks.value.length)
+
+  function queuePendingCreateTracks(tracks: PlaylistTrack[]) {
+    pendingCreateTracks.value = clonePlaylist(tracks)
+  }
+
+  function startNewPlaylist(): boolean {
+    if (loading.value || (isNewPlaylist.value && isPlaylistLocked.value) || playlistManageBusy.value) return false
+
+    const currentCardId = selectedCardId.value
+    const currentCardSaving = currentCardId ? isCardSaving(currentCardId) : false
+    if (isEditing.value && isDirty.value && !currentCardSaving && !isNewPlaylist.value) {
+      stashCurrentDraft(currentCardId!)
+    }
+
+    if (isNewPlaylist.value && isDirty.value) {
+      return true
+    }
+
+    cancelPlaylistManage()
+
+    const draft = pendingDrafts.value.get(NEW_PLAYLIST_SAVE_KEY)
+    selectedCardId.value = null
+    isNewPlaylist.value = true
+    isPodcast.value = false
+    originalCardDetail.value = null
+    errorMessage.value = ''
+    createOutcomeUncertain.value = false
+    pendingCreateTracks.value = []
+    cancelUpdatePrompt()
+
+    if (draft) {
+      restoreSnapshot(draft)
+      clearPendingDraft(NEW_PLAYLIST_SAVE_KEY)
+      return true
+    }
+
+    cardTitle.value = ''
+    playlist.value = []
+    baselinePlaylist.value = []
+    return true
+  }
+
+  async function confirmNewPlaylistName(title: string): Promise<boolean> {
+    const name = title.trim()
+    if (!isNewPlaylist.value || !name) return false
+    if (
+      createOutcomeUncertain.value
+      || loading.value
+      || isPlaylistLocked.value
+      || saveStarting.value
+      || isCardSaving(NEW_PLAYLIST_SAVE_KEY)
+    ) {
+      return false
+    }
+
+    const createError = getStandalonePlaylistCreateError(name, playlist.value)
+    if (createError) {
+      errorMessage.value = createError
+      playEvent('saveError')
+      return false
+    }
+
+    cardTitle.value = name
+    errorMessage.value = ''
+
+    const inbound = pendingCreateTracks.value
+    if (inbound.length > 0) {
+      const result = insertTracks(inbound)
+      if (!result.ok) {
+        playEvent('saveError')
+        errorMessage.value = result.message
+        return false
+      }
+      pendingCreateTracks.value = []
+    }
+
+    if (playlist.value.length === 0) {
+      saveStarting.value = true
+      try {
+        await startSaveJob(
+          { operation: 'create' },
+          {
+            playlist: clonePlaylist(playlist.value),
+            baseline: clonePlaylist(baselinePlaylist.value),
+            cardTitle: name,
+          },
+        )
+        return true
+      }
+      catch (err: unknown) {
+        const failure = classifyCreateStartFailure(err)
+        createOutcomeUncertain.value = failure.outcomeUncertain
+        errorMessage.value = failure.message
+        playEvent('saveError')
+        return false
+      }
+      finally {
+        saveStarting.value = false
+      }
+    }
+
+    requestUpdate('footer')
+    return true
+  }
+
+  const canAcceptTracks = computed(() =>
+    canAcceptPlaylistTracks({
+      isEditing: isEditing.value,
+      isNewPlaylist: isNewPlaylist.value,
+      title: cardTitle.value,
+    })
+    && !(isNewPlaylist.value && (saveStarting.value || isCardSaving(NEW_PLAYLIST_SAVE_KEY))),
+  )
+
+  function insertTracks(
+    tracks: PlaylistTrack[],
+    atIndex?: number,
+  ): InsertTracksResult {
+    if (!isEditing.value) {
+      return { ok: false, message: 'Start a new playlist or open one from Playlists before importing.' }
+    }
+    if (!canAcceptTracks.value) {
+      return { ok: false, message: UNNAMED_PLAYLIST_ADD_MESSAGE }
+    }
+    if (loading.value || isPlaylistLocked.value) {
+      return { ok: false, message: 'Wait for the current card operation to finish.' }
+    }
+    if (isPodcast.value) {
+      return { ok: false, message: 'Podcasts cannot be edited yet.' }
+    }
+
+    const unique: PlaylistTrack[] = []
+    let skipped = 0
+    for (const track of tracks) {
+      if (playlistHasTrack(playlist.value, track) || playlistHasTrack(unique, track)) {
+        skipped++
+        continue
+      }
+      unique.push(track)
+    }
+
+    const room = Math.max(0, YOTO_MYO_MAX_TRACKS - playlist.value.length)
+    const overflow = Math.max(0, unique.length - room)
+    const toAdd = unique.slice(0, room)
+
+    if (toAdd.length === 0) {
+      return { ok: true, added: 0, skipped, overflow }
+    }
+
+    const cloned = clonePlaylist(toAdd)
+    if (atIndex === undefined || atIndex < 0 || atIndex >= playlist.value.length) {
+      playlist.value = [...playlist.value, ...cloned]
+    }
+    else {
+      const next = [...playlist.value]
+      next.splice(atIndex, 0, ...cloned)
+      playlist.value = next
+    }
+    errorMessage.value = ''
+    return {
+      ok: true,
+      added: toAdd.length,
+      skipped,
+      overflow,
+      firstAddedId: toAdd[0]?.id,
+    }
+  }
+
+  function appendTracks(tracks: PlaylistTrack[]): InsertTracksResult {
+    if (!isEditing.value) {
+      const started = startNewPlaylist()
+      if (!started) {
+        return { ok: false, message: 'Start a new playlist or open one from Playlists before importing.' }
+      }
+    }
+    return insertTracks(tracks)
+  }
+
   function clearSelection(force = false): boolean {
     const currentCardId = selectedCardId.value
     const currentCardSaving = currentCardId ? isCardSaving(currentCardId) : false
+    const newDraftSaving = isCardSaving(NEW_PLAYLIST_SAVE_KEY)
 
-    if (currentCardId && isDirty.value && !currentCardSaving) {
+    if (isNewPlaylist.value && isDirty.value && !newDraftSaving) {
+      if (force) clearPendingDraft(NEW_PLAYLIST_SAVE_KEY)
+      else stashCurrentDraft(NEW_PLAYLIST_SAVE_KEY)
+    }
+    else if (currentCardId && isDirty.value && !currentCardSaving) {
       if (force) {
         clearPendingDraft(currentCardId)
       }
@@ -741,12 +1051,15 @@ export function useMyoEditor() {
     }
 
     selectedCardId.value = null
+    isNewPlaylist.value = false
     cardTitle.value = ''
     isPodcast.value = false
     playlist.value = []
     baselinePlaylist.value = []
     originalCardDetail.value = null
     errorMessage.value = ''
+    createOutcomeUncertain.value = false
+    cancelPlaylistManage(true)
     return true
   }
 
@@ -755,7 +1068,15 @@ export function useMyoEditor() {
     const cardId = selectedCardId.value
     playlist.value = clonePlaylist(baselinePlaylist.value)
     errorMessage.value = ''
-    if (cardId) clearPendingDraft(cardId)
+    if (isNewPlaylist.value) {
+      cardTitle.value = ''
+      createOutcomeUncertain.value = false
+      pendingCreateTracks.value = []
+      clearPendingDraft(NEW_PLAYLIST_SAVE_KEY)
+    }
+    else if (cardId) {
+      clearPendingDraft(cardId)
+    }
   }
 
   function setTrackArt(trackId: string, icon16x16: string, previewUrl: string) {
@@ -828,6 +1149,119 @@ export function useMyoEditor() {
     }
   }
 
+  const playlistManagePrompt = ref<PlaylistManagePrompt | null>(null)
+  const playlistManageBusy = ref(false)
+
+  function canManageLoadedPlaylist(): boolean {
+    return Boolean(
+      selectedCardId.value
+      && !isNewPlaylist.value
+      && !loading.value
+      && !isPlaylistLocked.value
+      && !saveStarting.value
+      && !playlistManageBusy.value,
+    )
+  }
+
+  function cancelPlaylistManage(force = false) {
+    if (playlistManageBusy.value && !force) return
+    playlistManagePrompt.value = null
+  }
+
+  function startRename(): boolean {
+    if (!canManageLoadedPlaylist()) return false
+    cancelUpdatePrompt()
+    playlistManagePrompt.value = 'rename'
+    return true
+  }
+
+  function startDelete(): boolean {
+    if (!canManageLoadedPlaylist()) return false
+    cancelUpdatePrompt()
+    playlistManagePrompt.value = 'delete'
+    return true
+  }
+
+  function apiErrorMessage(err: unknown, fallback: string): string {
+    const e = err as { statusMessage?: string; message?: string; data?: { statusMessage?: string; message?: string } }
+    const message = (
+      e.data?.statusMessage
+      ?? e.data?.message
+      ?? e.statusMessage
+      ?? e.message
+      ?? fallback
+    )
+    return message.length > 240 ? `${message.slice(0, 237)}…` : message
+  }
+
+  async function confirmRename(title: string): Promise<boolean> {
+    const name = title.trim()
+    const cardId = selectedCardId.value
+    if (!cardId || !name || playlistManagePrompt.value !== 'rename') return false
+    if (!canManageLoadedPlaylist() && !playlistManageBusy.value) return false
+    if (isPlaylistLocked.value || saveStarting.value || loading.value) return false
+
+    if (name === cardTitle.value.trim()) {
+      playlistManagePrompt.value = null
+      return true
+    }
+
+    playlistManageBusy.value = true
+    try {
+      await $fetch(`/api/yoto/content/${cardId}/patch-title`, {
+        method: 'POST',
+        body: { cardTitle: name },
+      })
+      cardTitle.value = name
+      if (originalCardDetail.value) {
+        originalCardDetail.value = { ...originalCardDetail.value, title: name }
+      }
+      const draft = pendingDrafts.value.get(cardId)
+      if (draft) {
+        pendingDrafts.value.set(cardId, { ...draft, cardTitle: name })
+        touchPendingDrafts()
+      }
+      errorMessage.value = ''
+      playlistManagePrompt.value = null
+      options.onPlaylistRenamed?.(cardId, name)
+      return true
+    }
+    catch (err: unknown) {
+      errorMessage.value = apiErrorMessage(err, 'Failed to rename playlist')
+      playEvent('saveError')
+      return false
+    }
+    finally {
+      playlistManageBusy.value = false
+    }
+  }
+
+  async function confirmDelete(): Promise<boolean> {
+    const cardId = selectedCardId.value
+    if (!cardId || playlistManagePrompt.value !== 'delete') return false
+    if (isPlaylistLocked.value || saveStarting.value || loading.value) return false
+    if (playlistManageBusy.value) return false
+
+    playlistManageBusy.value = true
+    try {
+      await $fetch(`/api/yoto/content/${cardId}`, { method: 'DELETE' })
+      clearPendingDraft(cardId)
+      playlistManagePrompt.value = null
+      errorMessage.value = ''
+      clearSelection(true)
+      options.onPlaylistDeleted?.(cardId)
+      return true
+    }
+    catch (err: unknown) {
+      errorMessage.value = apiErrorMessage(err, 'Failed to delete playlist')
+      playEvent('saveError')
+      return false
+    }
+    finally {
+      playlistManageBusy.value = false
+    }
+  }
+
   const updatePrompt = ref<UpdatePromptKind | null>(null)
   const updatePromptSurface = ref<UpdatePromptSurface | null>(null)
   const updatePromptCardCount = ref(1)
@@ -836,6 +1270,21 @@ export function useMyoEditor() {
   let updateScope: UpdatePromptScope = 'selected'
 
   function livePendingInput() {
+    if (isNewPlaylist.value) {
+      if (loading.value) return null
+      return {
+        cardId: NEW_PLAYLIST_SAVE_KEY,
+        snapshot: {
+          playlist: clonePlaylist(playlist.value),
+          baseline: clonePlaylist(baselinePlaylist.value),
+          cardTitle: cardTitle.value,
+        },
+        isDirty: isDirty.value,
+        isPodcast: false,
+        isSaving: isCardSaving(NEW_PLAYLIST_SAVE_KEY),
+        cardDetail: null,
+      }
+    }
     const cardId = selectedCardId.value
     if (!cardId || loading.value) return null
     return {
@@ -854,7 +1303,7 @@ export function useMyoEditor() {
 
   function collectAllPending(): PendingUpdateTarget[] {
     return collectPendingUpdateTargets({
-      live: livePendingInput(),
+      live: isNewPlaylist.value ? null : livePendingInput(),
       drafts: pendingDrafts.value,
       isPodcast: isKnownPodcast,
       isSaving: isCardSaving,
@@ -863,6 +1312,11 @@ export function useMyoEditor() {
 
   function targetsForCurrentScope(): PendingUpdateTarget[] {
     if (updateScope === 'selected') {
+      if (isNewPlaylist.value) {
+        const live = livePendingInput()
+        if (!live || live.isSaving) return []
+        return [pendingTargetFrom(live.cardId, live.snapshot, live.cardDetail)]
+      }
       const live = livePendingInput()
       if (!live) return []
       return collectPendingUpdateTargets({
@@ -923,6 +1377,23 @@ export function useMyoEditor() {
   }
 
   function requestUpdate(surface: UpdatePromptSurface = 'footer') {
+    if (playlistManageBusy.value) return
+    cancelPlaylistManage()
+    if (isNewPlaylist.value) {
+      if (createOutcomeUncertain.value || loading.value || isPlaylistLocked.value) return
+      const validationError = getStandalonePlaylistValidationError(cardTitle.value, playlist.value)
+      if (validationError) {
+        errorMessage.value = validationError
+        playEvent('saveError')
+        return
+      }
+      const live = livePendingInput()
+      if (!live) return
+      beginPromptedUpdate(surface, 'selected', [
+        pendingTargetFrom(live.cardId, live.snapshot, live.cardDetail),
+      ])
+      return
+    }
     const cardId = selectedCardId.value
     if (!cardId || !isDirty.value || loading.value || isPlaylistLocked.value || isPodcast.value) return
     const live = livePendingInput()
@@ -940,7 +1411,8 @@ export function useMyoEditor() {
   }
 
   function requestUpdatePending(surface: UpdatePromptSurface = 'dialog') {
-    if (hasActiveSaves.value) return
+    if (hasActiveSaves.value || playlistManageBusy.value) return
+    cancelPlaylistManage()
     beginPromptedUpdate(surface, 'pending', collectAllPending())
   }
 
@@ -973,10 +1445,19 @@ export function useMyoEditor() {
     options: { acknowledgeCapacityRisk?: boolean, normalizeVolume?: boolean },
   ) {
     const { cardId, snapshot } = target
-    if (isCardSaving(cardId) || isKnownPodcast(cardId)) return
+    if (isCardSaving(cardId) || (cardId !== NEW_PLAYLIST_SAVE_KEY && isKnownPodcast(cardId))) return
 
     const acknowledgeCapacityRisk = options.acknowledgeCapacityRisk === true && target.overCapacity
     const normalizeVolume = options.normalizeVolume === true && target.extractsYoutube
+
+    if (cardId === NEW_PLAYLIST_SAVE_KEY) {
+      const validationError = getStandalonePlaylistValidationError(snapshot.cardTitle, snapshot.playlist)
+      if (validationError) {
+        errorMessage.value = validationError
+        playEvent('saveError')
+        return
+      }
+    }
 
     if (!acknowledgeCapacityRisk) {
       const limitError = getPlaylistPreflightLimitError(snapshot.playlist)
@@ -987,17 +1468,28 @@ export function useMyoEditor() {
       }
     }
 
-    if (selectedCardId.value === cardId) {
+    if (selectedSaveKey.value === cardId) {
       errorMessage.value = ''
     }
 
+    const saveTarget: ClientSaveTarget = cardId === NEW_PLAYLIST_SAVE_KEY
+      ? { operation: 'create' }
+      : { operation: 'update', cardId }
+
     try {
-      await startSaveJob(cardId, snapshot, {
+      await startSaveJob(saveTarget, snapshot, {
         acknowledgeCapacityRisk,
         normalizeVolume,
       })
     }
     catch (err: unknown) {
+      if (cardId === NEW_PLAYLIST_SAVE_KEY) {
+        const failure = classifyCreateStartFailure(err)
+        createOutcomeUncertain.value = failure.outcomeUncertain
+        errorMessage.value = failure.message
+        playEvent('saveError')
+        return
+      }
       const e = err as { statusMessage?: string; message?: string }
       errorMessage.value = e.statusMessage ?? e.message ?? 'Failed to update card'
     }
@@ -1061,7 +1553,7 @@ export function useMyoEditor() {
         if (collectAllPending().length === 0) cancelUpdatePrompt()
         return
       }
-      if (!isDirty.value || isPlaylistLocked.value || isPodcast.value || !selectedCardId.value) {
+      if (!isDirty.value || isPlaylistLocked.value || isPodcast.value || !isEditing.value) {
         cancelUpdatePrompt()
       }
     },
@@ -1069,7 +1561,7 @@ export function useMyoEditor() {
 
   // Keep durable drafts in sync while editing — debounced; flushed on hide/unmount.
   watch(
-    [playlist, baselinePlaylist, cardTitle, selectedCardId, isDirty, isPodcast],
+    [playlist, baselinePlaylist, cardTitle, selectedCardId, isNewPlaylist, isDirty, isPodcast],
     () => {
       schedulePersistPendingDrafts()
     },
@@ -1077,9 +1569,12 @@ export function useMyoEditor() {
 
   return {
     selectedCardId,
+    isNewPlaylist,
+    createOutcomeUncertain,
     cardTitle,
     playlist,
     isEditing,
+    canAcceptTracks,
     isPodcast,
     loading,
     updating,
@@ -1095,6 +1590,12 @@ export function useMyoEditor() {
     isCardSaving,
     isKnownPodcast,
     selectCard,
+    startNewPlaylist,
+    queuePendingCreateTracks,
+    pendingCreateTrackCount,
+    confirmNewPlaylistName,
+    appendTracks,
+    insertTracks,
     clearSelection,
     resetChanges,
     requestUpdate,
@@ -1109,5 +1610,12 @@ export function useMyoEditor() {
     updateCard,
     setTrackArt,
     persistTrackArt,
+    playlistManagePrompt,
+    playlistManageBusy,
+    startRename,
+    startDelete,
+    cancelPlaylistManage,
+    confirmRename,
+    confirmDelete,
   }
 }

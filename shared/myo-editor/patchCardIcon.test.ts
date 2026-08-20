@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  contentChaptersFromDetail,
   isPersistedCardTrack,
   PatchCardIconError,
   patchCardDetailIcons,
@@ -121,5 +122,23 @@ describe('isPersistedCardTrack', () => {
     assert.equal(isPersistedCardTrack(persisted, baseline), true)
     assert.equal(isPersistedCardTrack(fresh, baseline), false)
     assert.equal(isPersistedCardTrack({ ...persisted, chapterKey: undefined }, baseline), false)
+  })
+})
+
+describe('contentChaptersFromDetail', () => {
+  it('maps chapters and icons without changing them', () => {
+    const chapters = contentChaptersFromDetail(fixtureDetail())
+    assert.equal(chapters.length, 2)
+    assert.equal(chapters[0]!.title, 'First')
+    assert.deepEqual(chapters[0]!.display, { icon16x16: 'yoto:#old-a' })
+    assert.deepEqual(chapters[0]!.tracks[0]!.display, { icon16x16: 'yoto:#old-a' })
+    assert.equal(chapters[0]!.tracks[0]!.trackUrl, 'yoto:#audio-a')
+    assert.equal(chapters[1]!.overlayLabel, '2')
+  })
+
+  it('returns an empty chapter list for an empty playlist', () => {
+    const empty = fixtureDetail()
+    empty.chapters = []
+    assert.deepEqual(contentChaptersFromDetail(empty), [])
   })
 })

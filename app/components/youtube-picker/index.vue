@@ -3,10 +3,10 @@
 
   Requires:
   - LOUIS_YOUTUBE_API_KEY in .env
-  - Server proxy routes at /api/youtube/search and /api/youtube/videos
+  - Server proxy routes at /api/youtube/search, /api/youtube/videos, /api/youtube/playlist, and /api/youtube/channel
 -->
 <script setup lang="ts">
-import { useYoutubePicker } from './useYoutubePicker'
+import { useYoutubePicker, YOUTUBE_PICKER_RESULTS_KEY } from './useYoutubePicker'
 import YoutubePickerPreview from './YoutubePickerPreview.vue'
 import YoutubePickerResultsPane from './YoutubePickerResultsPane.vue'
 import YoutubePickerSearch from './YoutubePickerSearch.vue'
@@ -59,7 +59,18 @@ const {
   cancelEnableLongTracks,
   moveFocus,
   resetSearch,
+  playlistSummary,
+  skippedUnavailable,
+  selectedCount,
+  allImportableSelected,
+  importableCount,
+  playlistMode,
+  channelSummary,
+  searchSource,
+  toggleSelectAll,
 } = useYoutubePicker(props.maxResults)
+
+provide(YOUTUBE_PICKER_RESULTS_KEY, results)
 
 const { showError } = useToast()
 
@@ -178,10 +189,19 @@ onUnmounted(() => {
         :focused-index="focusedIndex"
         :next-page-token="nextPageToken"
         :loading-more="loadingMore"
+        :playlist="playlistSummary"
+        :channel="channelSummary"
+        :search-source="searchSource"
+        :skipped-unavailable="skippedUnavailable"
+        :selected-count="selectedCount"
+        :all-importable-selected="allImportableSelected"
+        :importable-count="importableCount"
+        :playlist-mode="playlistMode"
         :fill="embedded"
         @search="onPlaceholderSearch"
         @select="onSelect"
         @enable-long-tracks="requestEnableLongTracks"
+        @toggle-select-all="toggleSelectAll"
         @load-more="loadMore"
       />
     </div>
@@ -195,5 +215,6 @@ onUnmounted(() => {
         @cancel="onCancelEnableLongTracks"
       />
     </div>
+
   </div>
 </template>

@@ -33,21 +33,22 @@ const sections = [
   {
     id: 'youtube',
     title: 'YouTube Search',
-    body: 'Type a song, show, or artist to find videos. Preview audio right in the results, then add tracks to a MYO card.',
+    body: 'Type a song, show, or artist to find videos. Paste a YouTube video, Shorts, playlist, or channel URL to load it in Search. Check rows to group them, then drag the group into a playlist — or on a phone, tap Add and pick a playlist.',
     bullets: [
       'Search and browse YouTube results',
-      'Preview tracks before adding them',
-      'On desktop, drag into the playlist; on a phone, tap Add and pick a card',
+      'Paste a video or Shorts URL to open that track, ready to add',
+      'Paste a playlist or channel URL to load those videos, pre-checked',
+      'On desktop, drag into the playlist; on a phone, tap Add and pick a playlist',
     ],
   },
   {
     id: 'cards',
-    title: 'My Cards',
+    title: 'Playlists',
     body: '',
     bullets: [
       'Sign in with Connect in the status bar (desktop) or Menu (phone)',
-      'Choose the MYO card you want to edit',
-      'Selected cards stay highlighted so you know the target',
+      'Open a playlist to edit it, or start New from the Playlists header, the empty playlist panel, or Add → New playlist on a phone',
+      'Selected playlists stay highlighted so you know what you are editing',
     ],
   },
   {
@@ -55,10 +56,12 @@ const sections = [
     title: 'Playlist',
     body: '',
     bullets: [
+      'New names the playlist and creates it on Yoto — checked Search results (desktop) or Add → New playlist (phone) are uploaded with that create',
       'On desktop, drag to reorder; on a phone, use the track menu to move or remove',
       'Watch capacity meters for track count and length',
-      'Tap Update in the playlist footer (desktop) or Menu / card detail (phone) — saving can take a few minutes',
-      'If Update downloads YouTube audio, you can normalize those new tracks; existing card tracks stay as they are',
+      'Tap Update to save tracks to Yoto — saving can take a few minutes',
+      'If the save downloads YouTube audio, you can normalize those new tracks; existing playlist tracks stay as they are',
+      'The playlist menu can Rename (saves the name to Yoto now) or Delete the loaded playlist',
     ],
   },
 ] as const
@@ -164,10 +167,10 @@ onUnmounted(() => {
 
         <div class="howto-modal__body">
           <p class="howto-modal__intro text-pretty m-0">
-            This app helps you build Yoto Make Your Own playlists from YouTube.
-            Search for videos, preview the audio, pick one of your MYO cards, arrange
-            tracks in a playlist, then save the finished set back to your card so it
-            plays on your Yoto player.
+            This app helps you build Yoto playlists from YouTube.
+            Search for videos, preview the audio, open a playlist (or start a New one and name it), arrange
+            tracks, then save the finished set back to Yoto so it
+            plays on your player.
           </p>
 
           <section
@@ -198,17 +201,17 @@ onUnmounted(() => {
               />
               <p class="howto-section__body text-pretty m-0">
                 <template v-if="section.id === 'cards'">
-                  Connect your Yoto account, then pick a
+                  Connect your Yoto account, then open a
                   <a
                     class="howto-section__link"
                     href="https://my.yotoplay.com/"
                     target="_blank"
                     rel="noopener noreferrer"
                   >Make Your Own</a>
-                  card. The selected card is what the playlist will update.
+                  playlist. Use New in the Playlists header (or New playlist when the playlist panel is empty) if you do not have one yet. The selected playlist is what you edit.
                 </template>
                 <template v-else-if="section.id === 'playlist'">
-                  Arrange tracks in the order you want, remove anything you don’t need, then tap Update to save the playlist onto the selected card.
+                  Confirming the name creates the playlist on Yoto and lists it in Playlists. If you already picked tracks (checked results on desktop, or Add → New playlist on a phone), those upload with the create. Otherwise add tracks after, then tap Update. The playlist menu Renames or Deletes a loaded playlist.
                   <strong class="font-maru-bold">Saving downloads and processes each track, so it can take a while—especially on longer playlists.</strong>
                 </template>
                 <template v-else>

@@ -9,6 +9,7 @@
 <script setup lang="ts">
 import MaruHeading from '~/components/layout/MaruHeading.vue'
 import { MYO_EDITOR_KEY } from '~/components/myo-editor/keys'
+import { useSelectedResultTracks } from '~/components/youtube-picker/useYoutubePicker'
 import { useYotoMyo } from './useYotoMyo'
 import { useMyoCardFanScroll } from './useMyoCardFanScroll'
 import { YOTO_MYO_KEY } from './keys'
@@ -23,6 +24,7 @@ withDefaults(defineProps<{
 
 const yoto = inject(YOTO_MYO_KEY, null) ?? useYotoMyo()
 const editor = inject(MYO_EDITOR_KEY, null)
+const selectedResultTracks = useSelectedResultTracks()
 
 const selectedCardId = editor?.selectedCardId
 const editorLoading = editor?.loading
@@ -52,16 +54,17 @@ function onSelectCard(card: YotoMyoCardType) {
   editor?.selectCard(card)
 }
 
+function onStartNewPlaylist() {
+  if (!editor?.startNewPlaylist()) return
+  if (selectedResultTracks.value.length > 0) {
+    editor.queuePendingCreateTracks(selectedResultTracks.value)
+  }
+}
+
 const cardCountLabel = computed(() => {
   if (!connected.value || status.value !== 'idle' || cardsLoading.value) return ''
-  return `${cards.value.length} ${cards.value.length === 1 ? 'card' : 'cards'}`
+  return `${cards.value.length} ${cards.value.length === 1 ? 'playlist' : 'playlists'}`
 })
-
-const emit = defineEmits<{
-  'update:count': [value: string]
-}>()
-
-watch(cardCountLabel, value => emit('update:count', value), { immediate: true })
 
 const CARD_PLACEHOLDERS = [0, 1, 2, 3, 4, 5, 6, 7]
 </script>
@@ -69,7 +72,7 @@ const CARD_PLACEHOLDERS = [0, 1, 2, 3, 4, 5, 6, 7]
 <template>
   <section v-if="!embedded" class="mt-12">
     <div class="flex items-baseline justify-between gap-3 mb-4">
-      <MaruHeading text="My Yoto Cards" size="md" />
+      <MaruHeading text="Playlists" size="md" />
       <p
         v-if="cardCountLabel"
         class="type-meta text-maru-gray"
@@ -97,7 +100,7 @@ const CARD_PLACEHOLDERS = [0, 1, 2, 3, 4, 5, 6, 7]
         <div class="empty-state gap-3">
           <MaruEmoji name="Bear" size="lg" />
           <p class="empty-state-meta">
-            Connect your Yoto account to load your MYO cards.
+            Connect your Yoto account to load your playlists.
           </p>
           <button
             type="button"
@@ -113,7 +116,7 @@ const CARD_PLACEHOLDERS = [0, 1, 2, 3, 4, 5, 6, 7]
         v-else-if="cardsLoading"
         class="myo-card-fan list-none m-0 p-0 flex-1 min-h-0"
         aria-busy="true"
-        aria-label="Loading MYO cards"
+        aria-label="Loading playlists"
       >
         <YotoMyoCard
           v-for="n in CARD_PLACEHOLDERS"
@@ -127,7 +130,7 @@ const CARD_PLACEHOLDERS = [0, 1, 2, 3, 4, 5, 6, 7]
           v-if="cards.length === 0"
           class="empty-state-meta py-8 text-center"
         >
-          No MYO cards found.
+          No playlists found.
         </p>
 
         <ul
@@ -136,7 +139,7 @@ const CARD_PLACEHOLDERS = [0, 1, 2, 3, 4, 5, 6, 7]
           class="myo-card-fan list-none m-0 p-0 flex-1 min-h-0"
           :class="{ 'myo-card-fan--dragging': dragging }"
           tabindex="0"
-          aria-label="My Yoto cards"
+          aria-label="Playlists"
           @keydown="onKeydown"
           @pointerdown="onPointerDown"
           @pointermove="onPointerMove"
@@ -156,6 +159,13 @@ const CARD_PLACEHOLDERS = [0, 1, 2, 3, 4, 5, 6, 7]
     </div>
 
     <div v-if="connected" class="mt-3 flex gap-4">
+      <button
+        type="button"
+        class="font-maru-mono font-maru-regular text-xs text-maru-gray underline"
+        @click="onStartNewPlaylist"
+      >
+        New
+      </button>
       <button
         type="button"
         class="font-maru-mono font-maru-regular text-xs text-maru-gray underline"
@@ -201,7 +211,7 @@ const CARD_PLACEHOLDERS = [0, 1, 2, 3, 4, 5, 6, 7]
       <div v-else-if="status === 'disconnected'" class="empty-state flex-1 min-h-0 w-full gap-3">
         <MaruEmoji name="Bear" size="lg" />
         <p class="empty-state-meta">
-          Connect your Yoto account to load your MYO cards.
+          Connect your Yoto account to load your playlists.
         </p>
       </div>
 
@@ -209,7 +219,7 @@ const CARD_PLACEHOLDERS = [0, 1, 2, 3, 4, 5, 6, 7]
         v-else-if="cardsLoading"
         class="myo-card-fan list-none m-0 p-0 flex-1 min-h-0"
         aria-busy="true"
-        aria-label="Loading MYO cards"
+        aria-label="Loading playlists"
       >
         <YotoMyoCard
           v-for="n in CARD_PLACEHOLDERS"
@@ -223,7 +233,7 @@ const CARD_PLACEHOLDERS = [0, 1, 2, 3, 4, 5, 6, 7]
           v-if="cards.length === 0"
           class="empty-state flex-1 min-h-0 w-full empty-state-meta"
         >
-          No MYO cards found.
+          No playlists found.
         </p>
 
         <ul
@@ -232,7 +242,7 @@ const CARD_PLACEHOLDERS = [0, 1, 2, 3, 4, 5, 6, 7]
           class="myo-card-fan list-none m-0 p-0 flex-1 min-h-0"
           :class="{ 'myo-card-fan--dragging': dragging }"
           tabindex="0"
-          aria-label="My Yoto cards"
+          aria-label="Playlists"
           @keydown="onKeydown"
           @pointerdown="onPointerDown"
           @pointermove="onPointerMove"

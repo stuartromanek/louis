@@ -149,13 +149,16 @@ export interface SaveJobTrackProgress {
 
 export interface SaveJobState {
   id: string
-  cardId: string
+  operation?: 'create' | 'update'
+  /** Present for updates, and for creates once Yoto returns an id. */
+  cardId?: string
   status: SaveJobPhase
   /** Monotonic 0–100 progress for the entire save job. */
   progress: number
   /** 0–100 progress for the current step (per-track download/upload/transcode). */
   operationProgress: number
   error?: string
+  outcomeUncertain?: boolean
   tracks: SaveJobTrackProgress[]
   createdAt: number
 }

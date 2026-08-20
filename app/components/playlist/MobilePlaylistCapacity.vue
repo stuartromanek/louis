@@ -10,7 +10,7 @@ const selectedCardId = editor?.selectedCardId
 
 const capacity = computed(() => getPlaylistCapacitySnapshot(playlist?.value ?? []))
 
-const show = computed(() => Boolean(selectedCardId?.value))
+const show = computed(() => Boolean(selectedCardId?.value || editor?.isNewPlaylist.value))
 
 type Level = 'empty' | 'low' | 'medium' | 'high' | 'over'
 type Tone = 'ok' | 'warn' | 'alert'

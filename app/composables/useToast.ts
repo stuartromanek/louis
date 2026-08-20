@@ -11,7 +11,7 @@ export type ToastPlacement = {
 export type ToastAddedPayload = ToastPlacement & {
   kind: 'added'
   trackTitle: string
-  cardTitle: string
+  playlistTitle: string
 }
 
 export type ToastDuplicatePayload = ToastPlacement & {
@@ -87,11 +87,11 @@ export function useToast() {
     }, durationMs)
   }
 
-  function showAddedToCard(trackTitle: string, cardTitle: string, durationMs = 6400) {
+  function showAddedToPlaylist(trackTitle: string, playlistTitle: string, durationMs = 6400) {
     payload.value = {
       kind: 'added',
       trackTitle: trackTitle.trim() || 'Track',
-      cardTitle: cardTitle.trim() || 'card',
+      playlistTitle: playlistTitle.trim() || 'playlist',
       ...defaultToastPlacement(),
     }
     scheduleAutoClose(durationMs)
@@ -129,7 +129,7 @@ export function useToast() {
   return {
     open,
     payload,
-    showAddedToCard,
+    showAddedToPlaylist,
     showDuplicateTrack,
     showError,
     showInstallHelp,

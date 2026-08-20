@@ -2,7 +2,7 @@ import { YOTO_MYO_MAX_TRACK_SECONDS } from './yotoMyoLimits.ts'
 
 /** Full hint for title / aria. */
 export const YOTO_MYO_OVER_TRACK_DURATION_MESSAGE
-  = 'Over 1 hour — too long for a MYO card'
+  = 'Over 1 hour — too long for a Yoto playlist'
 
 /** Short stamp label on over-limit result thumbs. */
 export const YOTO_MYO_OVER_TRACK_DURATION_STAMP = 'TOO LONG'

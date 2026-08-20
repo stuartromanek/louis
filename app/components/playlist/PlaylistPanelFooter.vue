@@ -6,6 +6,7 @@ import {
   getPlaylistCapacitySnapshot,
   YOTO_MYO_TRACK_COUNT_MESSAGE,
 } from '#shared/myo-editor/yotoMyoLimits'
+import { getStandalonePlaylistValidationError } from '#shared/myo-editor/standalonePlaylist'
 
 const editor = inject(MYO_EDITOR_KEY, null)
 const { playEvent } = useUiSound()
@@ -16,6 +17,9 @@ const isDirty = editor?.isDirty
 const loading = editor?.loading
 const isPlaylistLocked = editor?.isPlaylistLocked
 const selectedCardId = editor?.selectedCardId
+const isNewPlaylist = editor?.isNewPlaylist
+const createOutcomeUncertain = editor?.createOutcomeUncertain
+const cardTitle = editor?.cardTitle
 const isPodcast = editor?.isPodcast
 const playlist = editor?.playlist
 
@@ -26,19 +30,28 @@ const overTrackLimit = computed(
 )
 
 const footerHint = computed(() => {
-  if (isPodcast?.value) return 'Podcast cards cannot be edited yet.'
+  if (isPodcast?.value) return 'Podcasts cannot be edited yet.'
+  if (createOutcomeUncertain?.value) return 'Check Playlists before trying again.'
   if (overTrackLimit.value) return YOTO_MYO_TRACK_COUNT_MESSAGE
   return ''
 })
 
+const canCreate = computed(() => {
+  if (!isNewPlaylist?.value) return false
+  return !getStandalonePlaylistValidationError(cardTitle?.value ?? '', playlist?.value ?? [])
+})
+
 const canUpdate = computed(
   () => Boolean(
-    selectedCardId?.value
-    && isDirty?.value
-    && !loading?.value
+    !loading?.value
     && !isPlaylistLocked?.value
     && !saveProgressTestMode.value
-    && !isPodcast?.value,
+    && !isPodcast?.value
+    && (
+      isNewPlaylist?.value
+        ? canCreate.value && !createOutcomeUncertain?.value
+        : selectedCardId?.value && isDirty?.value
+    ),
   ),
 )
 
@@ -50,9 +63,22 @@ const askingUpdatePrompt = computed(
   () => Boolean(editor?.updatePrompt.value) && !editor.saveStarting.value,
 )
 
+const askingManagePrompt = computed(
+  () => Boolean(editor?.playlistManagePrompt.value),
+)
+
 const updateBusy = computed(
   () => Boolean(isPlaylistLocked?.value || saveProgressTestMode.value || editor?.saveStarting.value),
 )
+
+const overlayBusy = computed(
+  () => updateBusy.value || Boolean(editor?.playlistManageBusy.value),
+)
+
+const primaryLabel = computed(() => {
+  if (updateBusy.value) return isNewPlaylist?.value ? 'Creating...' : 'Updating...'
+  return isNewPlaylist?.value ? 'Create' : 'Update'
+})
 
 function onUpdate() {
   if (!canUpdate.value || updateBusy.value) {
@@ -64,7 +90,15 @@ function onUpdate() {
 }
 
 function onCancelUpdate() {
+  if (editor?.playlistManageBusy.value) {
+    playEvent('disabled')
+    return
+  }
   playEvent('resetPlaylist')
+  if (editor?.playlistManagePrompt.value) {
+    editor.cancelPlaylistManage()
+    return
+  }
   editor?.cancelUpdatePrompt()
 }
 
@@ -92,10 +126,11 @@ function onReset() {
       <div class="w-full flex items-center gap-2 sm:gap-3 min-w-0">
         <PlaylistCapacityMeters />
         <div class="ml-auto flex items-center gap-2 sm:gap-3 shrink-0">
-          <template v-if="askingUpdatePrompt">
+          <template v-if="askingUpdatePrompt || askingManagePrompt">
             <button
               type="button"
               class="panel-footer-btn panel-footer-btn--short panel-footer-btn--secondary shrink-0"
+              :disabled="overlayBusy"
               @click="onCancelUpdate"
             >
               <span class="panel-footer-btn__label">Cancel</span>
@@ -118,7 +153,7 @@ function onReset() {
               :tabindex="canUpdate && !updateBusy ? 0 : -1"
               @click="onUpdate"
             >
-              <span class="panel-footer-btn__label">{{ updateBusy ? 'Updating...' : 'Update' }}</span>
+              <span class="panel-footer-btn__label">{{ primaryLabel }}</span>
             </button>
           </template>
         </div>

@@ -110,6 +110,37 @@ describe('collectPendingUpdateTargets', () => {
     }
   })
 
+  it('skips the new-playlist draft key', () => {
+    const draftSnap = snapshot([youtubeTrack()])
+    const targets = collectPendingUpdateTargets({
+      live: null,
+      drafts: new Map([
+        ['new-playlist-draft', draftSnap],
+        ['ok', draftSnap],
+      ]),
+      isPodcast: none,
+      isSaving: none,
+    })
+    assert.deepEqual(targets.map(t => t.cardId), ['ok'])
+  })
+
+  it('skips a live new-playlist-draft so Menu batch Update does not Create', () => {
+    const targets = collectPendingUpdateTargets({
+      live: {
+        cardId: 'new-playlist-draft',
+        snapshot: snapshot([youtubeTrack()]),
+        cardDetail: null,
+        isDirty: true,
+        isPodcast: false,
+        isSaving: false,
+      },
+      drafts: new Map(),
+      isPodcast: none,
+      isSaving: none,
+    })
+    assert.equal(targets.length, 0)
+  })
+
   it('skips podcast and in-flight draft cards', () => {
     const draftSnap = snapshot([youtubeTrack()])
     const targets = collectPendingUpdateTargets({

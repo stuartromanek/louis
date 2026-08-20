@@ -8,6 +8,7 @@ import PlaylistEmptyState from './PlaylistEmptyState.vue'
 import PlaylistItem from './PlaylistItem.vue'
 import PlaylistSaveProgress from './PlaylistSaveProgress.vue'
 import PlaylistUpdatePrompt from './PlaylistUpdatePrompt.vue'
+import { usePlaylistEnterStagger } from './usePlaylistEnterStagger'
 import {
   SAVE_PROGRESS_TEST_FIXTURE,
   useSaveProgressTestMode,
@@ -30,7 +31,9 @@ if (!editor) {
 
 const yoto = inject(YOTO_MYO_KEY, null)
 
-const { playlist, isPlaylistLocked, saveProgress, loading, cardTitle, selectedCardId, clearSelection } = editor
+const { playlist, isPlaylistLocked, saveProgress, loading, cardTitle, selectedCardId, isEditing, canAcceptTracks, clearSelection } = editor
+
+const { enterIndex } = usePlaylistEnterStagger(playlist)
 
 const saveProgressTestMode = useSaveProgressTestMode()
 
@@ -49,13 +52,30 @@ const showUpdatePrompt = computed(() => {
   return surface === 'footer' || surface === 'dialog'
 })
 
+const showRenamePrompt = computed(() => editor.playlistManagePrompt.value === 'rename')
+const showDeletePrompt = computed(() => editor.playlistManagePrompt.value === 'delete')
+
 const showPlaylistCover = computed(() =>
-  showSaveProgressOverlay.value || showUpdatePrompt.value || editor.saveStarting.value,
+  showSaveProgressOverlay.value
+  || showUpdatePrompt.value
+  || editor.saveStarting.value
+  || showRenamePrompt.value
+  || showDeletePrompt.value,
 )
 
+const coverTone = computed(() => (
+  showRenamePrompt.value && !showSaveProgressOverlay.value && !showUpdatePrompt.value && !editor.saveStarting.value
+    ? 'bg-maru-green-lighter'
+    : 'bg-maru-turquoise-light'
+))
+
 function onPromptCancel() {
-  if (editor.saveStarting.value) return
+  if (editor.saveStarting.value || editor.playlistManageBusy.value) return
   playEvent('resetPlaylist')
+  if (editor.playlistManagePrompt.value) {
+    editor.cancelPlaylistManage()
+    return
+  }
   editor.cancelUpdatePrompt()
 }
 
@@ -66,6 +86,10 @@ function onPromptKeep() {
 
 function onPromptConfirm() {
   playEvent('buttonPrimary')
+  if (editor.playlistManagePrompt.value === 'delete') {
+    void editor.confirmDelete()
+    return
+  }
   editor.confirmUpdatePrompt()
 }
 
@@ -98,6 +122,7 @@ const showPlaylistItems = computed(() => {
 const showEmptyState = computed(() => {
   if (isYotoDisconnectGarage.value) return false
   if (isYotoUnavailable.value || isYotoLoading.value) return false
+  if (editor.playlistManagePrompt.value) return false
   return playlist.value.length === 0
 })
 
@@ -234,7 +259,7 @@ watch(isYotoUnavailable, (unavailable, wasUnavailable) => {
 
   if (!unavailable || wasUnavailable) return
 
-  const hadContent = playlist.value.length > 0 || Boolean(selectedCardId.value)
+  const hadContent = playlist.value.length > 0 || Boolean(selectedCardId.value) || editor.isNewPlaylist.value
   if (!hadContent) {
     clearSelection(true)
     return
@@ -289,7 +314,7 @@ const { isDropTarget } = useDroppable({
     () => isDropzoneLocked.value
       || isCardLoadingActive.value
       || isYotoPlaylistBlocked.value
-      || !selectedCardId.value,
+      || !canAcceptTracks.value,
   ),
 })
 
@@ -334,7 +359,7 @@ watch(() => props.scrollToVideoId, async (id) => {
     ref="element"
     class="playlist-dropzone relative flex flex-col flex-1 min-h-0 h-full w-full overflow-hidden transition-[background-color,box-shadow]"
     :class="[
-      isDropTarget && !isDropzoneLocked && !isCardLoadingActive && !isYotoPlaylistBlocked && selectedCardId
+      isDropTarget && !isDropzoneLocked && !isCardLoadingActive && !isYotoPlaylistBlocked && canAcceptTracks
         ? 'bg-maru-green-light ring-2 ring-inset ring-maru-blue'
         : '',
       isDropzoneLocked ? 'playlist-dropzone--locked' : '',
@@ -343,7 +368,7 @@ watch(() => props.scrollToVideoId, async (id) => {
   >
     <div
       class="playlist-dropzone__scroll flex flex-col flex-1 min-h-0 overflow-y-auto p-3 sm:p-4"
-      :class="isDropzoneLocked || isCardLoadingActive || isYotoPlaylistBlocked || !selectedCardId ? 'pointer-events-none select-none' : ''"
+      :class="isDropzoneLocked || isCardLoadingActive || isYotoPlaylistBlocked || !isEditing ? 'pointer-events-none select-none' : ''"
     >
       <TransitionGroup
         v-if="showPlaylistItems"
@@ -357,6 +382,7 @@ watch(() => props.scrollToVideoId, async (id) => {
           :track="track"
           :index="index"
           :locked="isDropzoneLocked"
+          :enter-index="enterIndex(track.id)"
           @remove="removeTrack"
         />
       </TransitionGroup>
@@ -400,9 +426,10 @@ watch(() => props.scrollToVideoId, async (id) => {
 
     <div
       v-if="showPlaylistCover"
-      class="playlist-dropzone__lock playlist-dropzone__cover absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-maru-turquoise-light p-4 text-center"
+      class="playlist-dropzone__lock playlist-dropzone__cover absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 p-4 text-center"
+      :class="coverTone"
       aria-live="polite"
-      :aria-busy="showSaveProgressOverlay && !saveProgressTestMode"
+      :aria-busy="(showSaveProgressOverlay && !saveProgressTestMode) || editor.playlistManageBusy.value"
     >
       <template v-if="showSaveProgressOverlay && displayedSaveProgress">
         <div class="playlist-dropzone__cover-inner">
@@ -425,8 +452,25 @@ watch(() => props.scrollToVideoId, async (id) => {
         id-prefix="playlist-update"
         :card-count="editor.updatePromptCardCount.value"
         :busy="editor.saveStarting.value"
+        :intent="editor.isNewPlaylist.value ? 'create' : 'update'"
         @cancel="onPromptCancel"
         @keep="onPromptKeep"
+        @confirm="onPromptConfirm"
+      />
+      <div
+        v-else-if="showRenamePrompt"
+        class="playlist-dropzone__cover-inner"
+      >
+        <PlaylistEmptyState fill />
+      </div>
+      <PlaylistUpdatePrompt
+        v-else-if="showDeletePrompt"
+        kind="delete"
+        surface="panel"
+        id-prefix="playlist-delete"
+        :playlist-title="cardTitle"
+        :busy="editor.playlistManageBusy.value"
+        @cancel="onPromptCancel"
         @confirm="onPromptConfirm"
       />
     </div>

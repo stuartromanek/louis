@@ -9,6 +9,7 @@ const props = defineProps<{
   track: PlaylistTrack
   index: number
   locked?: boolean
+  enterIndex?: number
 }>()
 
 const emit = defineEmits<{
@@ -51,6 +52,7 @@ const { isDragging, isDropTarget } = useSortable({
     ref="element"
     :data-playlist-video-id="track.id"
     class="playlist-item flex items-center gap-2 border-maru rounded-maru bg-maru-white p-2 pr-2.5 transition-[background-color,opacity,scale]"
+    :style="{ '--playlist-enter-i': enterIndex ?? 0 }"
     :class="{
       'opacity-50': isDragging,
       'bg-maru-yellow-light ring-2 ring-maru-blue': isDropTarget && !isDragging,

@@ -3,34 +3,39 @@ import Tray from '~/components/ui/Tray.vue'
 import { MYO_EDITOR_KEY } from '~/components/myo-editor/keys'
 import { YOTO_MYO_KEY } from '~/components/yoto-myo/keys'
 import { MOBILE_EDITOR_CHROME_KEY } from '~/composables/useMobileEditorChrome'
-import { pickerVideoToPlaylistTrack, playlistHasTrack } from '~/components/playlist/types'
+import { pickerVideoToPlaylistTrack } from '~/components/playlist/types'
+import type { InsertTracksResult } from '~/components/myo-editor/useMyoEditor'
 import type { YotoMyoCard as YotoMyoCardType } from '~/components/yoto-myo/types'
+import type { YoutubeVideoSummary } from '~/components/youtube-picker/types'
 
 const yoto = inject(YOTO_MYO_KEY)
 const editor = inject(MYO_EDITOR_KEY)
 const chrome = inject(MOBILE_EDITOR_CHROME_KEY)
 
 if (!yoto || !editor || !chrome) {
-  throw new Error('MobileAddToCardDrawer requires YOTO_MYO_KEY, MYO_EDITOR_KEY, and MOBILE_EDITOR_CHROME_KEY')
+  throw new Error('MobileAddToPlaylistDrawer requires YOTO_MYO_KEY, MYO_EDITOR_KEY, and MOBILE_EDITOR_CHROME_KEY')
 }
 
 const { playEvent } = useUiSound()
 const { cards, status, cardsLoading, connected } = yoto
 const {
-  playlist,
   selectedCardId,
   isPlaylistLocked,
   isPodcast,
   isKnownPodcast,
   selectCard,
+  startNewPlaylist,
+  queuePendingCreateTracks,
+  insertTracks,
 } = editor
-const { addDrawerVideo, closeAddDrawer, goToTab } = chrome
-const { showAddedToCard, showDuplicateTrack, showError } = useToast()
+const { addDrawerVideos, closeAddDrawer, openPlaylist } = chrome
+const { showAddedToPlaylist, showDuplicateTrack, showError } = useToast()
+const { clear: clearResultSelection } = useYoutubeResultSelection()
 
 const picking = ref(false)
 
 const trayOpen = computed({
-  get: () => Boolean(addDrawerVideo.value),
+  get: () => addDrawerVideos.value.length > 0,
   set: (value: boolean) => {
     if (!value) closeAddDrawer()
   },
@@ -43,13 +48,74 @@ function cardIsPodcast(card: YotoMyoCardType) {
     || (selectedCardId.value === card.cardId && isPodcast.value)
 }
 
+function addedLabel(videos: YoutubeVideoSummary[], added: number) {
+  if (added === 1) return videos[0]?.title ?? 'Track'
+  return `${added} tracks`
+}
+
+function finishAdd(
+  result: InsertTracksResult,
+  videos: YoutubeVideoSummary[],
+  destinationTitle: string,
+  openDetail: boolean,
+) {
+  if (!result.ok) {
+    playEvent('disabled')
+    showError(result.message)
+    return
+  }
+
+  if (result.added > 0) {
+    playEvent('drop')
+    clearResultSelection()
+    closeAddDrawer()
+    if (openDetail) chrome.openPlaylist()
+    showAddedToPlaylist(addedLabel(videos, result.added), destinationTitle)
+    return
+  }
+
+  if (result.overflow > 0) {
+    const extra = result.overflow === 1 ? 'track' : 'tracks'
+    showError(`Couldn't add ${result.overflow} more ${extra}. Yoto playlists allow up to 100 tracks.`)
+    closeAddDrawer()
+    return
+  }
+
+  if (result.skipped > 0) {
+    showDuplicateTrack(videos[0]?.title ?? 'Track')
+    closeAddDrawer()
+  }
+}
+
+async function onPickNewCard() {
+  const videos = addDrawerVideos.value
+  if (videos.length === 0 || picking.value) return
+
+  picking.value = true
+  try {
+    if (!startNewPlaylist()) {
+      playEvent('disabled')
+      showError('Could not start a new playlist. Try again.')
+      return
+    }
+
+    queuePendingCreateTracks(videos.map(pickerVideoToPlaylistTrack))
+    playEvent('buttonClick')
+    closeAddDrawer()
+    openPlaylist()
+  }
+  finally {
+    picking.value = false
+  }
+}
+
 async function onPickCard(card: YotoMyoCardType) {
-  const video = addDrawerVideo.value
-  if (!video || picking.value) return
+  const videos = addDrawerVideos.value
+  if (videos.length === 0 || picking.value) return
 
   if (cardIsPodcast(card)) {
     playEvent('disabled')
-    showError('Podcast cards cannot be edited yet.')
+    showError('Podcasts cannot be edited yet.')
     return
   }
 
@@ -60,41 +126,25 @@ async function onPickCard(card: YotoMyoCardType) {
     }
 
     if (selectedCardId.value !== card.cardId) {
-      // Select failed (load error) — draft stash on switch is silent.
       playEvent('disabled')
-      showError('Could not open that card. Try again.')
+      showError('Could not open that playlist. Try again.')
       return
     }
 
     if (isPlaylistLocked.value || isPodcast.value) {
       playEvent('disabled')
       if (isPodcast.value) {
-        showError('Podcast cards cannot be edited yet.')
+        showError('Podcasts cannot be edited yet.')
       }
       return
     }
 
-    const track = pickerVideoToPlaylistTrack(video)
-    if (playlistHasTrack(playlist.value, track)) {
-      showDuplicateTrack(track.title)
-      closeAddDrawer()
-      return
-    }
-
-    playlist.value = [...playlist.value, track]
-    playEvent('drop')
-    closeAddDrawer()
-    showAddedToCard(track.title, card.title)
+    const result = insertTracks(videos.map(pickerVideoToPlaylistTrack))
+    finishAdd(result, videos, card.title, false)
   }
   finally {
     picking.value = false
   }
-}
-
-function onGoLibrary() {
-  playEvent('buttonClick')
-  closeAddDrawer()
-  goToTab('library')
 }
 </script>
 
@@ -114,13 +164,13 @@ function onGoLibrary() {
       v-else-if="!connected || status === 'disconnected'"
       class="empty-state-meta mobile-add-drawer__status"
     >
-      Connect Yoto to choose a card.
+      Connect Yoto to choose a playlist.
     </p>
     <ul
       v-else-if="cardsLoading"
       class="mobile-add-drawer__scroller list-none m-0"
       aria-busy="true"
-      aria-label="Loading cards"
+      aria-label="Loading playlists"
     >
       <li
         v-for="n in [0, 1, 2, 3]"
@@ -135,26 +185,29 @@ function onGoLibrary() {
         </div>
       </li>
     </ul>
-    <div
-      v-else-if="selectableCards.length === 0"
-      class="mobile-add-drawer__status flex flex-col gap-2"
-    >
-      <p class="empty-state-meta">
-        No MYO cards found.
-      </p>
-      <button
-        type="button"
-        class="font-maru-medium underline text-left type-title"
-        @click="onGoLibrary"
-      >
-        Go to Library
-      </button>
-    </div>
     <ul
       v-else
       class="mobile-add-drawer__scroller list-none m-0"
-      aria-label="Choose a card"
+      aria-label="Choose a playlist"
     >
+      <li>
+        <button
+          type="button"
+          class="mobile-add-drawer__card mobile-add-drawer__card--new"
+          :disabled="picking"
+          @click="onPickNewCard"
+        >
+          <div class="mobile-add-drawer__card-art-wrap">
+            <div class="mobile-add-drawer__card-art mobile-add-drawer__card-art--empty">
+              <MaruEmoji
+                name="CardIndexDividers"
+                size="md"
+              />
+            </div>
+          </div>
+          <span class="mobile-add-drawer__card-title font-maru-bold">New playlist</span>
+        </button>
+      </li>
       <li
         v-for="card in selectableCards"
         :key="card.cardId"

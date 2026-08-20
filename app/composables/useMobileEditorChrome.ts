@@ -2,17 +2,17 @@ import type { InjectionKey, Ref } from 'vue'
 import type { YoutubeVideoSummary } from '~/components/youtube-picker/types'
 
 export type MobileEditorTab = 'search' | 'library'
-export type MobileLibraryMode = 'grid' | 'card'
+export type MobileLibraryMode = 'grid' | 'detail'
 
 export type MobileEditorChrome = {
   activeTab: Ref<MobileEditorTab>
   libraryMode: Ref<MobileLibraryMode>
-  addDrawerVideo: Ref<YoutubeVideoSummary | null>
+  addDrawerVideos: Ref<YoutubeVideoSummary[]>
   isPhone: Ref<boolean>
   goToTab: (tab: MobileEditorTab) => void
-  openCard: () => void
+  openPlaylist: () => void
   backToLibrary: () => void
-  openAddDrawer: (video: YoutubeVideoSummary) => void
+  openAddDrawer: (videos: YoutubeVideoSummary | YoutubeVideoSummary[]) => void
   closeAddDrawer: () => void
 }
 
@@ -23,19 +23,19 @@ const PHONE_MQ = '(max-width: 599px)'
 export function useMobileEditorChrome(): MobileEditorChrome {
   const activeTab = ref<MobileEditorTab>('search')
   const libraryMode = ref<MobileLibraryMode>('grid')
-  const addDrawerVideo = ref<YoutubeVideoSummary | null>(null)
+  const addDrawerVideos = ref<YoutubeVideoSummary[]>([])
   const isPhone = ref(false)
 
   function goToTab(tab: MobileEditorTab) {
     activeTab.value = tab
     if (tab === 'search') {
-      // Keep libraryMode so returning to Library restores card vs grid.
+      // Keep libraryMode so returning to Library restores detail vs grid.
     }
   }
 
-  function openCard() {
+  function openPlaylist() {
     activeTab.value = 'library'
-    libraryMode.value = 'card'
+    libraryMode.value = 'detail'
   }
 
   function backToLibrary() {
@@ -43,12 +43,12 @@ export function useMobileEditorChrome(): MobileEditorChrome {
     activeTab.value = 'library'
   }
 
-  function openAddDrawer(video: YoutubeVideoSummary) {
-    addDrawerVideo.value = video
+  function openAddDrawer(videos: YoutubeVideoSummary | YoutubeVideoSummary[]) {
+    addDrawerVideos.value = Array.isArray(videos) ? videos : [videos]
   }
 
   function closeAddDrawer() {
-    addDrawerVideo.value = null
+    addDrawerVideos.value = []
   }
 
   let mq: MediaQueryList | null = null
@@ -75,10 +75,10 @@ export function useMobileEditorChrome(): MobileEditorChrome {
   return {
     activeTab,
     libraryMode,
-    addDrawerVideo,
+    addDrawerVideos,
     isPhone,
     goToTab,
-    openCard,
+    openPlaylist,
     backToLibrary,
     openAddDrawer,
     closeAddDrawer,

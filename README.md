@@ -2,7 +2,7 @@
 
 Logo
 
-Search YouTube, arrange a playlist, and save it to your [Yoto](https://yotoplay.com/) **Make Your Own (MYO)** cards — Yoto’s blank cards you load your own audio onto.
+Search YouTube, arrange a playlist, and save it to [Yoto](https://yotoplay.com/). Linking a physical **Make Your Own (MYO)** card happens in the Yoto app, not here.
 
 Self-hosted **Nuxt** server app. Yoto OAuth token exchange and YouTube audio download (via yt-dlp) need a long-running server process, so a static export (Netlify/Vercel static, GitHub Pages, etc.) cannot power those flows.
 
@@ -14,10 +14,12 @@ Self-hosted **Nuxt** server app. Yoto OAuth token exchange and YouTube audio dow
 
 ## Features
 
-- Search YouTube and preview audio (server-side via yt-dlp)
-- Browse and select your Yoto MYO cards
-- Drag-and-drop playlist editing (desktop browser); phone Search / Library flow with Add-to-card
-- Save playlists to Yoto with download / transcode progress
+- Search YouTube and preview audio (server-side via yt-dlp). Paste a video, Shorts, playlist, or channel URL in Search to load it; check rows to add them together
+- Browse your Yoto playlists. **New** names a playlist and creates it on Yoto right away (empty, or with tracks already picked in Search)
+- Drag-and-drop playlist editing (desktop); phone Search / Library flow with Add to playlist
+- Rename or delete a loaded playlist from the playlist menu
+- Save / Update to Yoto with download and transcode progress; optional normalize for new YouTube extracts
+- Per-track 16×16 art (Yoto icon library, [yotoicons.com](https://yotoicons.com/), or draw)
 - Optional **desktop app** (macOS / Windows) — same app, no Docker required
 
 
@@ -94,7 +96,7 @@ Create a **public** client at [yoto.dev](https://yoto.dev/get-started/start-here
 | LAN / Portainer          | `http://<host-ip-or-name>:4000/api/yoto/auth/callback` — same origin you open Louis |
 | Local redirect           | `http://localhost:4000/api/yoto/auth/callback`                                     |
 | Desktop app redirect     | `http://127.0.0.1:4010/api/yoto/auth/callback` — see [DESKTOP.md](docs/DESKTOP.md) |
-| Scopes                   | `user:content:view user:content:manage`                                            |
+| Scopes                   | `user:content:view user:content:manage user:icons:manage`                          |
 
 
 You only need `LOUIS_YOTO_CLIENT_ID`. Leave `LOUIS_YOTO_CLIENT_SECRET` empty for PKCE.

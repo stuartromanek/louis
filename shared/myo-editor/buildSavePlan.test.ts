@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { playlistSaveExtractsYoutube } from './buildSavePlan.ts'
+import { buildSavePlan, EMPTY_CARD_DETAIL, playlistSaveExtractsYoutube } from './buildSavePlan.ts'
 import type { PlaylistTrack } from './types.ts'
 
 function youtubeTrack(overrides: Partial<PlaylistTrack> = {}): PlaylistTrack {
@@ -18,6 +18,13 @@ function youtubeTrack(overrides: Partial<PlaylistTrack> = {}): PlaylistTrack {
 describe('playlistSaveExtractsYoutube', () => {
   it('is true for a new YouTube track', () => {
     assert.equal(playlistSaveExtractsYoutube([], [youtubeTrack()], null), true)
+  })
+
+  it('extracts every YouTube track against an empty card detail', () => {
+    const plan = buildSavePlan([], [youtubeTrack()], EMPTY_CARD_DETAIL)
+    assert.equal(plan.tracks.length, 1)
+    assert.equal(plan.tracks[0]?.kind, 'extract-youtube')
+    assert.equal(playlistSaveExtractsYoutube([], [youtubeTrack()], EMPTY_CARD_DETAIL), true)
   })
 
   it('is false when the YouTube track can be reused from the card', () => {

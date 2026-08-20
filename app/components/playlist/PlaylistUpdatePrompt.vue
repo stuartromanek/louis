@@ -1,5 +1,5 @@
 <script setup lang="ts">
-export type UpdatePromptKind = 'capacity' | 'normalize'
+export type UpdatePromptKind = 'capacity' | 'normalize' | 'delete'
 export type UpdatePromptSurface = 'footer' | 'dialog' | 'panel' | 'menu'
 
 const props = withDefaults(defineProps<{
@@ -9,9 +9,13 @@ const props = withDefaults(defineProps<{
   busy?: boolean
   /** When > 1, copy covers a multi-playlist batch from Menu. */
   cardCount?: number
+  intent?: 'create' | 'update'
+  playlistTitle?: string
 }>(), {
   busy: false,
   cardCount: 1,
+  intent: 'update',
+  playlistTitle: '',
 })
 
 const emit = defineEmits<{
@@ -25,29 +29,47 @@ const bodyId = computed(() => `${props.idPrefix}-body`)
 
 const isBatch = computed(() => props.cardCount > 1)
 
+const isCreate = computed(() => props.intent === 'create')
+
 const title = computed(() => {
   if (props.kind === 'capacity') return 'Over MYO limit'
+  if (props.kind === 'delete') return 'Delete this playlist?'
   return 'Normalize new track levels?'
 })
 
 const body = computed(() => {
+  if (props.kind === 'delete') {
+    const name = props.playlistTitle.trim() || 'this playlist'
+    return `This removes ${name} from Yoto. This can’t be undone.`
+  }
   if (props.kind === 'capacity') {
-    return isBatch.value
-      ? 'One or more playlists are over the MYO limit. Update may fail.'
-      : 'Update may fail.'
+    if (isBatch.value) {
+      return 'One or more playlists are over the MYO limit. Update may fail.'
+    }
+    return isCreate.value ? 'Create may fail.' : 'Update may fail.'
   }
   return isBatch.value
     ? 'Attempt to normalize the volume levels of new tracks across these playlists. Existing tracks stay as they are.'
     : 'Attempt to normalize the volume levels of the new tracks. Existing tracks stay as they are.'
 })
 
-const secondaryLabel = computed(() => (props.kind === 'capacity' ? 'Cancel' : 'Keep as-is'))
-const primaryLabel = computed(() => (props.kind === 'capacity' ? 'Update anyway' : 'Normalize new track levels'))
+const secondaryLabel = computed(() => (props.kind === 'normalize' ? 'Keep as-is' : 'Cancel'))
+const primaryLabel = computed(() => {
+  if (props.kind === 'delete') return props.busy ? 'Deleting…' : 'Delete'
+  if (props.kind === 'capacity') return isCreate.value ? 'Create anyway' : 'Update anyway'
+  return 'Normalize new track levels'
+})
+
+const primaryClass = computed(() => (
+  props.kind === 'delete'
+    ? 'panel-footer-btn panel-footer-btn--short panel-footer-btn--danger shrink-0'
+    : 'panel-footer-btn panel-footer-btn--short panel-footer-btn--primary shrink-0'
+))
 
 function onSecondary() {
   if (props.busy) return
-  if (props.kind === 'capacity') emit('cancel')
-  else emit('keep')
+  if (props.kind === 'normalize') emit('keep')
+  else emit('cancel')
 }
 
 function onConfirm() {
@@ -81,7 +103,7 @@ function onConfirm() {
       </button>
       <button
         type="button"
-        class="panel-footer-btn panel-footer-btn--short panel-footer-btn--primary shrink-0"
+        :class="primaryClass"
         :disabled="busy"
         @click="onConfirm"
       >
@@ -125,7 +147,7 @@ function onConfirm() {
       </button>
       <button
         type="button"
-        class="panel-footer-btn panel-footer-btn--short panel-footer-btn--primary shrink-0"
+        :class="primaryClass"
         :disabled="busy"
         @click="onConfirm"
       >
@@ -170,7 +192,7 @@ function onConfirm() {
         </button>
         <button
           type="button"
-          class="panel-footer-btn panel-footer-btn--short panel-footer-btn--primary"
+          :class="primaryClass"
           :disabled="busy"
           @click="onConfirm"
         >

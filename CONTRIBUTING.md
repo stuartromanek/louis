@@ -14,7 +14,7 @@ Thanks for your interest in contributing to **Louis**!
 
 - Keep changes focused and minimal
 - Match existing code style and naming
-- Test manually: search → preview → connect Yoto → save to a test MYO card
+- Test manually: search → preview → connect Yoto → save to a test playlist
 - Do not commit secrets or assets you lack rights to redistribute
 - For user-facing changes, add a bullet under `## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md)
 

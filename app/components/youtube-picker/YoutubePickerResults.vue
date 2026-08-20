@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ResultsLayout, YoutubeVideoSummary } from './types'
 import YoutubeResultCard from './YoutubeResultCard.vue'
+import { videoResultKey } from '#shared/myo-editor/youtubePlaylistImport'
 
 withDefaults(defineProps<{
   results: YoutubeVideoSummary[]
@@ -36,7 +37,7 @@ const emit = defineEmits<{
     >
       <li
         v-for="(video, index) in results"
-        :key="video.id"
+        :key="videoResultKey(video)"
         role="option"
         :aria-selected="index === focusedIndex"
       >

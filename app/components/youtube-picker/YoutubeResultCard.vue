@@ -5,6 +5,11 @@ import type { ResultsLayout, YoutubeVideoSummary } from './types'
 import YoutubePickerAudioControls from './YoutubePickerAudioControls.vue'
 import { resultDragId, type ResultDragData } from '../playlist/dnd'
 import { MOBILE_EDITOR_CHROME_KEY } from '~/composables/useMobileEditorChrome'
+import { YOUTUBE_PICKER_RESULTS_KEY } from './useYoutubePicker'
+import {
+  videoResultKey,
+  videosForGroupDrag,
+} from '#shared/myo-editor/youtubePlaylistImport'
 import {
   formatDurationSeconds,
   formatYoutubeDurationIso,
@@ -31,9 +36,13 @@ const emit = defineEmits<{
 const { allowLongTracks } = useUserPreferences()
 const { playEvent } = useUiSound()
 const mobileChrome = inject(MOBILE_EDITOR_CHROME_KEY, null)
+const pickerResults = inject(YOUTUBE_PICKER_RESULTS_KEY, null)
+const { selectedKeySet, toggle, isSelected, isInFlight } = useYoutubeResultSelection()
 
 const element = ref<HTMLElement | null>(null)
 const handle = ref<HTMLElement | null>(null)
+
+const resultKey = computed(() => videoResultKey(props.video))
 
 const overLimit = computed(() => {
   const seconds = props.video.durationSeconds
@@ -44,6 +53,23 @@ const restricted = computed(() => overLimit.value && !allowLongTracks.value)
 
 const showLongTrackChip = computed(() => overLimit.value && allowLongTracks.value)
 
+const selected = computed(() => !restricted.value && isSelected(resultKey.value))
+
+const groupVideos = computed(() => {
+  const group = videosForGroupDrag(
+    pickerResults?.value ?? [props.video],
+    selectedKeySet.value,
+    props.video,
+  )
+  return group.filter((video) => {
+    const seconds = video.durationSeconds
+    const over = typeof seconds === 'number' && isOverMyoTrackDuration(seconds)
+    return !(over && !allowLongTracks.value)
+  })
+})
+
+const groupCount = computed(() => groupVideos.value.length)
+
 const durationLabel = computed(() => {
   if (typeof props.video.durationSeconds === 'number') {
     return formatDurationSeconds(props.video.durationSeconds)
@@ -52,7 +78,7 @@ const durationLabel = computed(() => {
 })
 
 const { isDragging } = useDraggable({
-  id: () => resultDragId(props.video.id),
+  id: () => resultDragId(resultKey.value),
   element,
   handle,
   type: 'result',
@@ -60,20 +86,47 @@ const { isDragging } = useDraggable({
   data: (): ResultDragData => ({
     type: 'result',
     video: props.video,
+    videos: groupVideos.value,
   }),
 })
 
+const stackDepth = computed(() => {
+  if (!isDragging.value || groupCount.value <= 1) return 0
+  return Math.min(groupCount.value - 1, 3)
+})
+
+const groupInFlight = computed(() =>
+  !isDragging.value && isInFlight(resultKey.value),
+)
+
 const shellClass = computed(() => [
-  props.focused
-    ? 'bg-maru-blue-lighter ring-2 ring-maru-blue'
-    : 'bg-maru-white',
+  selected.value
+    ? 'bg-maru-yellow-light yt-result-card--selected'
+    : props.focused
+      ? 'bg-maru-blue-lighter'
+      : 'bg-maru-white',
+  selected.value && !stackDepth.value ? 'ring-2 ring-maru-black' : '',
+  props.focused && !selected.value && !stackDepth.value ? 'ring-2 ring-maru-blue' : '',
   isDragging.value ? 'opacity-50' : '',
+  groupInFlight.value ? 'yt-result-card--in-flight' : '',
   restricted.value ? 'yt-result-card--over-limit' : '',
+  stackDepth.value ? 'yt-result-card--stacking' : 'overflow-hidden',
 ])
 
 function onEnableLongTracks(event: Event) {
   event.stopPropagation()
   emit('enableLongTracks')
+}
+
+function onToggleSelect(event: Event) {
+  event.stopPropagation()
+  if (restricted.value) {
+    playEvent('disabled')
+    return
+  }
+  const input = event.target as HTMLInputElement
+  toggle(resultKey.value, input.checked)
+  playEvent(input.checked ? 'toggleOn' : 'toggleOff')
 }
 
 function onAdd(event: Event) {
@@ -83,8 +136,16 @@ function onAdd(event: Event) {
     return
   }
   playEvent('buttonClick')
-  mobileChrome?.openAddDrawer(props.video)
+  const videos = selected.value ? groupVideos.value : [props.video]
+  mobileChrome?.openAddDrawer(videos)
 }
+
+const addLabel = computed(() => {
+  if (selected.value && groupCount.value > 1) {
+    return `Add ${groupCount.value} tracks to playlist`
+  }
+  return 'Add to playlist'
+})
 </script>
 
 <template>
@@ -92,11 +153,23 @@ function onAdd(event: Event) {
   <div
     v-if="layout === 'list'"
     ref="element"
-    class="yt-result-card w-full border-maru rounded-maru overflow-hidden transition-[opacity,box-shadow,background-color]"
+    class="yt-result-card w-full border-maru rounded-maru transition-[opacity,box-shadow,background-color]"
     :class="shellClass"
     :title="restricted ? YOTO_MYO_OVER_TRACK_DURATION_MESSAGE : undefined"
     :aria-disabled="restricted || undefined"
   >
+    <div
+      v-if="stackDepth"
+      class="yt-result-card__stack"
+      aria-hidden="true"
+    >
+      <span
+        v-for="n in stackDepth"
+        :key="n"
+        class="yt-result-card__slat"
+        :style="{ '--slat-i': n }"
+      />
+    </div>
     <div class="yt-result-card__main yt-result-card__main--list">
       <div class="yt-result-card__thumb">
         <button
@@ -115,15 +188,38 @@ function onAdd(event: Event) {
             class="yt-result-duration font-maru-mono tabular-nums"
           >{{ durationLabel }}</span>
         </button>
-        <button
+        <div
           v-if="!restricted"
-          ref="handle"
-          type="button"
-          class="playlist-handle yt-result-card__drag-handle"
-          aria-label="Drag to playlist"
+          class="yt-result-card__grab"
         >
-          <span /><span /><span />
-        </button>
+          <button
+            ref="handle"
+            type="button"
+            class="playlist-handle playlist-handle--sm yt-result-card__drag-handle"
+            aria-label="Drag to playlist"
+          >
+            <span /><span /><span />
+          </button>
+          <label
+            class="maru-checkbox yt-result-card__check"
+            @click.stop
+            @pointerdown.stop
+          >
+            <input
+              type="checkbox"
+              class="maru-checkbox__input"
+              :checked="selected"
+              :aria-label="selected ? 'Remove from group import' : 'Select for group import'"
+              @change="onToggleSelect"
+            >
+            <span
+              class="maru-checkbox__box"
+              aria-hidden="true"
+            >
+              <span class="maru-checkbox__mark" />
+            </span>
+          </label>
+        </div>
         <span
           v-if="showLongTrackChip"
           class="yt-result-long-chip font-maru-mono"
@@ -151,10 +247,10 @@ function onAdd(event: Event) {
         <button
           type="button"
           class="yt-result-card__add"
-          aria-label="Add to a card"
+          :aria-label="addLabel"
           @click="onAdd"
         >
-          Add to…
+          {{ addLabel }}
         </button>
       </div>
     </div>
@@ -195,11 +291,23 @@ function onAdd(event: Event) {
   <div
     v-else
     ref="element"
-    class="yt-result-card w-full text-left border-maru rounded-maru overflow-hidden transition-[opacity,box-shadow,background-color]"
+    class="yt-result-card w-full text-left border-maru rounded-maru transition-[opacity,box-shadow,background-color]"
     :class="shellClass"
     :title="restricted ? YOTO_MYO_OVER_TRACK_DURATION_MESSAGE : undefined"
     :aria-disabled="restricted || undefined"
   >
+    <div
+      v-if="stackDepth"
+      class="yt-result-card__stack"
+      aria-hidden="true"
+    >
+      <span
+        v-for="n in stackDepth"
+        :key="n"
+        class="yt-result-card__slat"
+        :style="{ '--slat-i': n }"
+      />
+    </div>
     <div class="yt-result-card__main">
       <div class="relative">
         <button
@@ -218,15 +326,38 @@ function onAdd(event: Event) {
             class="yt-result-duration font-maru-mono tabular-nums"
           >{{ durationLabel }}</span>
         </button>
-        <button
+        <div
           v-if="!restricted"
-          ref="handle"
-          type="button"
-          class="playlist-handle absolute top-2 left-2 z-10 bg-maru-yellow"
-          aria-label="Drag to playlist"
+          class="yt-result-card__grab yt-result-card__grab--tile"
         >
-          <span /><span /><span />
-        </button>
+          <button
+            ref="handle"
+            type="button"
+            class="playlist-handle playlist-handle--sm yt-result-card__drag-handle"
+            aria-label="Drag to playlist"
+          >
+            <span /><span /><span />
+          </button>
+          <label
+            class="maru-checkbox yt-result-card__check"
+            @click.stop
+            @pointerdown.stop
+          >
+            <input
+              type="checkbox"
+              class="maru-checkbox__input"
+              :checked="selected"
+              :aria-label="selected ? 'Remove from group import' : 'Select for group import'"
+              @change="onToggleSelect"
+            >
+            <span
+              class="maru-checkbox__box"
+              aria-hidden="true"
+            >
+              <span class="maru-checkbox__mark" />
+            </span>
+          </label>
+        </div>
       </div>
       <span
         v-if="showLongTrackChip"

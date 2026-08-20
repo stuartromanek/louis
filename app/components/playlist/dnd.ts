@@ -8,6 +8,7 @@ export const PLAYLIST_DROPZONE_ID = 'playlist-dropzone'
 export type ResultDragData = {
   type: 'result'
   video: YoutubeVideoSummary
+  videos: YoutubeVideoSummary[]
 }
 
 export type PlaylistDragData = {

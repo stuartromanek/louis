@@ -108,7 +108,7 @@ const copy = computed(() => {
       }
       return {
         heading: 'Connect Louis to Yoto',
-        body: 'Link your account to load MYO cards and build playlists.',
+        body: 'Link your account to load your playlists.',
         cta: 'Connect to Yoto',
         action: 'connect' as const,
       }

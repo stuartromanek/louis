@@ -38,15 +38,16 @@ const message = computed(() => {
   if (data.kind === 'duplicate') {
     return `${data.trackTitle} is already on this playlist. It will not be added again.`
   }
-  return `${data.trackTitle} successfully added to ${data.cardTitle}`
+  return `${data.trackTitle} successfully added to ${data.playlistTitle}`
 })
 
 const canUpdatePlaylists = computed(() => Boolean(
-  editor?.selectedCardId.value
+  (editor?.selectedCardId.value || editor?.isNewPlaylist.value)
   && editor?.isDirty.value
   && !editor?.loading.value
   && !editor?.isPodcast.value
-  && !editor?.hasActiveSaves.value,
+  && !editor?.hasActiveSaves.value
+  && !editor?.createOutcomeUncertain.value,
 ))
 
 function onUpdatePlaylists() {
@@ -123,7 +124,7 @@ watch(open, (isOpen, wasOpen) => {
       <p class="toast__message type-body m-0">
         <span class="toast__emphasis font-maru-medium">{{ payload.trackTitle }}</span>
         successfully added to
-        <span class="toast__emphasis font-maru-medium">{{ payload.cardTitle }}</span>
+        <span class="toast__emphasis font-maru-medium">{{ payload.playlistTitle }}</span>
       </p>
       <button
         type="button"
@@ -131,7 +132,7 @@ watch(open, (isOpen, wasOpen) => {
         :disabled="!canUpdatePlaylists"
         @click="onUpdatePlaylists"
       >
-        <span class="toast__update-label">Update Playlists</span>
+        <span class="toast__update-label">{{ editor?.isNewPlaylist.value ? 'Create Playlist' : 'Update Playlists' }}</span>
       </button>
     </div>
 

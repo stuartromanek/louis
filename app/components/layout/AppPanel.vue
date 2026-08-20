@@ -11,7 +11,6 @@ const props = withDefaults(defineProps<{
   headerTextClass?: string
   footerBg?: string
   footerTextClass?: string
-  count?: string
   fillBody?: boolean
   scrollBody?: boolean
   bodyPadding?: boolean
@@ -50,15 +49,8 @@ const footerTextClass = computed(() => props.footerTextClass ?? props.headerText
         :align="headingAlign"
         size="sm"
       />
-      <div class="flex items-center gap-3 shrink-0">
+      <div class="flex items-stretch gap-3 shrink-0 self-stretch">
         <slot name="header-actions" />
-        <p
-          v-if="count"
-          class="type-window-meta"
-          :class="headerTextClass"
-        >
-          {{ count }}
-        </p>
       </div>
     </header>
     <div

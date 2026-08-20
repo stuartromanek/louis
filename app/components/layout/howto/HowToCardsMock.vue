@@ -14,13 +14,12 @@ const cards = [
     aria-hidden="true"
   >
     <AppPanel
-      title="My Cards"
+      title="Playlists (3)"
       title-emoji="Bear"
       heading-tone="yellow-light"
       header-bg="bg-maru-magenta"
       body-bg="bg-maru-yellow-light"
       header-text-class="text-maru-white"
-      count="3"
       class="howto-mock__panel"
       :body-padding="false"
     >

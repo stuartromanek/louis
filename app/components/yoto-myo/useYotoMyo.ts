@@ -19,6 +19,7 @@ const EXTERNAL_POLL_TIMEOUT_MS = 5 * 60 * 1000
 
 export function useYotoMyo() {
   const cards = ref<YotoMyoCard[]>([])
+  const createdCardIds = new Set<string>()
   const status = ref<YotoMyoStatus>('loading')
   const cardsLoading = ref(false)
   const errorMessage = ref('')
@@ -44,13 +45,19 @@ export function useYotoMyo() {
   consumeOAuthInterrupt()
   watch(() => route.query.yoto, consumeOAuthInterrupt)
 
-  async function fetchCards() {
-    cardsLoading.value = true
+  async function fetchCards(options?: { quiet?: boolean }) {
+    const quiet = Boolean(options?.quiet)
+    if (!quiet) cardsLoading.value = true
     errorMessage.value = ''
 
     try {
       const data = await $fetch<YotoContentMineResponse>('/api/yoto/content/mine')
-      cards.value = data.cards
+      const incoming = data.cards
+      const remembered = cards.value.filter(
+        card => createdCardIds.has(card.cardId) && !incoming.some(item => item.cardId === card.cardId),
+      )
+      cards.value = [...remembered, ...incoming]
+      for (const card of incoming) createdCardIds.delete(card.cardId)
       status.value = 'idle'
     }
     catch (err: unknown) {
@@ -61,14 +68,15 @@ export function useYotoMyo() {
         connected.value = false
         status.value = 'disconnected'
         cards.value = []
+        createdCardIds.clear()
         return
       }
 
       status.value = 'error'
-      cards.value = []
+      if (!quiet) cards.value = []
     }
     finally {
-      cardsLoading.value = false
+      if (!quiet) cardsLoading.value = false
     }
   }
 
@@ -174,17 +182,51 @@ export function useYotoMyo() {
     connected.value = false
     hasWriteScope.value = false
     cards.value = []
+    createdCardIds.clear()
     cardsLoading.value = false
     status.value = 'disconnected'
     errorMessage.value = ''
   }
 
-  async function refresh() {
+  async function refresh(options?: { quiet?: boolean }) {
     if (connected.value) {
-      await fetchCards()
+      await fetchCards(options)
       return
     }
     await checkStatus()
+  }
+
+  function forgetCard(cardId: string) {
+    const id = cardId.trim()
+    if (!id) return
+    createdCardIds.delete(id)
+    cards.value = cards.value.filter(card => card.cardId !== id)
+  }
+
+  function rememberCreatedCard(card: { cardId: string, title: string }) {
+    const cardId = card.cardId.trim()
+    if (!cardId) return
+
+    createdCardIds.add(cardId)
+    const title = card.title.trim() || 'New playlist'
+    const existing = cards.value.find(item => item.cardId === cardId)
+    if (existing) {
+      if (existing.title !== title) existing.title = title
+      return
+    }
+
+    cards.value = [
+      {
+        cardId,
+        title,
+        author: '',
+        coverUrl: null,
+        duration: 0,
+        trackCount: 0,
+        updatedAt: new Date().toISOString(),
+      },
+      ...cards.value,
+    ]
   }
 
   onMounted(() => {
@@ -204,6 +246,8 @@ export function useYotoMyo() {
     connect,
     disconnect,
     refresh,
+    rememberCreatedCard,
+    forgetCard,
     fetchCards,
   }
 }

@@ -7,10 +7,10 @@ const PHONE_MQ = '(max-width: 599px)'
 
 const FEATURES = [
   'Search YouTube for stories, songs, and more',
-  'Preview tracks before you add them',
+  'Paste a video, playlist, or channel link in Search',
   'Drag tracks into a playlist',
-  'Save playlists to your MYO cards',
-  'Reopen and update cards you\'ve already made',
+  'Save playlists to Yoto',
+  'Reopen, rename, and update playlists you\'ve already made',
 ] as const
 
 type Phase = 'hidden' | 'animating' | 'visible'

@@ -56,7 +56,7 @@ Louis may ship its **public** Yoto PKCE client ID inside the app. Your **YouTube
 ## Using the app
 
 - Louis listens on **`http://127.0.0.1:4010`** (not the Docker/dev port 4000).
-- Search YouTube, build a playlist, and save to your MYO cards as usual.
+- Search YouTube, build a playlist, and save to Yoto as usual.
 - Open **Settings → Advanced** anytime to update API keys or the optional cookies path.
 
 ## Where settings are stored

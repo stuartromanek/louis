@@ -10,7 +10,7 @@ const weights = [
 const roles = [
   { label: 'nav', class: 'type-nav', sample: 'Connected to Yoto' },
   { label: 'meter-title', class: 'type-meter-title', sample: 'tracks' },
-  { label: 'window-meta', class: 'type-window-meta', sample: '8 cards' },
+  { label: 'window-meta', class: 'type-window-meta', sample: '8 playlists' },
   { label: 'caption', class: 'type-caption', sample: 'Footer lip / tip' },
   { label: 'label', class: 'type-label', sample: 'Sounds' },
   { label: 'body', class: 'type-body', sample: 'Modal and page prose sits here.' },

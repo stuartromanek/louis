@@ -104,7 +104,7 @@ export function buildSavePlan(
   const errors: string[] = []
 
   if (detail.feedUrl?.trim()) {
-    errors.push('Podcast cards cannot be edited yet.')
+    errors.push('Podcasts cannot be edited yet.')
     return { tracks: [], errors }
   }
 
@@ -135,7 +135,7 @@ export function buildSavePlan(
   return { tracks, errors }
 }
 
-const EMPTY_CARD_DETAIL: YotoCardDetail = {
+export const EMPTY_CARD_DETAIL: YotoCardDetail = {
   cardId: '',
   title: '',
   contentVersion: null,

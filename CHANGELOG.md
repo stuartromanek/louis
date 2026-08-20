@@ -10,8 +10,8 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 ## [Unreleased]
 
 ### Added
-- **Track Art Editor** — per-track 16×16 Yoto icons from the playlist (desktop) and mobile card detail: Icons tab (Yoto public library + [yotoicons.com](https://yotoicons.com/) search + upload) and Draw tab (pixel canvas, palette, undo/redo).
-- Instant icon patch for existing card tracks (`PATCH`-style content update) so art saves without a full playlist rewrite; new tracks stay local until Update.
+- **Track Art Editor** — per-track 16×16 Yoto icons from the playlist (desktop) and mobile playlist detail: Icons tab (Yoto public library + [yotoicons.com](https://yotoicons.com/) search + upload) and Draw tab (pixel canvas, palette, undo/redo).
+- Instant icon patch for existing playlist tracks (`PATCH`-style content update) so art saves without a full playlist rewrite; new tracks stay local until Update.
 - Server helpers for Yoto icon upload / public icons / URL import and yotoicons.com search.
 - Modal polish: desktop pop / phone sheet motion, LED preview crossfade, Apply success beat, and keyboard/a11y pass (focus trap, tablist, listbox roving, focus rings).
 - **Home Assistant add-on** under `homeassistant/` (Supervisor repo + options → `LOUIS_*`, port 4000, `/data/audio`) — [homeassistant/louis/DOCS.md](homeassistant/louis/DOCS.md).
@@ -20,12 +20,19 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - Desktop **Use default client** prefills Louis's bundled public Yoto PKCE client ID (setup wizard + Settings → Advanced).
 - **Add to Home** in the phone Menu and tablet/desktop status bar (browser install prompt, or a toast with Share / Install steps when the prompt is unavailable).
 - Settings → Advanced: **Check for updates** / **Update yt-dlp** installs the official nightly into persistent app data (Docker `/data/audio/bin`, Electron userData). `npm run dev` is check-only.
-- **Normalize new track levels?** at Update when this save will download YouTube audio — opt-in EBU R128 leveling (`I=-16`) for those extracts only. Existing card tracks stay unchanged.
-- Phone Menu can Update every pending dirty playlist without opening a card first. Capacity and normalize prompts are answered once for the whole batch, in the playlist cover (desktop) or by taking over Menu Update (phone).
-- Duplicate-track toast when adding a YouTube video that is already on the card (same playlist row or same YouTube id); it is not added again.
+- **Normalize new track levels?** at Update when this save will download YouTube audio — opt-in EBU R128 leveling (`I=-16`) for those extracts only. Existing playlist tracks stay unchanged.
+- Phone Menu can Update every pending dirty playlist without opening a playlist first. Capacity and normalize prompts are answered once for the whole batch, in the playlist cover (desktop) or by taking over Menu Update (phone).
+- Duplicate-track toast when adding a YouTube video that is already on the playlist (same playlist row or same YouTube id); it is not added again.
+- Import YouTube into Search by pasting a URL: a video or Shorts link opens that track (ready to add); a public playlist or channel URL loads those videos, pre-checked for a group drag (desktop) or Add (phone).
+- Playlist header menu (desktop panel + phone detail) to **Rename** or **Delete** a loaded playlist. Rename takes over the playlist body with the name form, prefilled. Delete asks for confirm in the same body cover as Normalize, then removes the playlist from Yoto.
+- **New playlist** in the idle playlist empty state is a link that starts the New playlist flow.
 
 ### Changed
-- Menu and the desktop status bar paint as soon as auth status is known; the library fetch no longer blocks chrome. Library / fan / add-to-card show placeholders while cards load.
+- Confirming a new playlist name creates the playlist on Yoto immediately. Checked Search results (desktop New) or Add → New playlist (phone) upload with that create; otherwise the playlist starts empty and you add tracks, then Update.
+- Product copy uses Yoto’s playlist terms for library items (**Playlists**, **New playlist**, **Open a playlist**). Louis does not link physical MYO cards — that stays in the Yoto app.
+- YouTube results have a maru checkbox next to the drag handle; checked rows import together when you drag (desktop) or tap Add (phone).
+- Playlist URL results sit in a nested Playlist title box with a Select all / Deselect all toggle.
+- Menu and the desktop status bar paint as soon as auth status is known; the library fetch no longer blocks chrome. Library / fan / add-to-playlist show placeholders while playlists load.
 - Toasts default to bottom-end (top on iOS so they don't cover Safari's Share control).
 - Yoto OAuth scopes now include `user:icons:manage` (reconnect if icon upload/patch is denied).
 - Docker / GHCR: OAuth callback no longer defaults to `localhost` — unset `LOUIS_YOTO_REDIRECT_URI` uses the Host the browser actually opened (LAN / Portainer). Image and compose default `LOUIS_COOKIE_SECURE=false` for plain HTTP; set `true` behind TLS. Compose pulls `ghcr.io/stuartromanek/louis:latest`, uses named volume `louis-audio`, and no longer requires a Git-tracked `env_file`.

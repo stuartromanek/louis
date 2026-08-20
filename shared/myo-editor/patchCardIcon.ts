@@ -31,6 +31,33 @@ export function isPersistedCardTrack(
   )
 }
 
+/** Rebuild Yoto content chapters from card detail without changing icons. */
+export function contentChaptersFromDetail(detail: YotoCardDetail): PatchedContentChapter[] {
+  return detail.chapters.map((chapter) => {
+    const tracks: YotoTrackPayload[] = chapter.tracks.map(track => ({
+      key: track.key,
+      title: track.title,
+      trackUrl: track.trackUrl,
+      type: track.type,
+      format: track.format,
+      duration: track.duration,
+      fileSize: track.fileSize,
+      overlayLabel: track.overlayLabel,
+      channels: track.channels,
+      display: { icon16x16: track.display?.icon16x16 ?? null },
+      uid: track.uid,
+    }))
+
+    return {
+      key: chapter.key,
+      title: chapter.title,
+      overlayLabel: chapter.tracks[0]?.overlayLabel,
+      tracks,
+      display: { icon16x16: chapter.display?.icon16x16 ?? null },
+    }
+  })
+}
+
 /**
  * Rebuild content chapters from card detail, swapping icons on the target chapter
  * (chapter display + tracks[0], and the matching track if it differs).
@@ -59,35 +86,17 @@ export function patchCardDetailIcons(
 
   const display = { icon16x16 }
 
-  return detail.chapters.map((chapter, ci) => {
+  return contentChaptersFromDetail(detail).map((chapter, ci) => {
     const isTarget = ci === chapterIndex
-    const tracks: YotoTrackPayload[] = chapter.tracks.map((track, ti) => {
-      const shouldPatch = isTarget && (ti === 0 || ti === trackIndex)
-      return {
-        key: track.key,
-        title: track.title,
-        trackUrl: track.trackUrl,
-        type: track.type,
-        format: track.format,
-        duration: track.duration,
-        fileSize: track.fileSize,
-        overlayLabel: track.overlayLabel,
-        channels: track.channels,
-        display: shouldPatch
-          ? display
-          : { icon16x16: track.display?.icon16x16 ?? null },
-        uid: track.uid,
-      }
-    })
+    if (!isTarget) return chapter
 
     return {
-      key: chapter.key,
-      title: chapter.title,
-      overlayLabel: chapter.tracks[0]?.overlayLabel,
-      tracks,
-      display: isTarget
-        ? display
-        : { icon16x16: chapter.display?.icon16x16 ?? null },
+      ...chapter,
+      display,
+      tracks: chapter.tracks.map((track, ti) => ({
+        ...track,
+        display: ti === 0 || ti === trackIndex ? display : track.display,
+      })),
     }
   })
 }

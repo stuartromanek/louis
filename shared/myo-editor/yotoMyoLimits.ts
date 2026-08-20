@@ -1,6 +1,6 @@
 import type { PlaylistTrack } from './types'
 
-/** Official Yoto MYO card capacity (support.yotoplay.com). */
+/** Official Yoto playlist capacity (support.yotoplay.com). */
 export const YOTO_MYO_MAX_TRACKS = 100
 export const YOTO_MYO_MAX_TRACK_SECONDS = 60 * 60
 export const YOTO_MYO_MAX_TRACK_BYTES = 100 * 1024 * 1024
@@ -8,10 +8,10 @@ export const YOTO_MYO_MAX_CARD_SECONDS = 5 * 60 * 60
 export const YOTO_MYO_MAX_CARD_BYTES = 500 * 1024 * 1024
 
 export const YOTO_MYO_TRACK_COUNT_MESSAGE
-  = 'Yoto MYO cards allow up to 100 tracks. Remove some tracks before updating.'
+  = 'Yoto playlists allow up to 100 tracks. Remove some tracks before updating.'
 
 export const YOTO_MYO_CARD_TOTALS_MESSAGE
-  = 'This playlist exceeds Yoto’s 5-hour / 500 MB card limit.'
+  = 'This playlist exceeds Yoto’s 5-hour / 500 MB playlist limit.'
 
 export function formatTrackMediaLimitError(title: string): string {
   const label = title.trim() || 'This track'

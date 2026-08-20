@@ -13,7 +13,7 @@ const selectedCardId = editor?.selectedCardId
 
 const capacity = computed(() => getPlaylistCapacitySnapshot(playlist?.value ?? []))
 
-const show = computed(() => Boolean(selectedCardId?.value))
+const show = computed(() => Boolean(selectedCardId?.value || editor?.isNewPlaylist.value))
 
 const trackRatio = computed(() => {
   const { trackCount, trackMax } = capacity.value
@@ -69,8 +69,8 @@ const timeTip = computed(() => {
   const { knownDurationSeconds, durationMax, durationComplete } = capacity.value
   const used = formatCapacityDuration(knownDurationSeconds)
   const max = formatCapacityDuration(durationMax)
-  if (durationComplete) return `${used} of ${max} used. MYO cards allow up to 5 hours.`
-  return `${used} of ${max} used (some durations unknown). MYO cards allow up to 5 hours.`
+  if (durationComplete) return `${used} of ${max} used. Yoto playlists allow up to 5 hours.`
+  return `${used} of ${max} used (some durations unknown). Yoto playlists allow up to 5 hours.`
 })
 </script>
 
@@ -78,7 +78,7 @@ const timeTip = computed(() => {
   <div
     v-if="show"
     class="capacity-meters"
-    aria-label="MYO card capacity"
+    aria-label="Yoto playlist capacity"
   >
     <MaruTooltip :text="trackTip">
       <div

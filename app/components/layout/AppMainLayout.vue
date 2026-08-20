@@ -11,7 +11,7 @@ import type { EmojiId } from '~/utils/emojiCatalog'
 
 defineProps<{
   playlistTitle?: string
-  myoCount?: string
+  playlistsTitle?: string
 }>()
 
 const { playEvent } = useUiSound()
@@ -31,7 +31,7 @@ function onTab(tab: MobileEditorTab) {
   chrome?.goToTab(tab)
 }
 
-function onBackToCards() {
+function onBackToLibrary() {
   playEvent('buttonClick')
   chrome?.backToLibrary()
 }
@@ -63,18 +63,23 @@ function onBackToCards() {
 
       <div class="desktop-right-col sm:flex sm:flex-col sm:gap-3 sm:min-h-0 sm:h-full sm:overflow-hidden">
         <AppPanel
-          title="My Cards"
+          :title="playlistsTitle || 'Playlists'"
           title-emoji="Books"
           heading-tone="yellow-light"
           header-bg="bg-maru-magenta"
           body-bg="bg-maru-yellow-light"
           header-text-class="text-maru-white"
           class="flex-[2] min-h-0"
-          :count="myoCount"
           fill-body
           scroll-body
           :body-padding="false"
         >
+          <template
+            v-if="$slots['myo-header']"
+            #header-actions
+          >
+            <slot name="myo-header" />
+          </template>
           <slot name="myo" />
         </AppPanel>
 
@@ -111,17 +116,17 @@ function onBackToCards() {
         <div class="mobile-library-panel border-maru rounded-maru bg-maru-yellow-light flex flex-col overflow-hidden min-h-0 h-full">
           <header class="mobile-library-panel__header border-maru-bottom shrink-0 flex items-center gap-2 px-2.5 py-1.5 bg-maru-magenta">
             <button
-              v-if="libraryMode === 'card'"
+              v-if="libraryMode === 'detail'"
               type="button"
               class="mobile-library-panel__back"
-              @click="onBackToCards"
+              @click="onBackToLibrary"
             >
               <MaruEmoji
                 name="HighSpeedTrain"
                 :size-rem="1.35"
                 class="mobile-library-panel__back-emoji"
               />
-              <span class="mobile-library-panel__back-label">Back to cards</span>
+              <span class="mobile-library-panel__back-label">Back to library</span>
             </button>
             <MaruHeading
               v-else

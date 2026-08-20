@@ -108,7 +108,7 @@ function onRefreshCards() {
         class="dev-tools-strip__text font-maru-mono text-maru-black underline"
         @click="onRefreshCards"
       >
-        Refresh cards
+        Refresh playlists
       </button>
       <span
         v-if="cacheStatsLabel"

@@ -237,6 +237,11 @@
   color: var(--color-maru-white);
 }
 
+.panel-footer-btn--danger {
+  background: var(--color-maru-red-light);
+  color: var(--color-maru-black);
+}
+
 .panel-footer-btn--secondary {
   background: var(--color-maru-white);
   color: var(--color-maru-black);

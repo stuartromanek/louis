@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import type { YoutubeVideoSummary } from './types'
+import type { YoutubePlaylistSummary } from '#shared/myo-editor/youtubePlaylistImport'
+import type { YoutubeChannelSummary } from '#shared/myo-editor/youtubeUrl'
+import type { YoutubePickerSource } from './useYoutubePicker'
+import MaruHeading from '~/components/layout/MaruHeading.vue'
 import YoutubePickerEmptyState from './YoutubePickerEmptyState.vue'
 import YoutubePickerLoadMore from './YoutubePickerLoadMore.vue'
 import YoutubePickerResults from './YoutubePickerResults.vue'
 
 export type ResultsPaneMode = 'initial' | 'loading' | 'no-results' | 'results'
 
-defineProps<{
+const props = defineProps<{
   mode: ResultsPaneMode
   query?: string
   placeholders?: string[]
@@ -14,6 +18,14 @@ defineProps<{
   focusedIndex?: number
   nextPageToken?: string | null
   loadingMore?: boolean
+  playlist?: YoutubePlaylistSummary | null
+  channel?: YoutubeChannelSummary | null
+  searchSource?: YoutubePickerSource
+  skippedUnavailable?: number
+  selectedCount?: number
+  allImportableSelected?: boolean
+  importableCount?: number
+  playlistMode?: boolean
   fill?: boolean
 }>()
 
@@ -21,8 +33,50 @@ const emit = defineEmits<{
   search: [query: string]
   select: [id: string]
   enableLongTracks: []
+  toggleSelectAll: []
   loadMore: []
 }>()
+
+const loadingTitle = computed(() => {
+  switch (props.searchSource) {
+    case 'playlist': return 'Loading playlist'
+    case 'video': return 'Loading video'
+    case 'channel': return 'Loading channel'
+    default: return 'Searching YouTube'
+  }
+})
+
+const loadingMeta = computed(() => {
+  const q = props.query?.trim()
+  switch (props.searchSource) {
+    case 'playlist': return 'Fetching tracks from that YouTube playlist...'
+    case 'video': return 'Opening that YouTube video...'
+    case 'channel': return 'Fetching videos from that channel...'
+    default: return q ? `Looking for “${q}”...` : ''
+  }
+})
+
+const sourceBanner = computed(() => {
+  if (props.playlist) {
+    return {
+      kind: 'playlist' as const,
+      title: props.playlist.title,
+      countLabel: props.playlist.itemCount
+        ? `${props.playlist.itemCount} source tracks`
+        : '',
+    }
+  }
+  if (props.channel) {
+    return {
+      kind: 'channel' as const,
+      title: props.channel.title,
+      countLabel: typeof props.channel.videoCount === 'number'
+        ? `${props.channel.videoCount} videos`
+        : '',
+    }
+  }
+  return null
+})
 </script>
 
 <template>
@@ -61,13 +115,13 @@ const emit = defineEmits<{
         class="search-loading-emoji"
       />
       <p class="empty-state-title">
-        Searching YouTube
+        {{ loadingTitle }}
       </p>
       <p
-        v-if="query?.trim()"
+        v-if="loadingMeta"
         class="empty-state-meta max-w-lg"
       >
-        Looking for “{{ query.trim() }}”...
+        {{ loadingMeta }}
       </p>
     </div>
 
@@ -79,21 +133,66 @@ const emit = defineEmits<{
       :query="query ?? ''"
     />
 
-    <YoutubePickerResults
+    <div
       v-else
-      :results="results ?? []"
-      :focused-index="focusedIndex ?? -1"
-      bare
-      :fill="fill"
-      @select="emit('select', $event)"
-      @enable-long-tracks="emit('enableLongTracks')"
+      class="flex flex-col"
+      :class="fill ? 'min-h-0 flex-1 overflow-y-auto' : ''"
     >
-      <YoutubePickerLoadMore
-        v-if="nextPageToken"
-        :loading="loadingMore"
-        @click="emit('loadMore')"
-      />
-    </YoutubePickerResults>
+      <section
+        v-if="sourceBanner"
+        class="yt-playlist-banner border-maru rounded-maru overflow-hidden bg-maru-white shrink-0"
+        :aria-label="sourceBanner.kind === 'channel' ? 'Channel' : 'Playlist'"
+      >
+        <header class="yt-playlist-banner__header border-maru-bottom bg-maru-yellow">
+          <MaruHeading
+            :text="sourceBanner.kind === 'channel' ? 'Channel' : 'Playlist'"
+            size="md"
+            tone="black"
+          />
+          <div class="yt-playlist-banner__actions">
+            <button
+              type="button"
+              class="yt-playlist-banner__select maru-button bg-maru-white text-maru-black"
+              :disabled="!(importableCount ?? 0)"
+              :aria-pressed="allImportableSelected ? 'true' : 'false'"
+              :aria-label="allImportableSelected ? 'Deselect all tracks' : 'Select all importable tracks'"
+              @click="emit('toggleSelectAll')"
+            >
+              <span class="maru-button__label">
+                {{ allImportableSelected ? 'Deselect all' : 'Select all' }}
+              </span>
+            </button>
+            <p class="type-window-meta text-maru-black m-0 shrink-0 tabular-nums">
+              {{ selectedCount ?? 0 }} selected
+            </p>
+          </div>
+        </header>
+        <div class="yt-playlist-banner__body">
+          <p class="type-title font-maru-medium m-0">
+            {{ sourceBanner.title }}<template v-if="sourceBanner.countLabel"> · {{ sourceBanner.countLabel }}</template>
+          </p>
+          <p
+            v-if="skippedUnavailable"
+            class="type-meta m-0 text-maru-black/75"
+          >
+            {{ skippedUnavailable }} unavailable skipped
+          </p>
+        </div>
+      </section>
+      <YoutubePickerResults
+        :results="results ?? []"
+        :focused-index="focusedIndex ?? -1"
+        bare
+        @select="emit('select', $event)"
+        @enable-long-tracks="emit('enableLongTracks')"
+      >
+        <YoutubePickerLoadMore
+          v-if="nextPageToken"
+          :loading="loadingMore"
+          @click="emit('loadMore')"
+        />
+      </YoutubePickerResults>
+    </div>
   </div>
 </template>
 

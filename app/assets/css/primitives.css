@@ -134,8 +134,8 @@
 }
 
 .maru-heading--sm {
-  font-size: clamp(1.5rem, 1.15rem + 1.1vw, 1.75rem);
-  letter-spacing: 0.8px;
+  font-size: clamp(1.2rem, 0.92rem + 0.88vw, 1.4rem);
+  letter-spacing: 0.64px;
 }
 
 /* Panel chrome: track header width so titles ease down on narrow phones. */
@@ -144,8 +144,18 @@
   container-name: app-panel-header;
 }
 
+.app-panel__header .maru-heading {
+  min-width: 0;
+  flex: 1;
+}
+
 .app-panel__header .maru-heading--sm {
-  font-size: clamp(1.15rem, 7.5cqi, 1.75rem);
+  font-size: clamp(0.92rem, 6cqi, 1.4rem);
+}
+
+.app-panel__header .maru-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .maru-heading--with-emoji {
@@ -171,7 +181,7 @@
 }
 
 .maru-heading--sm .maru-heading__label::before {
-  -webkit-text-stroke: 4px var(--color-maru-black);
+  -webkit-text-stroke: 3.2px var(--color-maru-black);
 }
 
 .maru-heading--md {

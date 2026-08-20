@@ -13,14 +13,30 @@
       >
         <AppMainLayout
           :playlist-title="playlistTitle"
-          :myo-count="myoCountLabel"
+          :playlists-title="playlistsTitle"
         >
           <template #youtube>
             <YoutubePicker embedded />
           </template>
 
           <template #myo>
-            <YotoMyo embedded @update:count="myoCountLabel = $event" />
+            <YotoMyo embedded />
+          </template>
+
+          <template #myo-header>
+            <button
+              v-if="connected && (status === 'idle' || status === 'error')"
+              type="button"
+              class="maru-button maru-button--sm typetester-inline-search-btn text-maru-black bg-maru-turquoise-light"
+              :disabled="isPlaylistLocked"
+              @click="onStartNewPlaylist"
+            >
+              <span class="maru-button__label">New</span>
+            </button>
+          </template>
+
+          <template #playlist-header>
+            <PlaylistHeaderMenu />
           </template>
 
           <template #playlist>
@@ -46,7 +62,7 @@
             <AppDevToolsStrip />
           </template>
         </AppMainLayout>
-        <MobileAddToCardDrawer />
+        <MobileAddToPlaylistDrawer />
         <ToastHost />
       </DragDropProvider>
     </div>
@@ -89,8 +105,10 @@
 <script setup lang="ts">
 import { DragDropProvider, type DragEndEvent, type DragOverEvent, type DragStartEvent } from '@dnd-kit/vue'
 import { isSortable, isSortableOperation } from '@dnd-kit/vue/sortable'
-import type { PlaylistTrack } from '~/components/playlist/types'
-import { pickerVideoToPlaylistTrack, playlistHasTrack } from '~/components/playlist/types'
+import { pickerVideoToPlaylistTrack } from '~/components/playlist/types'
+import type { YoutubeVideoSummary } from '~/components/youtube-picker/types'
+import { videoResultKey } from '#shared/myo-editor/youtubePlaylistImport'
+import { useSelectedResultTracks } from '~/components/youtube-picker/useYoutubePicker'
 import {
   PLAYLIST_DROPZONE_ID,
   configurePlaylistDndPlugins,
@@ -98,6 +116,7 @@ import {
 } from '~/components/playlist/dnd'
 import YoutubePlaylist from '~/components/playlist/YoutubePlaylist.vue'
 import PlaylistPanelFooter from '~/components/playlist/PlaylistPanelFooter.vue'
+import PlaylistHeaderMenu from '~/components/playlist/PlaylistHeaderMenu.vue'
 import AppMainLayout from '~/components/layout/AppMainLayout.vue'
 import { useMyoEditor } from '~/components/myo-editor/useMyoEditor'
 import { MYO_EDITOR_KEY } from '~/components/myo-editor/keys'
@@ -112,7 +131,7 @@ import YotoConnectedModal from '~/components/yoto-myo/YotoConnectedModal.vue'
 import AppSplash from '~/components/splash/AppSplash.vue'
 import DesktopSetupScreen from '~/components/splash/DesktopSetupScreen.vue'
 import MobileLibraryView from '~/components/layout/MobileLibraryView.vue'
-import MobileAddToCardDrawer from '~/components/layout/MobileAddToCardDrawer.vue'
+import MobileAddToPlaylistDrawer from '~/components/layout/MobileAddToPlaylistDrawer.vue'
 import ToastHost from '~/components/ui/ToastHost.vue'
 import {
   MOBILE_EDITOR_CHROME_KEY,
@@ -126,7 +145,19 @@ import {
 const yoto = useYotoMyo()
 provide(YOTO_MYO_KEY, yoto)
 
-const editor = useMyoEditor()
+const editor = useMyoEditor({
+  onPlaylistCreated: (cardId) => {
+    yoto.rememberCreatedCard({ cardId, title: editor.cardTitle.value })
+    void yoto.refresh({ quiet: true })
+  },
+  onPlaylistRenamed: (cardId, title) => {
+    yoto.rememberCreatedCard({ cardId, title })
+  },
+  onPlaylistDeleted: (cardId) => {
+    yoto.forgetCard(cardId)
+    void yoto.refresh({ quiet: true })
+  },
+})
 provide(MYO_EDITOR_KEY, editor)
 
 const mobileChrome = useMobileEditorChrome()
@@ -141,15 +172,21 @@ const route = useRoute()
 const router = useRouter()
 
 const { playEvent } = useUiSound()
-const { showDuplicateTrack } = useToast()
+const { showDuplicateTrack, showError } = useToast()
+const { clear: clearResultSelection, isSelected, setInFlightKeys, clearInFlight } = useYoutubeResultSelection()
+const selectedResultTracks = useSelectedResultTracks()
 const { shouldShowSplash, splashHoldsGate, splashDebug, markSplashSeen } = useAppSplash()
 const { open: prefsOpen } = usePreferencesShell()
 const { isDesktop, getConfig, desktopPrefsDebug } = useDesktopHost()
 
-const { playlist, isPlaylistLocked, selectedCardId, cardTitle } = editor
-const { connected, status } = yoto
+const { playlist, isPlaylistLocked, selectedCardId, cardTitle, isNewPlaylist, canAcceptTracks } = editor
+const { connected, status, cards, cardsLoading } = yoto
 
-const myoCountLabel = ref('')
+const playlistsTitle = computed(() => {
+  if (!connected.value || status.value !== 'idle' || cardsLoading.value) return 'Playlists'
+  return `Playlists (${cards.value.length})`
+})
+
 const authGateBlocksApp = ref(false)
 const welcomeBlocksApp = ref(false)
 const welcomeOpen = ref(false)
@@ -260,9 +297,25 @@ watch(
 )
 
 const playlistTitle = computed(() => {
+  if (isNewPlaylist.value) return cardTitle.value.trim() || 'New playlist'
   if (!selectedCardId.value || !cardTitle.value.trim()) return 'Playlist'
   return cardTitle.value.trim()
 })
+
+function onStartNewPlaylist() {
+  if (isPlaylistLocked.value) {
+    playEvent('disabled')
+    return
+  }
+  if (!editor.startNewPlaylist()) {
+    playEvent('disabled')
+    return
+  }
+  if (selectedResultTracks.value.length > 0) {
+    editor.queuePendingCreateTracks(selectedResultTracks.value)
+  }
+  playEvent('buttonClick')
+}
 
 function getItemData(entity: { data?: unknown } | null | undefined): DndItemData | null {
   const data = entity?.data
@@ -271,31 +324,51 @@ function getItemData(entity: { data?: unknown } | null | undefined): DndItemData
   return data as DndItemData
 }
 
-function insertTrack(track: PlaylistTrack, atIndex?: number): boolean {
-  if (playlistHasTrack(playlist.value, track)) {
-    showDuplicateTrack(track.title)
-    return false
+function applyResultDrop(videos: YoutubeVideoSummary[], sourceTitle: string, atIndex?: number) {
+  const tracks = videos.map(pickerVideoToPlaylistTrack)
+  const result = editor.insertTracks(tracks, atIndex)
+  if (!result.ok) {
+    playEvent('disabled')
+    showError(result.message)
+    return
   }
 
-  if (atIndex === undefined || atIndex < 0 || atIndex >= playlist.value.length) {
-    playlist.value = [...playlist.value, track]
-    return true
+  if (result.added > 0) {
+    playEvent('drop')
+    if (result.firstAddedId) scrollToVideoId.value = result.firstAddedId
+    if (videos.length > 1 || isSelected(videoResultKey(videos[0]!))) {
+      clearResultSelection()
+    }
   }
 
-  const next = [...playlist.value]
-  next.splice(atIndex, 0, track)
-  playlist.value = next
-  return true
+  if (result.overflow > 0) {
+    const extra = result.overflow === 1 ? 'track' : 'tracks'
+    showError(`Couldn't add ${result.overflow} more ${extra}. Yoto playlists allow up to 100 tracks.`)
+    return
+  }
+
+  if (result.added === 0 && result.skipped > 0) {
+    showDuplicateTrack(sourceTitle)
+  }
 }
 
 function onDragStart(event: DragStartEvent) {
   lastReorderIndex = null
-  if (isPlaylistLocked.value) return
-
   const source = event.operation.source
-  if (!source || !isSortable(source)) return
+  if (!source) return
 
   const sourceData = getItemData(source)
+  if (sourceData?.type === 'result') {
+    const videos = sourceData.videos?.length ? sourceData.videos : [sourceData.video]
+    if (videos.length > 1) {
+      setInFlightKeys(videos.map(video => videoResultKey(video)))
+    }
+    return
+  }
+
+  if (isPlaylistLocked.value) return
+
+  if (!isSortable(source)) return
   if (sourceData?.type !== 'playlist') return
 
   lastReorderIndex = source.index
@@ -324,6 +397,7 @@ function onDragOver(event: DragOverEvent) {
 
 function onDragEnd(event: DragEndEvent) {
   lastReorderIndex = null
+  clearInFlight()
   if (event.canceled || isPlaylistLocked.value) return
 
   const { operation } = event
@@ -345,27 +419,21 @@ function onDragEnd(event: DragEndEvent) {
   }
 
   if (sourceData?.type === 'result') {
-    if (!selectedCardId.value) {
+    if (!canAcceptTracks.value) {
       playEvent('disabled')
       return
     }
 
-    const track = pickerVideoToPlaylistTrack(sourceData.video)
+    const videos = sourceData.videos?.length ? sourceData.videos : [sourceData.video]
     if (!target) return
 
     if (target.id === PLAYLIST_DROPZONE_ID) {
-      if (insertTrack(track)) {
-        playEvent('drop')
-        scrollToVideoId.value = track.id
-      }
+      applyResultDrop(videos, sourceData.video.title)
       return
     }
 
     if (isSortable(target)) {
-      if (insertTrack(track, target.index)) {
-        playEvent('drop')
-        scrollToVideoId.value = track.id
-      }
+      applyResultDrop(videos, sourceData.video.title, target.index)
     }
   }
 }

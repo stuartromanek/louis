@@ -1,6 +1,7 @@
 import type { PlaylistTrack, YotoCardDetail } from './types.ts'
 import { playlistSaveExtractsYoutube } from './buildSavePlan.ts'
 import { playlistIsAtOrOverCapacity } from './yotoMyoLimits.ts'
+import { NEW_PLAYLIST_SAVE_KEY } from './standalonePlaylist.ts'
 
 export interface PendingUpdateSnapshot {
   playlist: PlaylistTrack[]
@@ -56,13 +57,14 @@ export function collectPendingUpdateTargets(
   const seen = new Set<string>()
 
   const live = input.live
-  if (live && live.isDirty && !live.isPodcast && !live.isSaving) {
+  if (live && live.cardId !== NEW_PLAYLIST_SAVE_KEY && live.isDirty && !live.isPodcast && !live.isSaving) {
     targets.push(pendingTargetFrom(live.cardId, live.snapshot, live.cardDetail))
     seen.add(live.cardId)
   }
 
   for (const [cardId, snapshot] of input.drafts) {
     if (seen.has(cardId)) continue
+    if (cardId === NEW_PLAYLIST_SAVE_KEY) continue
     if (input.isPodcast(cardId) || input.isSaving(cardId)) continue
     targets.push(pendingTargetFrom(cardId, snapshot, null))
     seen.add(cardId)

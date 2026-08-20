@@ -12,7 +12,10 @@ export interface YoutubeVideo {
 }
 
 /** Search-row shape: duration fields when enriched; no description. */
-export type YoutubeVideoSummary = Omit<YoutubeVideo, 'description'>
+export type YoutubeVideoSummary = Omit<YoutubeVideo, 'description'> & {
+  /** Stable row id when the same video can appear more than once (playlist items). */
+  resultKey?: string
+}
 
 export interface YoutubeSearchResponse {
   items: YoutubeVideoSummary[]
