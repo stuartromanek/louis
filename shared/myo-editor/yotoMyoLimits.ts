@@ -3,6 +3,8 @@ import type { PlaylistTrack } from './types'
 /** Official Yoto playlist capacity (support.yotoplay.com). */
 export const YOTO_MYO_MAX_TRACKS = 100
 export const YOTO_MYO_MAX_TRACK_SECONDS = 60 * 60
+/** Split source audio before this so no part sits on Yoto’s 60-minute cliff. */
+export const YOTO_MYO_SPLIT_TRACK_SECONDS = 55 * 60
 export const YOTO_MYO_MAX_TRACK_BYTES = 100 * 1024 * 1024
 export const YOTO_MYO_MAX_CARD_SECONDS = 5 * 60 * 60
 export const YOTO_MYO_MAX_CARD_BYTES = 500 * 1024 * 1024
@@ -21,6 +23,26 @@ export function formatTrackMediaLimitError(title: string): string {
 export function getTrackCountLimitError(count: number): string | null {
   if (count > YOTO_MYO_MAX_TRACKS) return YOTO_MYO_TRACK_COUNT_MESSAGE
   return null
+}
+
+/** How many MYO chapters a duration becomes after auto-split. Split rows already count as 1. */
+export function splitPartCountForDuration(durationSeconds: number): number {
+  if (!Number.isFinite(durationSeconds) || durationSeconds <= YOTO_MYO_SPLIT_TRACK_SECONDS) {
+    return 1
+  }
+  return Math.max(2, Math.ceil(durationSeconds / YOTO_MYO_SPLIT_TRACK_SECONDS))
+}
+
+export function projectedTrackSlots(track: PlaylistTrack): number {
+  if (track.split) return 1
+  const duration = trackDurationSeconds(track)
+  if (typeof duration !== 'number') return 1
+  return splitPartCountForDuration(duration)
+}
+
+/** Row count after save-time expand of unsplit longs with a known duration. */
+export function projectedPlaylistTrackCount(playlist: PlaylistTrack[]): number {
+  return playlist.reduce((sum, track) => sum + projectedTrackSlots(track), 0)
 }
 
 export function getTrackMediaLimitError(input: {
@@ -121,7 +143,7 @@ function trackFileSizeBytes(track: PlaylistTrack): number | undefined {
  * Incomplete metadata is ignored (server enforces after download/transcode).
  */
 export function getPlaylistPreflightLimitError(playlist: PlaylistTrack[]): string | null {
-  const countError = getTrackCountLimitError(playlist.length)
+  const countError = getTrackCountLimitError(projectedPlaylistTrackCount(playlist))
   if (countError) return countError
 
   const durations = playlist.map(trackDurationSeconds)

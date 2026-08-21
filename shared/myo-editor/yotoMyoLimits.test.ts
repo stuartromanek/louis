@@ -14,9 +14,11 @@ import {
   YOTO_MYO_MAX_TRACK_BYTES,
   YOTO_MYO_MAX_TRACK_SECONDS,
   YOTO_MYO_MAX_TRACKS,
+  YOTO_MYO_SPLIT_TRACK_SECONDS,
   YOTO_MYO_TRACK_COUNT_MESSAGE,
   formatCapacityDuration,
   getPlaylistCapacitySnapshot,
+  projectedPlaylistTrackCount,
 } from './yotoMyoLimits.ts'
 import type { PlaylistTrack } from './types.ts'
 
@@ -112,6 +114,16 @@ describe('getPlaylistPreflightLimitError', () => {
       track({ id: `t${i}`, title: `T${i}` }),
     )
     assert.equal(getPlaylistPreflightLimitError(playlist), YOTO_MYO_TRACK_COUNT_MESSAGE)
+  })
+
+  it('reserves split part slots for an unsplit long with a known duration', () => {
+    const playlist = [
+      ...Array.from({ length: 98 }, (_, i) => track({ id: `t${i}`, title: `T${i}` })),
+      track({ id: 'album', title: 'Album', duration: 2 * 60 * 60 }),
+    ]
+    assert.equal(projectedPlaylistTrackCount(playlist), 101)
+    assert.equal(getPlaylistPreflightLimitError(playlist), YOTO_MYO_TRACK_COUNT_MESSAGE)
+    assert.equal(YOTO_MYO_SPLIT_TRACK_SECONDS, 55 * 60)
   })
 
   it('skips duration checks when any track lacks duration', () => {

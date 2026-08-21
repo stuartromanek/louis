@@ -1,7 +1,6 @@
 import { computed, readonly, ref } from 'vue'
 
 const STORAGE_KEY = 'yoto-cards:user-preferences'
-const SESSION_STORAGE_KEY = 'yoto-cards:session-preferences'
 
 type StoredPrefs = {
   showDebugPanel?: boolean
@@ -13,17 +12,11 @@ type StoredPrefs = {
   trackArtIconSize?: 32 | 64
 }
 
-type SessionPrefs = {
-  /** Unlock over-hour YouTube tracks for this browser tab session. */
-  allowLongTracks?: boolean
-}
-
 const showDebugPanelStored = ref<boolean | null>(null)
 /** null = never customized; [] = cleared to defaults; non-empty = custom list */
 const searchPlaceholdersStored = ref<string[] | null>(null)
 const drawEditorSoundsStored = ref<boolean | null>(null)
 const trackArtIconSizeStored = ref<32 | 64 | null>(null)
-const allowLongTracksStored = ref(false)
 
 let initialized = false
 
@@ -33,19 +26,6 @@ function readStored(): StoredPrefs {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return {}
     const parsed = JSON.parse(raw) as StoredPrefs
-    return parsed && typeof parsed === 'object' ? parsed : {}
-  }
-  catch {
-    return {}
-  }
-}
-
-function readSessionStored(): SessionPrefs {
-  if (typeof sessionStorage === 'undefined') return {}
-  try {
-    const raw = sessionStorage.getItem(SESSION_STORAGE_KEY)
-    if (!raw) return {}
-    const parsed = JSON.parse(raw) as SessionPrefs
     return parsed && typeof parsed === 'object' ? parsed : {}
   }
   catch {
@@ -71,19 +51,6 @@ function persist() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave))
 }
 
-function persistSession() {
-  if (typeof sessionStorage === 'undefined') return
-  const toSave: SessionPrefs = {}
-  if (allowLongTracksStored.value) {
-    toSave.allowLongTracks = true
-  }
-  if (Object.keys(toSave).length === 0) {
-    sessionStorage.removeItem(SESSION_STORAGE_KEY)
-    return
-  }
-  sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(toSave))
-}
-
 function ensureInitialized() {
   if (initialized || import.meta.server) return
   initialized = true
@@ -99,10 +66,6 @@ function ensureInitialized() {
   }
   if (stored.trackArtIconSize === 32 || stored.trackArtIconSize === 64) {
     trackArtIconSizeStored.value = stored.trackArtIconSize
-  }
-  const session = readSessionStored()
-  if (session.allowLongTracks === true) {
-    allowLongTracksStored.value = true
   }
 }
 
@@ -167,13 +130,6 @@ export function useUserPreferences() {
     persist()
   }
 
-  const allowLongTracks = computed(() => allowLongTracksStored.value)
-
-  function setAllowLongTracks(value: boolean) {
-    allowLongTracksStored.value = value
-    persistSession()
-  }
-
   return {
     showDebugPanel,
     searchPlaceholders: readonly(searchPlaceholders),
@@ -184,7 +140,5 @@ export function useUserPreferences() {
     setDrawEditorSounds,
     trackArtIconSize: readonly(trackArtIconSize),
     setTrackArtIconSize,
-    allowLongTracks: readonly(allowLongTracks),
-    setAllowLongTracks,
   }
 }

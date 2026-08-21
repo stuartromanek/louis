@@ -371,7 +371,7 @@ function onEscape(event: KeyboardEvent) {
 
 watch(open, (isOpen) => {
   if (isOpen) {
-    if (phase.value === 'idle') beginOpen()
+    if (phase.value === 'idle' || phase.value === 'exiting') beginOpen()
     return
   }
   if (
@@ -398,6 +398,7 @@ onMounted(() => {
   window.addEventListener('keydown', onEscape)
   phoneMq = window.matchMedia(PHONE_MQ)
   phoneMq.addEventListener('change', onPhoneBreakpointChange)
+  if (open.value && phase.value === 'idle') beginOpen()
 })
 
 onUnmounted(() => {

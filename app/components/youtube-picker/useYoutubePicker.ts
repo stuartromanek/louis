@@ -11,7 +11,7 @@ import {
   classifyYoutubeSearchInput,
   type YoutubeChannelSummary,
 } from '#shared/myo-editor/youtubeUrl'
-import { pickerVideoToPlaylistTrack } from '~/components/playlist/types'
+import { videosToPlaylistTracks } from '~/components/playlist/types'
 
 const MIN_SEARCH_LOADING_MS = 2000
 
@@ -23,7 +23,6 @@ export const YOUTUBE_PICKER_RESULTS_STATE = 'youtube-picker-results'
 
 export function useYoutubePicker(maxResults = 12) {
   const { playEvent } = useUiSound()
-  const { allowLongTracks } = useUserPreferences()
   const {
     selectedCount,
     selectedKeySet,
@@ -35,7 +34,6 @@ export function useYoutubePicker(maxResults = 12) {
   const query = ref('')
   const submittedQuery = ref('')
   const results = useState<YoutubeVideoSummary[]>(YOUTUBE_PICKER_RESULTS_STATE, () => [])
-  const pendingEnableLongTracks = ref(false)
   const focusedIndex = ref(-1)
   const status = ref<PickerStatus>('idle')
   const errorMessage = ref('')
@@ -102,7 +100,6 @@ export function useYoutubePicker(maxResults = 12) {
     query.value = ''
     submittedQuery.value = ''
     results.value = []
-    pendingEnableLongTracks.value = false
     focusedIndex.value = -1
     status.value = 'idle'
     errorMessage.value = ''
@@ -113,7 +110,7 @@ export function useYoutubePicker(maxResults = 12) {
   }
 
   function precheckImportable(videos: YoutubeVideoSummary[], replace: boolean) {
-    const keys = importableResultKeys(videos, allowLongTracks.value)
+    const keys = importableResultKeys(videos)
     if (replace) setSelectedKeys(keys)
     else addSelectedKeys(keys)
   }
@@ -131,7 +128,6 @@ export function useYoutubePicker(maxResults = 12) {
     submittedQuery.value = q
     status.value = 'loading'
     errorMessage.value = ''
-    pendingEnableLongTracks.value = false
     focusedIndex.value = -1
     results.value = []
     nextPageToken.value = undefined
@@ -202,7 +198,6 @@ export function useYoutubePicker(maxResults = 12) {
     submittedQuery.value = q
     status.value = 'loading'
     errorMessage.value = ''
-    pendingEnableLongTracks.value = false
     focusedIndex.value = -1
     results.value = []
     nextPageToken.value = undefined
@@ -276,7 +271,6 @@ export function useYoutubePicker(maxResults = 12) {
     submittedQuery.value = q
     status.value = 'loading'
     errorMessage.value = ''
-    pendingEnableLongTracks.value = false
     focusedIndex.value = -1
     results.value = []
     nextPageToken.value = undefined
@@ -384,7 +378,6 @@ export function useYoutubePicker(maxResults = 12) {
       const loadingStartedAt = Date.now()
       status.value = 'loading'
       errorMessage.value = ''
-      pendingEnableLongTracks.value = false
       focusedIndex.value = -1
       results.value = []
       nextPageToken.value = undefined
@@ -469,14 +462,6 @@ export function useYoutubePicker(maxResults = 12) {
     }
   }
 
-  function requestEnableLongTracks() {
-    pendingEnableLongTracks.value = true
-  }
-
-  function cancelEnableLongTracks() {
-    pendingEnableLongTracks.value = false
-  }
-
   function moveFocus(delta: number) {
     if (results.value.length === 0) return
     const next = focusedIndex.value + delta
@@ -492,7 +477,7 @@ export function useYoutubePicker(maxResults = 12) {
   }
 
   const importableKeys = computed(() =>
-    importableResultKeys(results.value, allowLongTracks.value),
+    importableResultKeys(results.value),
   )
 
   const allImportableSelected = computed(() => {
@@ -512,16 +497,10 @@ export function useYoutubePicker(maxResults = 12) {
     playEvent('toggleOn')
   }
 
-  watch(allowLongTracks, (allowed) => {
-    if (!allowed || (!activePlaylistId.value && !activeChannelId.value)) return
-    addSelectedKeys(importableResultKeys(results.value, true))
-  })
-
   return {
     query,
     submittedQuery,
     results,
-    pendingEnableLongTracks,
     focusedIndex,
     status,
     errorMessage,
@@ -541,8 +520,6 @@ export function useYoutubePicker(maxResults = 12) {
     resetSearch,
     loadMore,
     selectVideo,
-    requestEnableLongTracks,
-    cancelEnableLongTracks,
     moveFocus,
   }
 }
@@ -553,6 +530,6 @@ export function useSelectedResultTracks() {
   return computed(() =>
     results.value
       .filter(video => selectedKeySet.value.has(videoResultKey(video)))
-      .map(pickerVideoToPlaylistTrack),
+      .flatMap(videosToPlaylistTracks),
   )
 }

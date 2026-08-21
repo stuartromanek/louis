@@ -6,6 +6,7 @@ import { PLAYLIST_DROPZONE_ID } from './dnd'
 import PlaylistCardLoading from './PlaylistCardLoading.vue'
 import PlaylistEmptyState from './PlaylistEmptyState.vue'
 import PlaylistItem from './PlaylistItem.vue'
+import PlaylistSplitGroup from './PlaylistSplitGroup.vue'
 import PlaylistSaveProgress from './PlaylistSaveProgress.vue'
 import PlaylistUpdatePrompt from './PlaylistUpdatePrompt.vue'
 import { usePlaylistEnterStagger } from './usePlaylistEnterStagger'
@@ -14,6 +15,7 @@ import {
   useSaveProgressTestMode,
 } from './saveProgressTestFixture'
 import { useLeftoverOutcomeFixtures } from './leftoverOutcomeFixtures'
+import { playlistBlocks, removeTrackOrGroup } from '#shared/myo-editor/splitTrack'
 
 const props = withDefaults(defineProps<{
   scrollToVideoId?: string | null
@@ -35,6 +37,8 @@ const yoto = inject(YOTO_MYO_KEY, null)
 const { playlist, isPlaylistLocked, saveProgress, loading, cardTitle, selectedCardId, isEditing, canAcceptTracks, clearSelection } = editor
 
 const { enterIndex } = usePlaylistEnterStagger(playlist)
+
+const playlistBlockList = computed(() => playlistBlocks(playlist.value))
 
 const saveProgressTestMode = useSaveProgressTestMode()
 const leftoverFixtures = useLeftoverOutcomeFixtures()
@@ -87,7 +91,6 @@ const coverTone = computed(() => (
 
 function onPromptCancel() {
   if (editor.saveStarting.value || editor.playlistManageBusy.value || uncertainRefreshBusy.value) return
-  playEvent('resetPlaylist')
   if (editor.playlistManagePrompt.value) {
     editor.cancelPlaylistManage()
     return
@@ -103,12 +106,10 @@ function onPromptCancel() {
 }
 
 function onPromptKeep() {
-  playEvent('buttonPrimary')
   editor.keepVolumeAsIs()
 }
 
 function onPromptConfirm() {
-  playEvent('buttonPrimary')
   if (showUpdatePrompt.value) {
     editor.confirmUpdatePrompt()
     return
@@ -361,7 +362,7 @@ const { isDropTarget } = useDroppable({
 function removeTrack(id: string) {
   if (isDropzoneLocked.value || isCardLoadingActive.value || isYotoPlaylistBlocked.value) return
   playEvent('removeTrack')
-  playlist.value = playlist.value.filter(track => track.id !== id)
+  playlist.value = removeTrackOrGroup(playlist.value, id)
 }
 
 function isVisibleInScrollContainer(item: HTMLElement, container: HTMLElement) {
@@ -416,15 +417,29 @@ watch(() => props.scrollToVideoId, async (id) => {
         name="playlist-track"
         class="playlist-items flex flex-col gap-1.5 list-none m-0 p-0"
       >
-        <PlaylistItem
-          v-for="(track, index) in playlist"
-          :key="track.id"
-          :track="track"
-          :index="index"
-          :locked="isDropzoneLocked"
-          :enter-index="enterIndex(track.id)"
-          @remove="removeTrack"
-        />
+        <template
+          v-for="(block, blockIndex) in playlistBlockList"
+          :key="block.kind === 'split'
+            ? `split:${block.tracks[0]?.split?.groupId ?? block.tracks[0]?.id}`
+            : block.tracks[0]!.id"
+        >
+          <PlaylistSplitGroup
+            v-if="block.kind === 'split'"
+            :tracks="block.tracks"
+            :index="blockIndex"
+            :locked="isDropzoneLocked"
+            :enter-index="enterIndex(block.tracks[0]!.id)"
+            @remove="removeTrack"
+          />
+          <PlaylistItem
+            v-else
+            :track="block.tracks[0]!"
+            :index="blockIndex"
+            :locked="isDropzoneLocked"
+            :enter-index="enterIndex(block.tracks[0]!.id)"
+            @remove="removeTrack"
+          />
+        </template>
       </TransitionGroup>
 
       <PlaylistEmptyState

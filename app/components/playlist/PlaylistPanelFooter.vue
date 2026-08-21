@@ -98,7 +98,7 @@ function onCancelUpdate() {
     playEvent('disabled')
     return
   }
-  playEvent('resetPlaylist')
+  playEvent('select')
   if (editor?.playlistManagePrompt.value) {
     editor.cancelPlaylistManage()
     return

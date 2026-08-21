@@ -3,7 +3,7 @@ import Tray from '~/components/ui/Tray.vue'
 import { MYO_EDITOR_KEY } from '~/components/myo-editor/keys'
 import { YOTO_MYO_KEY } from '~/components/yoto-myo/keys'
 import { MOBILE_EDITOR_CHROME_KEY } from '~/composables/useMobileEditorChrome'
-import { pickerVideoToPlaylistTrack } from '~/components/playlist/types'
+import { videosToPlaylistTracks } from '~/components/playlist/types'
 import type { InsertTracksResult } from '~/components/myo-editor/useMyoEditor'
 import { classifyInsertTracksOutcome } from '#shared/myo-editor/standalonePlaylist'
 import type { YotoMyoCard as YotoMyoCardType } from '~/components/yoto-myo/types'
@@ -50,6 +50,7 @@ function cardIsPodcast(card: YotoMyoCardType) {
 }
 
 function addedLabel(videos: YoutubeVideoSummary[], added: number) {
+  if (videos.length === 1) return videos[0]?.title ?? 'Track'
   if (added === 1) return videos[0]?.title ?? 'Track'
   return `${added} tracks`
 }
@@ -103,7 +104,7 @@ async function onPickNewCard() {
       return
     }
 
-    queuePendingCreateTracks(videos.map(pickerVideoToPlaylistTrack))
+    queuePendingCreateTracks(videosToPlaylistTracks(videos))
     playEvent('buttonClick')
     closeAddDrawer()
     openPlaylist()
@@ -143,7 +144,7 @@ async function onPickCard(card: YotoMyoCardType) {
       return
     }
 
-    const result = insertTracks(videos.map(pickerVideoToPlaylistTrack))
+    const result = insertTracks(videosToPlaylistTracks(videos))
     finishAdd(result, videos, card.title, false)
   }
   finally {

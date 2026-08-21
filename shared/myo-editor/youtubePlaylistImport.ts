@@ -1,5 +1,3 @@
-import { isOverMyoTrackDuration } from './youtubeDuration.ts'
-
 const YOUTUBE_PLAYLIST_HOSTS = new Set([
   'youtube.com',
   'www.youtube.com',
@@ -38,7 +36,6 @@ export interface YoutubePlaylistImportResponse {
 export type YoutubePlaylistImportBlockReason =
   | 'unavailable'
   | 'missing-duration'
-  | 'over-track-duration'
 
 /** Picker row shape produced from a playlist item (matches YoutubeVideoSummary). */
 export interface YoutubePlaylistResultVideo {
@@ -82,7 +79,6 @@ export function videoResultKey(video: { id: string, resultKey?: string }): strin
 
 export function youtubePlaylistItemBlockReason(
   item: YoutubePlaylistImportItem,
-  allowLongTracks: boolean,
 ): YoutubePlaylistImportBlockReason | undefined {
   if (!item.available) return 'unavailable'
   if (
@@ -92,22 +88,17 @@ export function youtubePlaylistItemBlockReason(
   ) {
     return 'missing-duration'
   }
-  if (!allowLongTracks && isOverMyoTrackDuration(item.durationSeconds)) {
-    return 'over-track-duration'
-  }
   return undefined
 }
 
 export function isYoutubePlaylistItemImportable(
   item: YoutubePlaylistImportItem,
-  allowLongTracks: boolean,
 ): boolean {
-  return youtubePlaylistItemBlockReason(item, allowLongTracks) === undefined
+  return youtubePlaylistItemBlockReason(item) === undefined
 }
 
 export function isImportableYoutubeResult(
   video: { durationSeconds?: number },
-  allowLongTracks: boolean,
 ): boolean {
   if (
     typeof video.durationSeconds !== 'number'
@@ -116,7 +107,6 @@ export function isImportableYoutubeResult(
   ) {
     return false
   }
-  if (!allowLongTracks && isOverMyoTrackDuration(video.durationSeconds)) return false
   return true
 }
 
@@ -164,10 +154,9 @@ export function mapPlaylistImportItems(
 
 export function importableResultKeys<T extends { id: string, resultKey?: string, durationSeconds?: number }>(
   videos: T[],
-  allowLongTracks: boolean,
 ): string[] {
   return videos
-    .filter(video => isImportableYoutubeResult(video, allowLongTracks))
+    .filter(video => isImportableYoutubeResult(video))
     .map(video => videoResultKey(video))
 }
 

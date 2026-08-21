@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import { ffmpegTimeoutMs } from './ffmpeg-split.ts'
 
 const execFileAsync = promisify(execFile)
 
@@ -7,7 +8,6 @@ const LOUDNORM_I = '-16'
 const LOUDNORM_TP = '-1.5'
 const LOUDNORM_LRA = '11'
 const FIRST_PASS_FILTER = `loudnorm=I=${LOUDNORM_I}:TP=${LOUDNORM_TP}:LRA=${LOUDNORM_LRA}:print_format=json`
-const FFMPEG_TIMEOUT_MS = 10 * 60 * 1000
 
 export type LoudnormMeasurement = {
   measuredI: string
@@ -77,12 +77,15 @@ function nullSink(): string {
 export async function loudnormAudioFile(
   sourcePath: string,
   destPath: string,
+  durationSeconds?: number,
 ): Promise<string | null> {
   const ffmpeg = await ffmpegBinary()
   if (!ffmpeg) {
     console.warn('[loudnorm] ffmpeg not found; uploading original audio')
     return null
   }
+
+  const timeout = ffmpegTimeoutMs(durationSeconds)
 
   try {
     const first = await execFileAsync(
@@ -95,7 +98,7 @@ export async function loudnormAudioFile(
         '-f', 'null',
         nullSink(),
       ],
-      { timeout: FFMPEG_TIMEOUT_MS, encoding: 'utf8' },
+      { timeout, encoding: 'utf8' },
     ).catch((err: NodeJS.ErrnoException & { stderr?: string }) => {
       // ffmpeg writes stats to stderr and exits 0; some builds still throw with stderr JSON.
       if (typeof err.stderr === 'string' && err.stderr.includes('input_i')) {
@@ -120,7 +123,7 @@ export async function loudnormAudioFile(
         '-af', secondPassLoudnormFilter(measured),
         destPath,
       ],
-      { timeout: FFMPEG_TIMEOUT_MS },
+      { timeout },
     )
     return destPath
   }

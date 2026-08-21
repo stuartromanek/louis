@@ -89,33 +89,25 @@ describe('playlist import results', () => {
     )
   })
 
-  it('blocks missing duration and long tracks, not card capacity', () => {
+  it('blocks missing duration, not long tracks', () => {
     assert.equal(
-      youtubePlaylistItemBlockReason(item('gone', { available: false }), false),
+      youtubePlaylistItemBlockReason(item('gone', { available: false })),
       'unavailable',
     )
     assert.equal(
-      youtubePlaylistItemBlockReason(item('unknown', { durationSeconds: undefined }), false),
+      youtubePlaylistItemBlockReason(item('unknown', { durationSeconds: undefined })),
       'missing-duration',
     )
     assert.equal(
       youtubePlaylistItemBlockReason(
         item('long', { durationSeconds: YOTO_MYO_MAX_TRACK_SECONDS + 1 }),
-        false,
-      ),
-      'over-track-duration',
-    )
-    assert.equal(
-      youtubePlaylistItemBlockReason(
-        item('long', { durationSeconds: YOTO_MYO_MAX_TRACK_SECONDS + 1 }),
-        true,
       ),
       undefined,
     )
-    assert.equal(youtubePlaylistItemBlockReason(item('ok'), false), undefined)
+    assert.equal(youtubePlaylistItemBlockReason(item('ok')), undefined)
   })
 
-  it('pre-checks importable rows only', () => {
+  it('pre-checks importable rows including long tracks', () => {
     const videos = mapPlaylistImportItems([
       item('one'),
       item('long', { durationSeconds: YOTO_MYO_MAX_TRACK_SECONDS + 1 }),
@@ -123,11 +115,7 @@ describe('playlist import results', () => {
     ]).videos
 
     assert.deepEqual(
-      importableResultKeys(videos, false),
-      ['item-one', 'item-two'],
-    )
-    assert.deepEqual(
-      importableResultKeys(videos, true),
+      importableResultKeys(videos),
       ['item-one', 'item-long', 'item-two'],
     )
   })

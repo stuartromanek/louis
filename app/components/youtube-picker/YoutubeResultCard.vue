@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useDraggable } from '@dnd-kit/vue'
-import MaruTooltip from '~/components/ui/MaruTooltip.vue'
 import type { ResultsLayout, YoutubeVideoSummary } from './types'
 import YoutubePickerAudioControls from './YoutubePickerAudioControls.vue'
 import { resultDragId, type ResultDragData } from '../playlist/dnd'
@@ -13,12 +12,8 @@ import {
 import {
   formatDurationSeconds,
   formatYoutubeDurationIso,
-  isOverMyoTrackDuration,
-  YOTO_MYO_LONG_TRACK_CHIP,
-  YOTO_MYO_OVER_TRACK_DURATION_FOOTER,
-  YOTO_MYO_OVER_TRACK_DURATION_MESSAGE,
-  YOTO_MYO_OVER_TRACK_DURATION_TOOLTIP,
 } from '#shared/myo-editor/youtubeDuration'
+import { formatSplitIntoChip, planTrackSplit } from '#shared/myo-editor/splitTrack'
 
 const props = withDefaults(defineProps<{
   video: YoutubeVideoSummary
@@ -30,10 +25,8 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   select: [id: string]
-  enableLongTracks: []
 }>()
 
-const { allowLongTracks } = useUserPreferences()
 const { playEvent } = useUiSound()
 const mobileChrome = inject(MOBILE_EDITOR_CHROME_KEY, null)
 const pickerResults = inject(YOUTUBE_PICKER_RESULTS_KEY, null)
@@ -44,29 +37,20 @@ const handle = ref<HTMLElement | null>(null)
 
 const resultKey = computed(() => videoResultKey(props.video))
 
-const overLimit = computed(() => {
+const splitChip = computed(() => {
   const seconds = props.video.durationSeconds
-  return typeof seconds === 'number' && isOverMyoTrackDuration(seconds)
+  if (typeof seconds !== 'number') return ''
+  const plan = planTrackSplit(seconds)
+  return plan ? formatSplitIntoChip(plan.count) : ''
 })
 
-const restricted = computed(() => overLimit.value && !allowLongTracks.value)
+const selected = computed(() => isSelected(resultKey.value))
 
-const showLongTrackChip = computed(() => overLimit.value && allowLongTracks.value)
-
-const selected = computed(() => !restricted.value && isSelected(resultKey.value))
-
-const groupVideos = computed(() => {
-  const group = videosForGroupDrag(
-    pickerResults?.value ?? [props.video],
-    selectedKeySet.value,
-    props.video,
-  )
-  return group.filter((video) => {
-    const seconds = video.durationSeconds
-    const over = typeof seconds === 'number' && isOverMyoTrackDuration(seconds)
-    return !(over && !allowLongTracks.value)
-  })
-})
+const groupVideos = computed(() => videosForGroupDrag(
+  pickerResults?.value ?? [props.video],
+  selectedKeySet.value,
+  props.video,
+))
 
 const groupCount = computed(() => groupVideos.value.length)
 
@@ -82,7 +66,6 @@ const { isDragging } = useDraggable({
   element,
   handle,
   type: 'result',
-  disabled: () => restricted.value,
   data: (): ResultDragData => ({
     type: 'result',
     video: props.video,
@@ -109,21 +92,11 @@ const shellClass = computed(() => [
   props.focused && !selected.value && !stackDepth.value ? 'ring-2 ring-maru-blue' : '',
   isDragging.value ? 'opacity-50' : '',
   groupInFlight.value ? 'yt-result-card--in-flight' : '',
-  restricted.value ? 'yt-result-card--over-limit' : '',
   stackDepth.value ? 'yt-result-card--stacking' : 'overflow-hidden',
 ])
 
-function onEnableLongTracks(event: Event) {
-  event.stopPropagation()
-  emit('enableLongTracks')
-}
-
 function onToggleSelect(event: Event) {
   event.stopPropagation()
-  if (restricted.value) {
-    playEvent('disabled')
-    return
-  }
   const input = event.target as HTMLInputElement
   toggle(resultKey.value, input.checked)
   playEvent(input.checked ? 'toggleOn' : 'toggleOff')
@@ -131,10 +104,6 @@ function onToggleSelect(event: Event) {
 
 function onAdd(event: Event) {
   event.stopPropagation()
-  if (restricted.value) {
-    playEvent('disabled')
-    return
-  }
   playEvent('buttonClick')
   const videos = selected.value ? groupVideos.value : [props.video]
   mobileChrome?.openAddDrawer(videos)
@@ -155,8 +124,6 @@ const addLabel = computed(() => {
     ref="element"
     class="yt-result-card w-full border-maru rounded-maru transition-[opacity,box-shadow,background-color]"
     :class="shellClass"
-    :title="restricted ? YOTO_MYO_OVER_TRACK_DURATION_MESSAGE : undefined"
-    :aria-disabled="restricted || undefined"
   >
     <div
       v-if="stackDepth"
@@ -188,10 +155,7 @@ const addLabel = computed(() => {
             class="yt-result-duration font-maru-mono tabular-nums"
           >{{ durationLabel }}</span>
         </button>
-        <div
-          v-if="!restricted"
-          class="yt-result-card__grab"
-        >
+        <div class="yt-result-card__grab">
           <button
             ref="handle"
             type="button"
@@ -221,9 +185,9 @@ const addLabel = computed(() => {
           </label>
         </div>
         <span
-          v-if="showLongTrackChip"
-          class="yt-result-long-chip font-maru-mono"
-        >{{ YOTO_MYO_LONG_TRACK_CHIP }}</span>
+          v-if="splitChip"
+          class="yt-result-split-chip type-caption font-maru-mono"
+        >{{ splitChip }}</span>
       </div>
 
       <div class="yt-result-card__copy">
@@ -237,10 +201,7 @@ const addLabel = computed(() => {
         </button>
       </div>
 
-      <div
-        v-if="!restricted"
-        class="yt-result-card__actions"
-      >
+      <div class="yt-result-card__actions">
         <div class="yt-result-card__audio">
           <YoutubePickerAudioControls :video-id="video.id" />
         </div>
@@ -254,37 +215,6 @@ const addLabel = computed(() => {
         </button>
       </div>
     </div>
-
-    <div
-      v-if="restricted"
-      class="yt-result-card__footer"
-    >
-      <p class="yt-result-card__footer-label font-maru-mono text-maru-black">
-        <span class="yt-result-card__footer-text">{{ YOTO_MYO_OVER_TRACK_DURATION_FOOTER }}</span>
-      </p>
-      <div class="yt-result-card__footer-actions">
-        <button
-          type="button"
-          class="yt-result-card__enable font-maru-mono text-maru-black"
-          @click="onEnableLongTracks"
-        >
-          Enable long tracks
-        </button>
-        <MaruTooltip
-          :text="YOTO_MYO_OVER_TRACK_DURATION_TOOLTIP"
-          placement="top"
-        >
-          <button
-            type="button"
-            class="yt-result-card__info"
-            aria-label="About Yoto track length limits"
-            @click.stop
-          >
-            ?
-          </button>
-        </MaruTooltip>
-      </div>
-    </div>
   </div>
 
   <!-- Tile layout -->
@@ -293,8 +223,6 @@ const addLabel = computed(() => {
     ref="element"
     class="yt-result-card w-full text-left border-maru rounded-maru transition-[opacity,box-shadow,background-color]"
     :class="shellClass"
-    :title="restricted ? YOTO_MYO_OVER_TRACK_DURATION_MESSAGE : undefined"
-    :aria-disabled="restricted || undefined"
   >
     <div
       v-if="stackDepth"
@@ -326,10 +254,7 @@ const addLabel = computed(() => {
             class="yt-result-duration font-maru-mono tabular-nums"
           >{{ durationLabel }}</span>
         </button>
-        <div
-          v-if="!restricted"
-          class="yt-result-card__grab yt-result-card__grab--tile"
-        >
+        <div class="yt-result-card__grab yt-result-card__grab--tile">
           <button
             ref="handle"
             type="button"
@@ -360,9 +285,9 @@ const addLabel = computed(() => {
         </div>
       </div>
       <span
-        v-if="showLongTrackChip"
-        class="yt-result-long-chip yt-result-long-chip--tile font-maru-mono"
-      >{{ YOTO_MYO_LONG_TRACK_CHIP }}</span>
+        v-if="splitChip"
+        class="yt-result-split-chip yt-result-split-chip--tile type-caption font-maru-mono"
+      >{{ splitChip }}</span>
       <div class="yt-result-card__body px-3 pt-3 pb-3">
         <button
           type="button"
@@ -372,43 +297,9 @@ const addLabel = computed(() => {
           <p class="yt-result-card__title type-title font-maru-medium line-clamp-2">{{ video.title }}</p>
           <p class="yt-result-card__meta type-meta text-maru-black/75 mt-1.5">{{ video.channelTitle }}</p>
         </button>
-        <div
-          v-if="!restricted"
-          class="pt-2"
-        >
+        <div class="pt-2">
           <YoutubePickerAudioControls :video-id="video.id" />
         </div>
-      </div>
-    </div>
-
-    <div
-      v-if="restricted"
-      class="yt-result-card__footer"
-    >
-      <p class="yt-result-card__footer-label font-maru-mono text-maru-black">
-        <span class="yt-result-card__footer-text">{{ YOTO_MYO_OVER_TRACK_DURATION_FOOTER }}</span>
-      </p>
-      <div class="yt-result-card__footer-actions">
-        <button
-          type="button"
-          class="yt-result-card__enable font-maru-mono text-maru-black"
-          @click="onEnableLongTracks"
-        >
-          Enable long tracks
-        </button>
-        <MaruTooltip
-          :text="YOTO_MYO_OVER_TRACK_DURATION_TOOLTIP"
-          placement="top"
-        >
-          <button
-            type="button"
-            class="yt-result-card__info"
-            aria-label="About Yoto track length limits"
-            @click.stop
-          >
-            ?
-          </button>
-        </MaruTooltip>
       </div>
     </div>
   </div>

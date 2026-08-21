@@ -1,22 +1,3 @@
-import { YOTO_MYO_MAX_TRACK_SECONDS } from './yotoMyoLimits.ts'
-
-/** Full hint for title / aria. */
-export const YOTO_MYO_OVER_TRACK_DURATION_MESSAGE
-  = 'Over 1 hour — too long for a Yoto playlist'
-
-/** Short stamp label on over-limit result thumbs. */
-export const YOTO_MYO_OVER_TRACK_DURATION_STAMP = 'TOO LONG'
-
-/** Footer label on restricted over-limit result cards. */
-export const YOTO_MYO_OVER_TRACK_DURATION_FOOTER = 'Track is over an hour'
-
-/** Tooltip for the over-hour info control. */
-export const YOTO_MYO_OVER_TRACK_DURATION_TOOLTIP
-  = 'Yoto guidelines warn that a single MYO track has a max length of 1 hour, however tracks slightly longer will often succeed.'
-
-/** Chip on unlocked over-hour result cards. */
-export const YOTO_MYO_LONG_TRACK_CHIP = 'Over 1 Hour'
-
 /**
  * Parse YouTube `contentDetails.duration` ISO-8601 strings (`PT1H5M30S`) to seconds.
  */
@@ -36,10 +17,6 @@ export function parseYoutubeDurationIso(iso: string): number | null {
   if (!match[1] && !match[2] && !match[3]) return null
 
   return hours * 3600 + minutes * 60 + seconds
-}
-
-export function isOverMyoTrackDuration(seconds: number): boolean {
-  return Number.isFinite(seconds) && seconds > YOTO_MYO_MAX_TRACK_SECONDS
 }
 
 /** Format seconds as `m:ss` or `h:mm:ss`. */

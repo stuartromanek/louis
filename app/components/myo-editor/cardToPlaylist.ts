@@ -6,6 +6,7 @@ import { playlistRowId } from '#shared/myo-editor/playlistRowId'
 import { mediaIdFromIcon16x16, resolveTrackIcon } from '#shared/myo-editor/trackArt'
 import { flattenCardTracks } from '#shared/myo-editor/trackLookup'
 import { toYotoTrackReuseSnapshot } from '#shared/myo-editor/yotoTrackPayload'
+import { sanitizeSplitGrouping } from '#shared/myo-editor/splitTrack'
 
 interface YoutubeVideoApiItem {
   id: string
@@ -29,7 +30,7 @@ export function yotoTrackId(chapterKey: string, trackKey: string): string {
 
 function classifyTrack(
   track: YotoTrack,
-  manifestLookup: Map<string, { youtubeId: string; title: string }>,
+  manifestLookup: Map<string, { youtubeId: string; title: string; split?: ClassifiedTrack['split'] }>,
 ): ClassifiedTrack {
   const manifestEntry = manifestLookup.get(`${track.chapterKey}:${track.trackKey}`)
   if (manifestEntry) {
@@ -38,6 +39,7 @@ function classifyTrack(
       source: 'app-youtube',
       youtubeId: manifestEntry.youtubeId,
       title: manifestEntry.title || track.title,
+      split: manifestEntry.split,
     }
   }
 
@@ -137,6 +139,7 @@ function classifiedTrackToPlaylistTrack(
     duration: track.duration || undefined,
     chapterDisplay: track.chapterDisplay,
     yotoReuse: toYotoTrackReuseSnapshot(track),
+    split: track.split,
   }
 
   const withPreview = (row: PlaylistTrack): PlaylistTrack => {
@@ -159,7 +162,7 @@ function classifiedTrackToPlaylistTrack(
     return withPreview({
       ...base,
       id: rowId,
-      title: hydrated?.title || track.title,
+      title: track.split ? track.title : (hydrated?.title || track.title),
       subtitle: buildSubtitle(track.source, track.duration, hydrated?.channelTitle),
       thumbnailUrl: hydrated?.thumbnailUrl ?? '',
     })
@@ -217,8 +220,10 @@ export async function cardToPlaylist(detail: YotoCardDetail): Promise<CardToPlay
   ])
 
   return {
-    tracks: classified.map(track =>
-      classifiedTrackToPlaylistTrack(track, hydrated, iconPreviewByMediaId),
+    tracks: sanitizeSplitGrouping(
+      classified.map(track =>
+        classifiedTrackToPlaylistTrack(track, hydrated, iconPreviewByMediaId),
+      ),
     ),
     isPodcast,
   }

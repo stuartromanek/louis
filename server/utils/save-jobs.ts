@@ -1,13 +1,21 @@
-import { mkdir } from 'node:fs/promises'
+import { mkdir, stat } from 'node:fs/promises'
 import path from 'node:path'
 import type { H3Event } from 'h3'
 import type {
   PlaylistTrack,
   SaveJobState,
   SaveJobTrackProgress,
+  SaveTrackAction,
   SaveTrackStatus,
+  TrackSplit,
   TranscodedAudioResult,
 } from '#shared/myo-editor/types'
+import {
+  applyProbedDurations,
+  extractGroupShouldCutParts,
+  isCompleteSplitGroup,
+  saveNeedsProbedDuration,
+} from '#shared/myo-editor/splitTrack'
 import { buildProvenance } from '#shared/myo-editor/parseProvenance'
 import { EMPTY_CARD_DETAIL, buildSavePlan } from '#shared/myo-editor/buildSavePlan'
 import { playlistToYotoContent } from '#shared/myo-editor/playlistToYotoContent'
@@ -20,7 +28,16 @@ import {
   withMappedYotoLimitError,
 } from '#shared/myo-editor/yotoMyoLimits'
 import { downloadYoutubeAudio } from './youtube-download'
-import { uploadAudioFile } from './yoto-media'
+import { hashFileSha256, uploadAudioFile } from './yoto-media'
+import { loudnormAudioFile } from './ffmpeg-loudnorm'
+import { probeAudioDurationSeconds, splitAudioFile } from './ffmpeg-split'
+import {
+  readSplitPartTranscodeCache,
+  shouldSkipSplitSourceDownload,
+  transcodedFromSplitCache,
+  writeSplitPartTranscodeCache,
+  type SplitPartTranscodeCacheKey,
+} from './split-transcode-cache'
 import { createOrUpdateContent } from './yoto-content'
 import {
   isUncertainCreatePostError,
@@ -32,7 +49,6 @@ import { mergeContentMetadata } from './yoto-metadata'
 import { fetchYotoCardDetail } from './yoto-card-detail'
 import { getYotoAccessToken } from './yoto'
 import { resolveAudioWorkDirConfig } from './audio-work-dir'
-import { loudnormAudioFile } from './ffmpeg-loudnorm'
 
 /** Process-local only — cleared on every container restart/redeploy. */
 const jobs = new Map<string, SaveJobState>()
@@ -40,6 +56,29 @@ const jobs = new Map<string, SaveJobState>()
 export type SaveTarget =
   | { operation: 'create' }
   | { operation: 'update'; cardId: string }
+
+function splitPartCacheKey(
+  youtubeId: string,
+  split: TrackSplit,
+  normalizeVolume: boolean,
+): SplitPartTranscodeCacheKey {
+  return {
+    youtubeId,
+    index: split.index,
+    count: split.count,
+    normalizeVolume,
+    startSeconds: split.startSeconds,
+    durationSeconds: split.durationSeconds,
+  }
+}
+
+function findActiveJobForCard(cardId: string): SaveJobState | undefined {
+  for (const job of jobs.values()) {
+    if (job.cardId !== cardId) continue
+    if (job.status === 'complete' || job.status === 'failed') continue
+    return job
+  }
+}
 
 function createTrackProgress(playlist: PlaylistTrack[]): SaveJobTrackProgress[] {
   return playlist.map((track, index) => ({
@@ -65,7 +104,16 @@ function updateTrack(
 function updateJob(jobId: string, patch: Partial<SaveJobState>) {
   const job = jobs.get(jobId)
   if (!job) return
-  Object.assign(job, patch)
+  Object.assign(job, patch, { updatedAt: Date.now() })
+}
+
+const SAVE_JOB_HEARTBEAT_MS = 15_000
+
+function startSaveJobHeartbeat(jobId: string): () => void {
+  const timer = setInterval(() => {
+    updateJob(jobId, {})
+  }, SAVE_JOB_HEARTBEAT_MS)
+  return () => clearInterval(timer)
 }
 
 /** Title of the track currently being extracted/uploaded, if any. */
@@ -109,6 +157,11 @@ export function startSaveJob(
   baselinePlaylist: PlaylistTrack[],
   options?: { acknowledgeCapacityRisk?: boolean, normalizeVolume?: boolean },
 ): SaveJobState {
+  if (target.operation === 'update') {
+    const existing = findActiveJobForCard(target.cardId)
+    if (existing) return existing
+  }
+
   const jobId = crypto.randomUUID()
   const acknowledgeCapacityRisk = options?.acknowledgeCapacityRisk === true
   const normalizeVolume = options?.normalizeVolume === true
@@ -121,6 +174,7 @@ export function startSaveJob(
     operationProgress: 0,
     tracks: createTrackProgress(playlist),
     createdAt: Date.now(),
+    updatedAt: Date.now(),
   }
   jobs.set(jobId, job)
 
@@ -168,6 +222,8 @@ async function runSaveJob(
 
   const uploadedByIndex = new Map<number, TranscodedAudioResult>()
   let createOutcomeUncertain = false
+  let workingPlaylist = playlist
+  const stopHeartbeat = startSaveJobHeartbeat(jobId)
 
   try {
     const detail = target.operation === 'update'
@@ -182,8 +238,14 @@ async function runSaveJob(
       })
     }
 
-    const extractActions = plan.tracks.filter(action => action.kind === 'extract-youtube')
-    const reuseActions = plan.tracks.filter(
+    let workingPlan = plan
+    workingPlaylist = playlist
+
+    let extractActions = workingPlan.tracks.filter(
+      (action): action is Extract<SaveTrackAction, { kind: 'extract-youtube' }> =>
+        action.kind === 'extract-youtube',
+    )
+    let reuseActions = workingPlan.tracks.filter(
       action => action.kind === 'reuse-yoto' || action.kind === 'passthrough-stream',
     )
 
@@ -203,7 +265,7 @@ async function runSaveJob(
     setJobProgress({ status: 'planning', progress: OVERALL_START, operationProgress: 5 })
 
     if (!acknowledgeCapacityRisk) {
-      const trackCountError = getTrackCountLimitError(playlist.length)
+      const trackCountError = getTrackCountLimitError(workingPlaylist.length)
       if (trackCountError) {
         throw createError({
           statusCode: 400,
@@ -212,99 +274,332 @@ async function runSaveJob(
       }
     }
 
-    const extractCount = extractActions.length
-    const trackSpan = extractCount > 0
-      ? (OVERALL_TRACKS_END - OVERALL_START) / extractCount
-      : 0
+    const downloadedByYoutubeId = new Map<string, Awaited<ReturnType<typeof downloadYoutubeAudio>>>()
+    const durationByYoutubeId = new Map<string, number>()
+    const uniqueYoutubeIds = [...new Set(extractActions.map(action => action.youtubeId))]
+    const audioWorkDir = resolveAudioWorkDirConfig(event).audioWorkDir
+    const skipDownloadYoutubeIds = new Set<string>()
+
+    for (const youtubeId of uniqueYoutubeIds) {
+      const group = extractActions.filter(action => action.youtubeId === youtubeId)
+      if (!isCompleteSplitGroup(group)) continue
+      const cached = await Promise.all(group.map(async (part) => {
+        const record = await readSplitPartTranscodeCache(
+          audioWorkDir,
+          splitPartCacheKey(youtubeId, part.split, normalizeVolume),
+        )
+        return transcodedFromSplitCache(record)
+      }))
+      if (shouldSkipSplitSourceDownload(cached)) skipDownloadYoutubeIds.add(youtubeId)
+    }
 
     let pauseBeforeNextExtract = false
-
-    for (let trackIndex = 0; trackIndex < extractActions.length; trackIndex++) {
-      const action = extractActions[trackIndex]!
-      const index = action.playlistIndex
-      const trackBase = OVERALL_START + trackIndex * trackSpan
-
+    for (let downloadIndex = 0; downloadIndex < uniqueYoutubeIds.length; downloadIndex++) {
+      const youtubeId = uniqueYoutubeIds[downloadIndex]!
+      const group = extractActions.filter(action => action.youtubeId === youtubeId)
+      const firstIndex = group[0]?.playlistIndex ?? 0
+      if (skipDownloadYoutubeIds.has(youtubeId)) {
+        setJobProgress({
+          status: 'downloading',
+          progress: OVERALL_START + (downloadIndex / Math.max(1, uniqueYoutubeIds.length)) * 20,
+          operationProgress: 8,
+        })
+        continue
+      }
       if (pauseBeforeNextExtract) {
         await new Promise(resolve => setTimeout(resolve, 5_000))
         pauseBeforeNextExtract = false
       }
 
-      updateTrack(job, index, 'extracting')
+      updateTrack(job, firstIndex, 'extracting')
       setJobProgress({
         status: 'downloading',
-        progress: trackBase + trackSpan * 0.05,
+        progress: OVERALL_START + (downloadIndex / Math.max(1, uniqueYoutubeIds.length)) * 20,
         operationProgress: 8,
       })
 
-      const downloaded = await downloadYoutubeAudio(action.youtubeId, event, {
-        enforceMyoSizeLimit: !acknowledgeCapacityRisk,
+      const downloaded = await downloadYoutubeAudio(youtubeId, event, {
+        enforceMyoSizeLimit: false,
       })
       pauseBeforeNextExtract = Boolean(downloaded.recoveredFromRetryableFailure)
+      downloadedByYoutubeId.set(youtubeId, downloaded)
 
-      let uploadPath = downloaded.filePath
-      let uploadName = downloaded.filename
+      const probed = await probeAudioDurationSeconds(downloaded.filePath)
+      if (probed) durationByYoutubeId.set(youtubeId, probed)
+    }
+
+    const replannedPlaylist = applyProbedDurations(workingPlaylist, durationByYoutubeId)
+    const didReplan = replannedPlaylist.length !== workingPlaylist.length
+      || replannedPlaylist.some((track, index) => {
+        const prev = workingPlaylist[index]
+        return prev?.id !== track.id
+          || prev.split?.startSeconds !== track.split?.startSeconds
+          || prev.split?.durationSeconds !== track.split?.durationSeconds
+          || prev.split?.count !== track.split?.count
+      })
+
+    if (didReplan) {
+      workingPlaylist = replannedPlaylist
+      workingPlan = buildSavePlan(baselinePlaylist, workingPlaylist, detail)
+      if (workingPlan.errors.length > 0) {
+        throw createError({
+          statusCode: 400,
+          message: workingPlan.errors[0],
+        })
+      }
+      job.tracks = createTrackProgress(workingPlaylist)
+      extractActions = workingPlan.tracks.filter(
+        (action): action is Extract<SaveTrackAction, { kind: 'extract-youtube' }> =>
+          action.kind === 'extract-youtube',
+      )
+      reuseActions = workingPlan.tracks.filter(
+        action => action.kind === 'reuse-yoto' || action.kind === 'passthrough-stream',
+      )
+      if (!acknowledgeCapacityRisk) {
+        const trackCountError = getTrackCountLimitError(workingPlaylist.length)
+        if (trackCountError) {
+          throw createError({
+            statusCode: 400,
+            message: trackCountError,
+          })
+        }
+      }
+    }
+
+    for (const action of extractActions) {
+      if (skipDownloadYoutubeIds.has(action.youtubeId)) continue
+      const probed = durationByYoutubeId.get(action.youtubeId)
+      if (probed) continue
+      const track = workingPlaylist[action.playlistIndex]
+      if (!track || !saveNeedsProbedDuration(track)) continue
+      throw createError({
+        statusCode: 500,
+        message: `Could not measure duration for "${track.title}". Check the source and try again.`,
+      })
+    }
+
+    const extractCount = extractActions.length
+    const trackSpan = extractCount > 0
+      ? (OVERALL_TRACKS_END - OVERALL_START) / extractCount
+      : 0
+
+    const processedYoutubeIds = new Set<string>()
+    let extractOrdinal = 0
+
+    for (const action of extractActions) {
+      if (processedYoutubeIds.has(action.youtubeId)) continue
+      processedYoutubeIds.add(action.youtubeId)
+
+      const group = extractActions.filter(item => item.youtubeId === action.youtubeId)
+      const firstIndex = group[0]!.playlistIndex
+      const trackBase = OVERALL_START + extractOrdinal * trackSpan * group.length
+      const actualDuration = durationByYoutubeId.get(action.youtubeId)
+      const shouldCut = extractGroupShouldCutParts(group)
+
+      const finishExtractedPart = (
+        playlistIndex: number,
+        transcoded: TranscodedAudioResult,
+      ) => {
+        uploadedByIndex.set(playlistIndex, transcoded)
+        if (!acknowledgeCapacityRisk) {
+          const mediaError = getTrackMediaLimitError({
+            title: workingPlaylist[playlistIndex]?.title ?? `Track ${playlistIndex + 1}`,
+            duration: transcoded.transcodedInfo.duration,
+            fileSize: transcoded.transcodedInfo.fileSize,
+          })
+          if (mediaError) {
+            throw createError({
+              statusCode: 413,
+              message: mediaError,
+            })
+          }
+        }
+        updateTrack(job, playlistIndex, 'ready')
+        extractOrdinal += 1
+      }
+
+      if (shouldCut) {
+        const ordered = [...group]
+          .filter((part): part is typeof part & { split: TrackSplit } => Boolean(part.split))
+          .sort((a, b) => a.split.index - b.split.index)
+        const cachedHits = await Promise.all(ordered.map(async (part) => {
+          const record = await readSplitPartTranscodeCache(
+            audioWorkDir,
+            splitPartCacheKey(action.youtubeId, part.split, normalizeVolume),
+          )
+          return transcodedFromSplitCache(record)
+        }))
+        if (shouldSkipSplitSourceDownload(cachedHits)) {
+          for (let partIndex = 0; partIndex < ordered.length; partIndex++) {
+            finishExtractedPart(ordered[partIndex]!.playlistIndex, cachedHits[partIndex]!)
+          }
+          setJobProgress({
+            status: 'uploading',
+            progress: Math.min(OVERALL_TRACKS_END, trackBase + trackSpan * group.length),
+            operationProgress: 100,
+          })
+          continue
+        }
+      }
+
+      const downloaded = downloadedByYoutubeId.get(action.youtubeId)
+      if (!downloaded) {
+        throw createError({
+          statusCode: 500,
+          message: `Missing download for YouTube video ${action.youtubeId}`,
+        })
+      }
+
+      let uploadSourcePath = downloaded.filePath
+      let uploadSourceName = downloaded.filename
+      let didNormalize = false
       if (normalizeVolume) {
-        updateTrack(job, index, 'leveling')
+        for (const part of group) updateTrack(job, part.playlistIndex, 'leveling')
         setJobProgress({
           status: 'downloading',
           progress: trackBase + trackSpan * 0.14,
           operationProgress: 20,
         })
-        const audioWorkDir = resolveAudioWorkDirConfig(event).audioWorkDir
-        const levelDir = path.join(audioWorkDir, 'jobs', jobId, String(index))
+        const levelDir = path.join(audioWorkDir, 'jobs', jobId, action.youtubeId)
         await mkdir(levelDir, { recursive: true })
         const ext = path.extname(downloaded.filePath) || '.m4a'
         const leveledPath = path.join(levelDir, `leveled${ext}`)
-        const leveled = await loudnormAudioFile(downloaded.filePath, leveledPath)
+        const leveled = await loudnormAudioFile(
+          downloaded.filePath,
+          leveledPath,
+          actualDuration,
+        )
         if (leveled) {
-          uploadPath = leveled
-          uploadName = path.basename(leveled)
+          uploadSourcePath = leveled
+          uploadSourceName = path.basename(leveled)
+          didNormalize = true
         }
       }
 
-      updateTrack(job, index, 'uploading')
-      setJobProgress({
-        status: 'uploading',
-        progress: trackBase + trackSpan * 0.22,
-        operationProgress: 32,
-      })
+      if (shouldCut) {
+        const ordered = [...group]
+          .filter((part): part is typeof part & { split: TrackSplit } => Boolean(part.split))
+          .sort((a, b) => a.split.index - b.split.index)
 
-      const transcoded = await uploadAudioFile(
-        accessToken,
-        uploadPath,
-        uploadName,
-        {
-          onTranscodePoll: ({ percent }) => {
-            updateTrack(job, index, 'transcoding')
-            const transcodePercent = percent ?? 50
-            const withinTrack = 0.22 + (transcodePercent / 100) * 0.78
-            setJobProgress({
-              status: 'uploading',
-              progress: trackBase + trackSpan * withinTrack,
-              operationProgress: Math.min(98, Math.round(35 + transcodePercent * 0.63)),
-            })
-          },
-        },
-      )
-      uploadedByIndex.set(index, transcoded)
-      if (!acknowledgeCapacityRisk) {
-        const mediaError = getTrackMediaLimitError({
-          title: playlist[index]?.title ?? `Track ${index + 1}`,
-          duration: transcoded.transcodedInfo.duration,
-          fileSize: transcoded.transcodedInfo.fileSize,
-        })
-        if (mediaError) {
-          throw createError({
-            statusCode: 413,
-            message: mediaError,
+        const splitDir = path.join(audioWorkDir, 'jobs', jobId, action.youtubeId, 'parts')
+        await mkdir(splitDir, { recursive: true })
+        const sourceSha256 = await hashFileSha256(uploadSourcePath)
+
+        for (let partIndex = 0; partIndex < ordered.length; partIndex++) {
+          const part = ordered[partIndex]!
+          const range = {
+            start: part.split.startSeconds,
+            duration: part.split.durationSeconds,
+          }
+          const cacheKey = splitPartCacheKey(action.youtubeId, part.split, didNormalize)
+          const cached = transcodedFromSplitCache(
+            await readSplitPartTranscodeCache(audioWorkDir, cacheKey, sourceSha256),
+          )
+          if (cached) {
+            finishExtractedPart(part.playlistIndex, cached)
+            continue
+          }
+
+          const destPath = path.join(splitDir, `part${part.split.index}.m4a`)
+          const cut = await splitAudioFile({
+            sourcePath: uploadSourcePath,
+            destPath,
+            startSeconds: range.start,
+            durationSeconds: range.duration,
+            codec: 'aac',
           })
+          if (!cut) {
+            throw createError({
+              statusCode: 500,
+              message: `Could not split "${workingPlaylist[part.playlistIndex]?.title ?? 'track'}".`,
+            })
+          }
+
+          updateTrack(job, part.playlistIndex, 'uploading')
+          const transcoded = await uploadAudioFile(
+            accessToken,
+            destPath,
+            path.basename(destPath),
+            {
+              meta: {
+                jobId,
+                youtubeId: action.youtubeId,
+                title: workingPlaylist[part.playlistIndex]?.title,
+                durationSeconds: range.duration,
+                partLabel: `${part.split.index + 1}/${part.split.count}`,
+              },
+              onTranscodePoll: ({ percent }) => {
+                updateTrack(job, part.playlistIndex, 'transcoding')
+                const transcodePercent = percent ?? 50
+                setJobProgress({
+                  status: 'uploading',
+                  progress: trackBase + trackSpan * (partIndex + 0.22 + (transcodePercent / 100) * 0.78),
+                  operationProgress: Math.min(98, Math.round(35 + transcodePercent * 0.63)),
+                })
+              },
+            },
+          )
+          await writeSplitPartTranscodeCache(audioWorkDir, cacheKey, transcoded, sourceSha256)
+          finishExtractedPart(part.playlistIndex, transcoded)
         }
       }
-      updateTrack(job, index, 'ready')
+      else {
+        if (!acknowledgeCapacityRisk) {
+          const fileStat = await stat(uploadSourcePath)
+          const mediaError = getTrackMediaLimitError({
+            title: workingPlaylist[firstIndex]?.title ?? `Track ${firstIndex + 1}`,
+            duration: actualDuration,
+            fileSize: fileStat.size,
+          })
+          if (mediaError) {
+            throw createError({
+              statusCode: 413,
+              message: mediaError,
+            })
+          }
+        }
+
+        for (const part of group) {
+          updateTrack(job, part.playlistIndex, 'uploading')
+          setJobProgress({
+            status: 'uploading',
+            progress: trackBase + trackSpan * 0.22,
+            operationProgress: 32,
+          })
+
+          const transcoded = await uploadAudioFile(
+            accessToken,
+            uploadSourcePath,
+            uploadSourceName,
+            {
+              meta: {
+                jobId,
+                youtubeId: action.youtubeId,
+                title: workingPlaylist[part.playlistIndex]?.title,
+                durationSeconds: actualDuration ?? workingPlaylist[part.playlistIndex]?.duration,
+                partLabel: group.length > 1
+                  ? `${group.indexOf(part) + 1}/${group.length}`
+                  : undefined,
+              },
+              onTranscodePoll: ({ percent }) => {
+                updateTrack(job, part.playlistIndex, 'transcoding')
+                const transcodePercent = percent ?? 50
+                const withinTrack = 0.22 + (transcodePercent / 100) * 0.78
+                setJobProgress({
+                  status: 'uploading',
+                  progress: trackBase + trackSpan * withinTrack,
+                  operationProgress: Math.min(98, Math.round(35 + transcodePercent * 0.63)),
+                })
+              },
+            },
+          )
+          finishExtractedPart(part.playlistIndex, transcoded)
+        }
+      }
 
       setJobProgress({
         status: 'uploading',
-        progress: trackBase + trackSpan,
+        progress: Math.min(OVERALL_TRACKS_END, trackBase + trackSpan * group.length),
         operationProgress: 100,
       })
     }
@@ -330,8 +625,8 @@ async function runSaveJob(
 
     const built = playlistToYotoContent(
       cardTitle,
-      playlist,
-      plan.tracks,
+      workingPlaylist,
+      workingPlan.tracks,
       uploadedByIndex,
     )
 
@@ -339,10 +634,10 @@ async function runSaveJob(
       (sum, chapter) => sum + chapter.tracks.length,
       0,
     )
-    if (builtTrackCount !== playlist.length) {
+    if (builtTrackCount !== workingPlaylist.length) {
       throw createError({
         statusCode: 500,
-        message: `Save built ${builtTrackCount} tracks but playlist has ${playlist.length}`,
+        message: `Save built ${builtTrackCount} tracks but playlist has ${workingPlaylist.length}`,
       })
     }
 
@@ -423,7 +718,7 @@ async function runSaveJob(
   catch (err: unknown) {
     const e = err as { statusMessage?: string; message?: string }
     const trackTitle = activeSaveTrackTitle(job)
-      ?? firstOverLimitTrackTitle(playlist, uploadedByIndex)
+      ?? firstOverLimitTrackTitle(workingPlaylist, uploadedByIndex)
     const message = withMappedYotoLimitError(
       e.statusMessage ?? e.message ?? 'Save failed',
       trackTitle,
@@ -448,6 +743,9 @@ async function runSaveJob(
       outcomeUncertain: createOutcomeUncertain || undefined,
       progress: 100,
     })
+  }
+  finally {
+    stopHeartbeat()
   }
 }
 

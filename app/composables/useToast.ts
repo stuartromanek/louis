@@ -1,3 +1,4 @@
+import { nextTick } from 'vue'
 import { detectPwaInstallPlatform } from '~/composables/usePwaInstall'
 
 export type ToastEdge = 'top' | 'bottom'
@@ -79,13 +80,27 @@ export function useToast() {
     seq.value += 1
     const id = seq.value
     persistent.value = durationMs <= 0
-    open.value = true
-    if (!import.meta.client) return
-    if (durationMs <= 0) return
-    clientTimer.id = setTimeout(() => {
-      if (id !== seq.value) return
-      dismiss()
-    }, durationMs)
+
+    const arm = () => {
+      open.value = true
+      if (!import.meta.client) return
+      if (durationMs <= 0) return
+      clientTimer.id = setTimeout(() => {
+        if (id !== seq.value) return
+        dismiss()
+      }, durationMs)
+    }
+
+    if (open.value) {
+      open.value = false
+      if (!import.meta.client) {
+        arm()
+        return
+      }
+      void nextTick(arm)
+      return
+    }
+    arm()
   }
 
   function showAddedToPlaylist(trackTitle: string, playlistTitle: string, durationMs = 6400) {

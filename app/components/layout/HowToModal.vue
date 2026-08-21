@@ -59,7 +59,7 @@ const sections = [
       'New names the playlist and creates it on Yoto — checked Search results (desktop) or Add → New playlist (phone) are uploaded with that create',
       'On desktop, drag to reorder; on a phone, use the track menu to move or remove',
       'Watch capacity meters for track count and length',
-      'Tap Update to save tracks to Yoto — saving can take a few minutes',
+      'Tap Update to save tracks to Yoto — long videos become multiple tracks and can take a while',
       'If the save downloads YouTube audio, you can normalize those new tracks; existing playlist tracks stay as they are',
       'The playlist menu can Rename (saves the name to Yoto now) or Delete the loaded playlist',
     ],

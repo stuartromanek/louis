@@ -10,6 +10,7 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 ## [Unreleased]
 
 ### Added
+- **Auto-split long tracks** — YouTube sources over 55 minutes expand into connected Part 1 / Part 2 / … playlist slats on add (move and delete as a group). Save downloads the audio once, then ffmpeg-splits into legal MYO chapters. Replaces the old “Enable long tracks?” confirm gate.
 - **Track Art Editor** — per-track 16×16 Yoto icons from the playlist (desktop) and mobile playlist detail: Icons tab (Yoto public library + [yotoicons.com](https://yotoicons.com/) search + upload) and Draw tab (pixel canvas, palette, undo/redo).
 - Instant icon patch for existing playlist tracks (`PATCH`-style content update) so art saves without a full playlist rewrite; new tracks stay local until Update.
 - Server helpers for Yoto icon upload / public icons / URL import and yotoicons.com search.
@@ -36,11 +37,17 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - Toasts default to bottom-end (top on iOS so they don't cover Safari's Share control).
 - Yoto OAuth scopes now include `user:icons:manage` (reconnect if icon upload/patch is denied).
 - Docker / GHCR: OAuth callback no longer defaults to `localhost` — unset `LOUIS_YOTO_REDIRECT_URI` uses the Host the browser actually opened (LAN / Portainer). Image and compose default `LOUIS_COOKIE_SECURE=false` for plain HTTP; set `true` behind TLS. Compose pulls `ghcr.io/stuartromanek/louis:latest`, uses named volume `louis-audio`, and no longer requires a Git-tracked `env_file`.
+- Yoto transcode waits scale with chapter size and duration (6-minute floor, 20-minute cap; ~30s wait per minute of audio so long split chapters actually reach the cap). Timeout copy names the part and last percent; the overlay keeps polling while the save job is still moving.
+- Pixel editor draw sounds use `scribble-*` / `erase` / `clear` instead of the old `mdn-*` ticks.
+- Auto-split shore-up: the overlay no longer fails a living save at 90 minutes (still-working hint only); lost-job copy asks you to check Yoto; ffmpeg split/loudnorm timeouts scale with duration; a partial re-extract cuts that chapter instead of uploading the full file; save re-plans when a probe would stretch a part past 60 minutes.
 
 ### Removed
 - `public.demoMode` / Settings demo-instance banner. yt-dlp Check and Update are no longer gated on a demo flag.
 
 ### Fixed
+- Client save polling no longer treats a quiet 10 minutes as failure while the job is still running (false “Save stalled” after Yoto already accepted the upload). Overlay stays up; a still-working hint appears if progress has not moved. Jobs heartbeat during download / ffmpeg / PUT.
+- Multi-track (split) Yoto uploads finish across retries: long chapters wait up to 20 minutes, completed parts keep their transcoded hashes so Update skips them, ffmpeg AAC-encodes cuts instead of GOP-unaligned copies, and a stall or Yoto failure re-PUTs once (a moving timeout does not). Extra-poll after a coalesced stall uses the chapter’s full wait budget.
+- Split checkpoints key off the scaled cut and whether loudnorm actually ran; a changed source hash misses cache. Incomplete split drafts sanitize on restore.
 - Desktop Yoto session: expired access without refresh forces reconnect; save/reuse-test read scope from cookie or `yoto-session.json`.
 - Stale MYO metadata notes after delete/reorder no longer map old YouTube sources onto the wrong remaining tracks.
 

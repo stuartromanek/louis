@@ -7,7 +7,6 @@
 -->
 <script setup lang="ts">
 import { useYoutubePicker, YOUTUBE_PICKER_RESULTS_KEY } from './useYoutubePicker'
-import YoutubePickerPreview from './YoutubePickerPreview.vue'
 import YoutubePickerResultsPane from './YoutubePickerResultsPane.vue'
 import YoutubePickerSearch from './YoutubePickerSearch.vue'
 import { useYoutubeAudioPlayer, YOUTUBE_AUDIO_PLAYER_KEY } from './useYoutubeAudioPlayer'
@@ -29,8 +28,7 @@ const DEFAULT_SEARCH_PLACEHOLDERS = [
 ]
 
 const appConfig = useAppConfig()
-const { searchPlaceholders: preferredPlaceholders, setAllowLongTracks } = useUserPreferences()
-const { playEvent } = useUiSound()
+const { searchPlaceholders: preferredPlaceholders } = useUserPreferences()
 const searchPlaceholders = computed(
   () => preferredPlaceholders.value
     ?? props.placeholders
@@ -46,7 +44,6 @@ const {
   query,
   submittedQuery,
   results,
-  pendingEnableLongTracks,
   focusedIndex,
   status,
   errorMessage,
@@ -55,8 +52,6 @@ const {
   search,
   loadMore,
   selectVideo,
-  requestEnableLongTracks,
-  cancelEnableLongTracks,
   moveFocus,
   resetSearch,
   playlistSummary,
@@ -104,17 +99,6 @@ async function onSelect(id: string) {
   await selectVideo(id)
 }
 
-function onConfirmEnableLongTracks() {
-  playEvent('buttonPrimary')
-  setAllowLongTracks(true)
-  cancelEnableLongTracks()
-}
-
-function onCancelEnableLongTracks() {
-  playEvent('buttonClick')
-  cancelEnableLongTracks()
-}
-
 function onKeydown(event: KeyboardEvent) {
   if (results.value.length === 0) return
   if (event.target instanceof HTMLInputElement) return
@@ -134,12 +118,6 @@ function onKeydown(event: KeyboardEvent) {
       if (focusedIndex.value >= 0) {
         event.preventDefault()
         onSelect(results.value[focusedIndex.value]!.id)
-      }
-      break
-    case 'Escape':
-      if (pendingEnableLongTracks.value) {
-        event.preventDefault()
-        onCancelEnableLongTracks()
       }
       break
   }
@@ -202,21 +180,9 @@ onUnmounted(() => {
         :fill="embedded"
         @search="onPlaceholderSearch"
         @select="onSelect"
-        @enable-long-tracks="requestEnableLongTracks"
         @toggle-select-all="toggleSelectAll"
         @load-more="loadMore"
       />
     </div>
-
-    <div
-      v-if="pendingEnableLongTracks"
-      :class="embedded ? 'shrink-0 border-maru-top pt-3 mt-3' : 'mt-4'"
-    >
-      <YoutubePickerPreview
-        @confirm="onConfirmEnableLongTracks"
-        @cancel="onCancelEnableLongTracks"
-      />
-    </div>
-
   </div>
 </template>

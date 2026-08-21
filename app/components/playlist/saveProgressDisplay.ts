@@ -3,6 +3,7 @@ import type {
   SaveJobTrackProgress,
   SaveTrackStatus,
 } from '#shared/myo-editor/types'
+import { splitGroupSourceTitle } from '#shared/myo-editor/splitTrack'
 
 const OVERALL_LABELS: Record<SaveJobPhase, string> = {
   planning: 'Preparing save…',
@@ -20,6 +21,10 @@ const ACTIVE_TRACK_STATUSES: SaveTrackStatus[] = [
   'transcoding',
 ]
 
+export function saveSlowWaitHint(): string {
+  return 'Still working. Long videos can take a while on Yoto.'
+}
+
 export function saveOverallLabel(phase: SaveJobPhase): string {
   return OVERALL_LABELS[phase] ?? 'Saving playlist…'
 }
@@ -30,17 +35,18 @@ export function saveOperationLabel(
 ): string | null {
   const active = tracks.find(track => ACTIVE_TRACK_STATUSES.includes(track.status))
   if (active) {
+    const title = splitGroupSourceTitle(active.title)
     if (active.status === 'extracting') {
-      return `Downloading “${active.title}”`
+      return `Downloading “${title}”`
     }
     if (active.status === 'leveling') {
-      return `Leveling “${active.title}”`
+      return `Leveling “${title}”`
     }
     if (active.status === 'uploading') {
-      return `Uploading “${active.title}”`
+      return `Uploading “${title}”`
     }
     if (active.status === 'transcoding') {
-      return `Processing “${active.title}”`
+      return `Processing “${title}”`
     }
   }
 
@@ -49,7 +55,7 @@ export function saveOperationLabel(
 
   const pending = tracks.find(track => track.status === 'pending')
   if (pending) {
-    return `Waiting for “${pending.title}”`
+    return `Waiting for “${splitGroupSourceTitle(pending.title)}”`
   }
 
   return null

@@ -192,17 +192,14 @@ function onUpdate() {
 }
 
 function onPromptCancel() {
-  playEvent('resetPlaylist')
   editor?.cancelUpdatePrompt()
 }
 
 function onPromptKeep() {
-  playEvent('buttonPrimary')
   editor?.keepVolumeAsIs()
 }
 
 function onPromptConfirm() {
-  playEvent('buttonPrimary')
   editor?.confirmUpdatePrompt()
 }
 

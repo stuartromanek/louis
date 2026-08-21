@@ -5,7 +5,8 @@ import {
   MOBILE_EDITOR_CHROME_KEY,
 } from '~/composables/useMobileEditorChrome'
 import type { YotoMyoCard as YotoMyoCardType } from '~/components/yoto-myo/types'
-import { moveItem } from '~/utils/reorder'
+import type { PlaylistTrack } from '~/components/playlist/types'
+import { movePlaylistBlock, playlistBlocks, removeTrackOrGroup, trackIndexForBlock, blockIndexForTrack, splitGroupSourceTitle, splitPartNumberLabel, splitTrackAccessibleName } from '#shared/myo-editor/splitTrack'
 import PlaylistSaveProgress from '~/components/playlist/PlaylistSaveProgress.vue'
 import PlaylistEmptyState from '~/components/playlist/PlaylistEmptyState.vue'
 import MobilePlaylistCapacity from '~/components/playlist/MobilePlaylistCapacity.vue'
@@ -188,7 +189,6 @@ function onStartNewPlaylist() {
 
 function onPromptCancel() {
   if (editor.saveStarting.value || editor.playlistManageBusy.value || uncertainRefreshBusy.value) return
-  playEvent('resetPlaylist')
   if (editor.playlistManagePrompt.value) {
     editor.cancelPlaylistManage()
     return
@@ -204,12 +204,10 @@ function onPromptCancel() {
 }
 
 function onPromptKeep() {
-  playEvent('buttonPrimary')
   keepVolumeAsIs()
 }
 
 async function onPromptConfirm() {
-  playEvent('buttonPrimary')
   if (askingUpdatePrompt.value) {
     confirmUpdatePrompt()
     return
@@ -253,18 +251,37 @@ function onUpdate() {
   requestUpdate('footer')
 }
 
+const playlistBlockList = computed(() => playlistBlocks(playlist.value))
+
+function splitRowLabel(track: PlaylistTrack) {
+  const part = splitPartNumberLabel(track.split?.index ?? 0)
+  if (typeof track.duration !== 'number' || track.duration <= 0) return part
+  return `${part} \u00B7 ${formatDurationSeconds(track.duration)}`
+}
+
+const menuBlockIndex = computed(() => {
+  if (trackMenuIndex.value === null) return null
+  return blockIndexForTrack(playlist.value, trackMenuIndex.value)
+})
+
 function moveTrack(index: number, delta: number) {
   if (tracksLocked.value) {
     playEvent('disabled')
     return
   }
-  const next = index + delta
-  if (next < 0 || next >= playlist.value.length) {
+  const fromBlock = blockIndexForTrack(playlist.value, index)
+  const targetBlock = fromBlock + delta
+  if (fromBlock < 0 || targetBlock < 0 || targetBlock >= playlistBlockList.value.length) {
     playEvent('disabled')
     return
   }
-  playlist.value = moveItem(playlist.value, index, next)
+  const id = playlist.value[index]?.id
+  playlist.value = movePlaylistBlock(playlist.value, index, delta)
   playEvent('reorderSwipe')
+  if (id) {
+    const nextIndex = playlist.value.findIndex(track => track.id === id)
+    if (nextIndex >= 0) trackMenuIndex.value = nextIndex
+  }
 }
 
 function removeTrack(id: string) {
@@ -272,7 +289,7 @@ function removeTrack(id: string) {
     playEvent('disabled')
     return
   }
-  playlist.value = playlist.value.filter(t => t.id !== id)
+  playlist.value = removeTrackOrGroup(playlist.value, id)
   playEvent('chipHover')
 }
 
@@ -296,7 +313,11 @@ const menuTrack = computed(() => {
   return playlist.value[index] ?? null
 })
 
-const menuTrackTitle = computed(() => menuTrack.value?.title?.trim() || 'Track')
+const menuTrackTitle = computed(() => {
+  const track = menuTrack.value
+  if (!track) return 'Track'
+  return splitTrackAccessibleName(track)
+})
 
 const showTrackList = computed(
   () => !isRenamingPlaylist.value && (playlist.value.length > 0 || trackLeavePending.value),
@@ -304,16 +325,28 @@ const showTrackList = computed(
 
 /** 1-based index after Move up; null when move is unavailable. */
 const moveUpBecomesTrack = computed(() => {
-  const index = trackMenuIndex.value
-  if (index === null || index <= 0) return null
-  return index
+  const blockIndex = menuBlockIndex.value
+  if (blockIndex === null || blockIndex <= 0) return null
+  return trackIndexForBlock(playlist.value, blockIndex - 1) + 1
 })
 
 /** 1-based index after Move down; null when move is unavailable. */
 const moveDownBecomesTrack = computed(() => {
-  const index = trackMenuIndex.value
-  if (index === null || index >= playlist.value.length - 1) return null
-  return index + 2
+  const blockIndex = menuBlockIndex.value
+  if (blockIndex === null || blockIndex >= playlistBlockList.value.length - 1) return null
+  const next = playlistBlockList.value[blockIndex + 1]
+  if (!next) return null
+  return trackIndexForBlock(playlist.value, blockIndex) + next.tracks.length + 1
+})
+
+const canMoveUp = computed(() => {
+  const blockIndex = menuBlockIndex.value
+  return blockIndex !== null && blockIndex > 0
+})
+
+const canMoveDown = computed(() => {
+  const blockIndex = menuBlockIndex.value
+  return blockIndex !== null && blockIndex < playlistBlockList.value.length - 1
 })
 
 function clearPendingRemoveTimer() {
@@ -339,12 +372,6 @@ function onMenuMove(delta: number) {
   const index = trackMenuIndex.value
   if (index === null) return
   moveTrack(index, delta)
-  const next = index + delta
-  if (next < 0 || next >= playlist.value.length) {
-    trackMenuIndex.value = null
-    return
-  }
-  trackMenuIndex.value = next
 }
 
 function onMenuRemove() {
@@ -654,47 +681,98 @@ onMounted(() => {
           @after-leave="onTrackListAfterLeave"
         >
           <li
-            v-for="(track, index) in playlist"
-            :key="track.id"
-            class="mobile-card-track border-maru rounded-maru bg-maru-white"
-            :style="{ '--playlist-enter-i': enterIndex(track.id) }"
+            v-for="block in playlistBlockList"
+            :key="block.kind === 'split'
+              ? `split:${block.tracks[0]?.split?.groupId ?? block.tracks[0]?.id}`
+              : block.tracks[0]!.id"
+            :class="block.kind === 'split'
+              ? 'mobile-card-track-group border-maru rounded-maru overflow-hidden bg-maru-white'
+              : 'mobile-card-track border-maru rounded-maru bg-maru-white'"
+            :style="{ '--playlist-enter-i': enterIndex(block.tracks[0]!.id) }"
           >
-            <div class="mobile-card-track__media mobile-card-track__media--art">
-              <TrackArtThumb
-                class="mobile-card-track__art-thumb"
-                :track="track"
-                :locked="tracksLocked"
-                size="md"
-                @edit="artEditor?.openForTrack(track.id)"
-              />
-            </div>
-
-            <div class="mobile-card-track__copy">
-              <p class="mobile-card-track__title font-maru-medium line-clamp-2 text-pretty">
-                {{ track.title }}
-              </p>
-              <p
-                v-if="track.duration"
-                class="mobile-card-track__meta type-meta-sm font-maru-mono tabular-nums text-maru-black/70"
-              >
-                {{ formatDurationSeconds(track.duration) }}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              class="mobile-card-track__menu"
-              :disabled="tracksLocked"
-              :aria-label="`Track menu for ${track.title}`"
-              :aria-expanded="trackMenuIndex === index"
-              aria-haspopup="dialog"
-              @click="openTrackMenu(index)"
+            <header
+              v-if="block.kind === 'split'"
+              class="mobile-card-track-group__header border-maru-bottom bg-maru-yellow"
             >
-              <MaruEmoji
-                name="CardFileBox"
-                :size-rem="1.35"
-              />
-            </button>
+              <h3 class="mobile-card-track__title font-maru-medium line-clamp-2 text-pretty min-w-0 flex-1">
+                {{ splitGroupSourceTitle(block.tracks[0]!.title) }}
+              </h3>
+              <button
+                type="button"
+                class="mobile-card-track__menu shrink-0"
+                :disabled="tracksLocked"
+                :aria-label="`Track menu for ${splitGroupSourceTitle(block.tracks[0]!.title)}`"
+                :aria-expanded="trackMenuIndex === playlist.findIndex(item => item.id === block.tracks[0]!.id)"
+                aria-haspopup="dialog"
+                @click="openTrackMenu(playlist.findIndex(item => item.id === block.tracks[0]!.id))"
+              >
+                <MaruEmoji
+                  name="CardFileBox"
+                  :size-rem="1.35"
+                />
+              </button>
+            </header>
+            <template
+              v-for="track in block.tracks"
+              :key="track.id"
+            >
+              <div
+                class="mobile-card-track__inner"
+                :class="{ 'mobile-card-track__inner--split': block.kind === 'split' }"
+              >
+                <div class="mobile-card-track__media mobile-card-track__media--art">
+                  <TrackArtThumb
+                    class="mobile-card-track__art-thumb"
+                    :track="track"
+                    :locked="tracksLocked"
+                    size="md"
+                    @edit="artEditor?.openForTrack(track.id)"
+                  />
+                </div>
+
+                <div
+                  class="mobile-card-track__copy"
+                  :class="{ 'mobile-card-track__copy--split': block.kind === 'split' }"
+                >
+                  <template v-if="block.kind === 'split'">
+                    <p class="mobile-card-track__title font-maru-medium truncate min-w-0 flex-1">
+                      {{ splitRowLabel(track) }}
+                    </p>
+                    <span
+                      v-if="track.split"
+                      class="playlist-split-part playlist-split-part--inline type-caption font-maru-mono tabular-nums shrink-0"
+                    >{{ track.split.index + 1 }}/{{ track.split.count }}</span>
+                  </template>
+                  <template v-else>
+                    <p class="mobile-card-track__title font-maru-medium line-clamp-2 text-pretty min-w-0 flex-1">
+                      {{ track.title }}
+                    </p>
+                    <p
+                      v-if="track.duration"
+                      class="mobile-card-track__meta type-meta-sm font-maru-mono tabular-nums text-maru-black/70"
+                    >
+                      {{ formatDurationSeconds(track.duration) }}
+                    </p>
+                  </template>
+                </div>
+
+                <button
+                  v-if="block.kind !== 'split'"
+                  type="button"
+                  class="mobile-card-track__menu"
+                  :disabled="tracksLocked"
+                  :aria-label="`Track menu for ${track.title}`"
+                  :aria-expanded="trackMenuIndex === playlist.findIndex(item => item.id === track.id)"
+                  aria-haspopup="dialog"
+                  @click="openTrackMenu(playlist.findIndex(item => item.id === track.id))"
+                >
+                  <MaruEmoji
+                    name="CardFileBox"
+                    :size-rem="1.35"
+                  />
+                </button>
+              </div>
+            </template>
           </li>
         </TransitionGroup>
 
@@ -727,7 +805,7 @@ onMounted(() => {
               type="button"
               class="mobile-overflow-menu__item mobile-card-track-menu__item--up"
               role="menuitem"
-              :disabled="tracksLocked || trackMenuIndex === null || trackMenuIndex <= 0"
+              :disabled="tracksLocked || !canMoveUp"
               :aria-label="moveUpBecomesTrack !== null ? `Move up. Becomes track ${moveUpBecomesTrack}` : 'Move up'"
               @click="onMenuMove(-1)"
             >
@@ -747,7 +825,7 @@ onMounted(() => {
               type="button"
               class="mobile-overflow-menu__item mobile-card-track-menu__item--down"
               role="menuitem"
-              :disabled="tracksLocked || trackMenuIndex === null || trackMenuIndex >= playlist.length - 1"
+              :disabled="tracksLocked || !canMoveDown"
               :aria-label="moveDownBecomesTrack !== null ? `Move down. Becomes track ${moveDownBecomesTrack}` : 'Move down'"
               @click="onMenuMove(1)"
             >
@@ -775,7 +853,9 @@ onMounted(() => {
                 size="md"
                 class="mobile-overflow-menu__item-emoji"
               />
-              <span class="mobile-overflow-menu__item-label">Remove</span>
+              <span class="mobile-overflow-menu__item-label">{{
+                menuTrack?.split ? 'Remove all parts' : 'Remove'
+              }}</span>
             </button>
           </div>
         </Tray>

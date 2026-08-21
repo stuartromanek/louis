@@ -112,6 +112,7 @@ export function playlistToYotoContent(
         trackKey: TRACK_KEY,
         title: playlistTrack.title,
         youtubeId: action.youtubeId,
+        split: playlistTrack.split ?? action.split,
       })
     }
     else if (action.kind === 'reuse-yoto' || action.kind === 'passthrough-stream') {
@@ -130,6 +131,7 @@ export function playlistToYotoContent(
           trackKey: TRACK_KEY,
           title: playlistTrack.title,
           youtubeId: playlistTrack.youtubeId,
+          split: playlistTrack.split,
         })
       }
     }

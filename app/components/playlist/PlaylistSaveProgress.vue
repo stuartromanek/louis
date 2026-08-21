@@ -4,6 +4,7 @@ import type { EmojiId } from '~/utils/emojiCatalog'
 import {
   saveOperationLabel,
   saveOverallLabel,
+  saveSlowWaitHint,
   saveTrackCountMeta,
 } from './saveProgressDisplay'
 
@@ -198,7 +199,7 @@ const operationFillWidth = computed(() =>
     </template>
 
     <div
-      v-if="operationLabel || trackCountMeta"
+      v-if="operationLabel || trackCountMeta || progress.slowWait"
       class="w-full flex flex-col min-w-0 items-center gap-1.5"
       :class="{ 'mt-2': variant === 'overlay' }"
     >
@@ -231,6 +232,12 @@ const operationFillWidth = computed(() =>
         :class="metaClass"
       >
         {{ trackCountMeta }}
+      </p>
+      <p
+        v-if="progress.slowWait"
+        :class="metaClass"
+      >
+        {{ saveSlowWaitHint() }}
       </p>
     </div>
   </div>

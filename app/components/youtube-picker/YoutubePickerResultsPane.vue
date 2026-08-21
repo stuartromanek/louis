@@ -37,7 +37,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   search: [query: string]
   select: [id: string]
-  enableLongTracks: []
   toggleSelectAll: []
   loadMore: []
 }>()
@@ -221,7 +220,6 @@ const sourceBanner = computed(() => {
         :focused-index="focusedIndex ?? -1"
         bare
         @select="emit('select', $event)"
-        @enable-long-tracks="emit('enableLongTracks')"
       >
         <YoutubePickerLoadMore
           v-if="nextPageToken"

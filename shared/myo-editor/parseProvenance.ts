@@ -1,5 +1,6 @@
-import type { ProvenanceTrackEntry, YotoCardsManifest } from './types.ts'
+import type { ProvenanceTrackEntry, TrackSplit, YotoCardsManifest } from './types.ts'
 import { YOTO_CARDS_CONTENT_VERSION } from './types.ts'
+import { isValidTrackSplit } from './splitTrack.ts'
 
 interface NotePayload {
   yotoCards?: {
@@ -32,7 +33,7 @@ export function parseProvenance(
   }
 
   const tracks = Array.isArray(yotoCards.tracks)
-    ? yotoCards.tracks.filter(isValidProvenanceEntry)
+    ? yotoCards.tracks.filter(isValidProvenanceEntry).map(normalizeProvenanceEntry)
     : []
 
   if (tracks.length === 0 && yotoCards.version !== 1) {
@@ -54,6 +55,15 @@ function isValidProvenanceEntry(entry: unknown): entry is ProvenanceTrackEntry {
     && e.youtubeId
     && e.title,
   )
+}
+
+function normalizeProvenanceEntry(entry: ProvenanceTrackEntry): ProvenanceTrackEntry {
+  const split = isValidTrackSplit(entry.split) ? entry.split : undefined
+  if (!split) {
+    const { split: _ignored, ...rest } = entry
+    return rest
+  }
+  return { ...entry, split }
 }
 
 export function manifestLookupKey(chapterKey: string, trackKey: string): string {
@@ -88,17 +98,29 @@ export function buildManifestLookupForCard(
 }
 
 export function buildProvenance(
-  tracks: Array<{ chapterKey: string; trackKey: string; title: string; youtubeId: string }>,
+  tracks: Array<{
+    chapterKey: string
+    trackKey: string
+    title: string
+    youtubeId: string
+    split?: TrackSplit
+  }>,
 ): { note: string; contentVersion: string } {
   const payload = {
     yotoCards: {
       version: 1,
-      tracks: tracks.map(track => ({
-        chapterKey: track.chapterKey,
-        trackKey: track.trackKey,
-        youtubeId: track.youtubeId,
-        title: track.title,
-      })),
+      tracks: tracks.map((track) => {
+        const entry: ProvenanceTrackEntry = {
+          chapterKey: track.chapterKey,
+          trackKey: track.trackKey,
+          youtubeId: track.youtubeId,
+          title: track.title,
+        }
+        if (track.split && isValidTrackSplit(track.split)) {
+          entry.split = track.split
+        }
+        return entry
+      }),
     },
   }
 

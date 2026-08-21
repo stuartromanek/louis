@@ -55,10 +55,10 @@ export function useUiSound() {
       return
     }
     if (resolved.oneShot) {
-      player.playOneShot(resolved.id, { gain: resolved.gain })
+      player.playOneShot(resolved.id, { gain: resolved.gain, exclusive: resolved.exclusive })
       return
     }
-    player.play(resolved.id, { gain: resolved.gain })
+    player.play(resolved.id, { gain: resolved.gain, exclusive: resolved.exclusive })
   }
 
   /** Like playEvent, but reports whether the browser allowed playback. */
@@ -68,7 +68,7 @@ export function useUiSound() {
       player.startLoop(resolved.id, { gain: resolved.gain })
       return player.isUnlocked()
     }
-    return player.tryPlayOneShot(resolved.id, { gain: resolved.gain })
+    return player.tryPlayOneShot(resolved.id, { gain: resolved.gain, exclusive: resolved.exclusive })
   }
 
   async function unlockAudio(id?: UiSoundId): Promise<boolean> {

@@ -3,6 +3,16 @@ import { createReadStream } from 'node:fs'
 import { stat } from 'node:fs/promises'
 import { fetchYotoApi } from './yoto'
 import type { TranscodedAudioResult } from '#shared/myo-editor/types'
+import {
+  formatTranscodeGiveUpMessage,
+  formatTranscodeLogLine,
+  transcodePollBudget,
+  transcodePollIntervalMs,
+  transcodeProgressKey,
+  transcodeRetryDecision,
+  transcodeShouldStall,
+  type TranscodeGiveUpReason,
+} from './yoto-transcode-poll'
 
 interface UploadUrlResponse {
   upload: {
@@ -22,7 +32,31 @@ interface TranscodePollResponse {
   }
 }
 
+export interface TranscodeUploadMeta {
+  jobId?: string
+  youtubeId?: string
+  partLabel?: string
+  title?: string
+  durationSeconds?: number
+}
+
 const TRANSCODE_FAILURE_PHASES = new Set(['failed', 'error', 'cancelled', 'aborted'])
+
+export class TranscodeGiveUpError extends Error {
+  readonly statusCode: number
+  readonly statusMessage: string
+
+  constructor(
+    readonly reason: TranscodeGiveUpReason,
+    message: string,
+    readonly uploadId: string,
+  ) {
+    super(message)
+    this.name = 'TranscodeGiveUpError'
+    this.statusCode = reason === 'failed' ? 502 : 504
+    this.statusMessage = message
+  }
+}
 
 export async function hashFileSha256(filePath: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -69,15 +103,31 @@ export async function pollTranscoded(
   accessToken: string,
   uploadId: string,
   options?: {
-    maxAttempts?: number
-    intervalMs?: number
+    maxWaitMs?: number
     onPoll?: (info: { attempt: number; phase?: string; percent?: number }) => void
+    meta?: TranscodeUploadMeta
+    sizeMb?: number
   },
 ): Promise<TranscodedAudioResult> {
-  const maxAttempts = options?.maxAttempts ?? 120
-  const intervalMs = options?.intervalMs ?? 1000
+  const maxWaitMs = options?.maxWaitMs ?? transcodePollBudget({ bytes: 0 })
+  const startedAt = Date.now()
+  let lastChangeAt = startedAt
+  let lastKey = ''
+  let lastPhase: string | undefined
+  let lastPercent: number | undefined
+  let attempt = 0
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+  const logContext = {
+    jobId: options?.meta?.jobId,
+    youtubeId: options?.meta?.youtubeId,
+    partLabel: options?.meta?.partLabel,
+    sizeMb: options?.sizeMb ?? 0,
+    durationSec: options?.meta?.durationSeconds,
+    uploadId,
+  }
+
+  while (true) {
+    attempt += 1
     const data = await fetchYotoApi<TranscodePollResponse>(
       `/media/upload/${uploadId}/transcoded?loudnorm=false`,
       accessToken,
@@ -86,8 +136,15 @@ export async function pollTranscoded(
     const transcode = data.transcode
     const phase = transcode?.progress?.phase
     const percent = transcode?.progress?.percent
+    lastPhase = phase
+    lastPercent = percent
+    options?.onPoll?.({ attempt, phase, percent })
 
-    options?.onPoll?.({ attempt: attempt + 1, phase, percent })
+    const key = transcodeProgressKey(phase, percent)
+    if (key !== lastKey) {
+      lastKey = key
+      lastChangeAt = Date.now()
+    }
 
     if (phase === 'complete' || transcode?.transcodedSha256) {
       if (!transcode?.transcodedSha256) {
@@ -96,6 +153,14 @@ export async function pollTranscoded(
           statusMessage: 'Yoto transcoding completed without a track hash',
         })
       }
+      console.info(formatTranscodeLogLine({
+        ...logContext,
+        result: 'ok',
+        attempt,
+        lastPhase,
+        lastPercent,
+        elapsedMs: Date.now() - startedAt,
+      }))
       return {
         transcodedSha256: transcode.transcodedSha256,
         transcodedInfo: transcode.transcodedInfo ?? {},
@@ -103,19 +168,69 @@ export async function pollTranscoded(
     }
 
     if (phase && TRANSCODE_FAILURE_PHASES.has(phase)) {
-      throw createError({
-        statusCode: 502,
-        message: `Yoto audio transcoding failed (${phase})`,
-      })
+      console.info(formatTranscodeLogLine({
+        ...logContext,
+        result: 'failed',
+        attempt,
+        lastPhase,
+        lastPercent,
+        elapsedMs: Date.now() - startedAt,
+      }))
+      throw new TranscodeGiveUpError(
+        'failed',
+        `Yoto audio transcoding failed (${phase})`,
+        uploadId,
+      )
     }
 
-    await new Promise(resolve => setTimeout(resolve, intervalMs))
-  }
+    const elapsedMs = Date.now() - startedAt
+    const unchangedMs = Date.now() - lastChangeAt
+    if (transcodeShouldStall({ elapsedMs, unchangedMs })) {
+      console.info(formatTranscodeLogLine({
+        ...logContext,
+        result: 'stall',
+        attempt,
+        lastPhase,
+        lastPercent,
+        elapsedMs,
+      }))
+      throw new TranscodeGiveUpError(
+        'stall',
+        formatTranscodeGiveUpMessage({
+          reason: 'stall',
+          title: options?.meta?.title,
+          partLabel: options?.meta?.partLabel,
+          lastPercent,
+          elapsedMs,
+        }),
+        uploadId,
+      )
+    }
 
-  throw createError({
-    statusCode: 504,
-    statusMessage: 'Yoto audio transcoding timed out',
-  })
+    if (elapsedMs >= maxWaitMs) {
+      console.info(formatTranscodeLogLine({
+        ...logContext,
+        result: 'timeout',
+        attempt,
+        lastPhase,
+        lastPercent,
+        elapsedMs,
+      }))
+      throw new TranscodeGiveUpError(
+        'timeout',
+        formatTranscodeGiveUpMessage({
+          reason: 'timeout',
+          title: options?.meta?.title,
+          partLabel: options?.meta?.partLabel,
+          lastPercent,
+          elapsedMs,
+        }),
+        uploadId,
+      )
+    }
+
+    await new Promise(resolve => setTimeout(resolve, transcodePollIntervalMs(elapsedMs)))
+  }
 }
 
 function guessContentType(filePath: string): string {
@@ -131,24 +246,67 @@ export async function uploadAudioFile(
   filePath: string,
   filename: string,
   options?: {
-    poll?: { maxAttempts?: number; intervalMs?: number }
+    poll?: { maxWaitMs?: number }
     onTranscodePoll?: (info: { attempt: number; phase?: string; percent?: number }) => void
+    meta?: TranscodeUploadMeta
   },
 ): Promise<TranscodedAudioResult> {
   const fileStat = await stat(filePath)
   const sha256 = await hashFileSha256(filePath)
-  const upload = await getUploadUrl(accessToken, { sha256, filename })
+  const sizeMb = fileStat.size / 1_000_000
+  const budget = options?.poll?.maxWaitMs ?? transcodePollBudget({
+    bytes: fileStat.size,
+    durationSeconds: options?.meta?.durationSeconds,
+  })
+  const pollOptions = {
+    maxWaitMs: budget,
+    onPoll: options?.onTranscodePoll,
+    meta: options?.meta,
+    sizeMb,
+  }
 
+  const upload = await getUploadUrl(accessToken, { sha256, filename })
   if (upload.uploadUrl) {
     await putAudioFile(upload.uploadUrl, filePath, guessContentType(filePath))
   }
 
-  const pollDefaults = fileStat.size > 50_000_000
-    ? { maxAttempts: 180, intervalMs: 2000 }
-    : undefined
+  try {
+    return await pollTranscoded(accessToken, upload.uploadId, pollOptions)
+  }
+  catch (err) {
+    if (!(err instanceof TranscodeGiveUpError) || err.reason === 'timeout') throw err
 
-  return pollTranscoded(accessToken, upload.uploadId, {
-    ...(options?.poll ?? pollDefaults),
-    onPoll: options?.onTranscodePoll,
-  })
+    const again = await getUploadUrl(accessToken, { sha256, filename })
+    const decision = transcodeRetryDecision({
+      reason: err.reason,
+      alreadyRetried: false,
+      newUploadUrl: again.uploadUrl,
+      oldUploadId: upload.uploadId,
+      newUploadId: again.uploadId,
+    })
+    if (decision.action === 'throw') throw err
+
+    console.info(formatTranscodeLogLine({
+      result: 'retry',
+      jobId: options?.meta?.jobId,
+      youtubeId: options?.meta?.youtubeId,
+      partLabel: options?.meta?.partLabel,
+      sizeMb,
+      durationSec: options?.meta?.durationSeconds,
+      uploadId: decision.uploadId,
+      priorUploadId: upload.uploadId,
+      attempt: 1,
+      elapsedMs: 0,
+    }))
+
+    if (decision.action === 'reput' && again.uploadUrl) {
+      await putAudioFile(again.uploadUrl, filePath, guessContentType(filePath))
+      return pollTranscoded(accessToken, decision.uploadId, pollOptions)
+    }
+
+    return pollTranscoded(accessToken, decision.uploadId, {
+      ...pollOptions,
+      maxWaitMs: budget,
+    })
+  }
 }

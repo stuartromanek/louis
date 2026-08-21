@@ -105,9 +105,10 @@
 <script setup lang="ts">
 import { DragDropProvider, type DragEndEvent, type DragOverEvent, type DragStartEvent } from '@dnd-kit/vue'
 import { isSortable, isSortableOperation } from '@dnd-kit/vue/sortable'
-import { pickerVideoToPlaylistTrack } from '~/components/playlist/types'
+import { videosToPlaylistTracks } from '~/components/playlist/types'
 import type { YoutubeVideoSummary } from '~/components/youtube-picker/types'
 import { videoResultKey } from '#shared/myo-editor/youtubePlaylistImport'
+import { reorderPlaylistBlocks, trackIndexForBlock } from '#shared/myo-editor/splitTrack'
 import { classifyInsertTracksOutcome } from '#shared/myo-editor/standalonePlaylist'
 import {
   OVERFLOW_TOAST_TEST_MESSAGE,
@@ -340,7 +341,7 @@ function getItemData(entity: { data?: unknown } | null | undefined): DndItemData
 }
 
 function applyResultDrop(videos: YoutubeVideoSummary[], sourceTitle: string, atIndex?: number) {
-  const tracks = videos.map(pickerVideoToPlaylistTrack)
+  const tracks = videosToPlaylistTracks(videos)
   const result = editor.insertTracks(tracks, atIndex)
   if (!result.ok) {
     playEvent('disabled')
@@ -427,7 +428,7 @@ function onDragEnd(event: DragEndEvent) {
     const toIndex = source.index
 
     if (fromIndex !== toIndex) {
-      playlist.value = moveItem(playlist.value, fromIndex, toIndex)
+      playlist.value = reorderPlaylistBlocks(playlist.value, fromIndex, toIndex)
       playEvent('drop')
     }
     return
@@ -448,7 +449,11 @@ function onDragEnd(event: DragEndEvent) {
     }
 
     if (isSortable(target)) {
-      applyResultDrop(videos, sourceData.video.title, target.index)
+      applyResultDrop(
+        videos,
+        sourceData.video.title,
+        trackIndexForBlock(playlist.value, target.index),
+      )
     }
   }
 }

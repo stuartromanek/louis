@@ -26,6 +26,8 @@ const emit = defineEmits<{
   confirm: []
 }>()
 
+const { playEvent } = useUiSound()
+
 const titleId = computed(() => `${props.idPrefix}-title`)
 const bodyId = computed(() => `${props.idPrefix}-body`)
 
@@ -77,12 +79,14 @@ const primaryClass = computed(() => (
 
 function onSecondary() {
   if (props.busy) return
+  playEvent('select')
   if (props.kind === 'normalize') emit('keep')
   else emit('cancel')
 }
 
 function onConfirm() {
   if (props.busy) return
+  playEvent('select')
   emit('confirm')
 }
 </script>

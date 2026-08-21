@@ -17,7 +17,6 @@ withDefaults(defineProps<{
 
 const emit = defineEmits<{
   select: [id: string]
-  enableLongTracks: []
 }>()
 </script>
 
@@ -46,7 +45,6 @@ const emit = defineEmits<{
           :layout="layout"
           :focused="index === focusedIndex"
           @select="emit('select', $event)"
-          @enable-long-tracks="emit('enableLongTracks')"
         />
       </li>
     </ul>

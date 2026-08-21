@@ -1116,10 +1116,45 @@
   box-shadow: 2px 2px 0 var(--color-maru-black);
 }
 
+.mobile-card-track .mobile-card-track__inner {
+  display: contents;
+}
+
+.mobile-card-track-group {
+  display: flex;
+  flex-direction: column;
+  box-shadow: 2px 2px 0 var(--color-maru-black);
+}
+
+.mobile-card-track-group__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.35rem 0.45rem;
+}
+
+.mobile-card-track-group .mobile-card-track__inner {
+  display: grid;
+  grid-template-columns: 4.75rem minmax(0, 1fr);
+  gap: 0.5rem 0.85rem;
+  align-items: center;
+  padding: 0.45rem 0.55rem;
+}
+
+.mobile-card-track-group .mobile-card-track__inner + .mobile-card-track__inner {
+  border-top: 3px solid var(--color-maru-black);
+}
+
 /* Phone: hug track art (3rem) — don't leave the old 4.75rem art column empty */
 @media (max-width: 599px) {
   .mobile-card-track {
     grid-template-columns: 3rem minmax(0, 1fr) auto;
+    column-gap: 0.6rem;
+  }
+
+  .mobile-card-track-group .mobile-card-track__inner {
+    grid-template-columns: 3rem minmax(0, 1fr);
     column-gap: 0.6rem;
   }
 }
@@ -1218,6 +1253,12 @@
   flex-direction: column;
   gap: 0.15rem;
   align-self: center;
+}
+
+.mobile-card-track__copy--split {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .mobile-card-track__meta {
@@ -1376,6 +1417,17 @@
     line-height: var(--text-maru-meta--line-height);
   }
 
+  .mobile-card-track-group__header {
+    padding: 0.22rem 0.3rem;
+    gap: 0.28rem;
+  }
+
+  .mobile-card-track-group .mobile-card-track__inner {
+    grid-template-columns: 3rem minmax(0, 1fr);
+    padding: 0.22rem 0.3rem;
+    column-gap: 0.35rem;
+  }
+
   .mobile-overflow-menu__item-hint {
     display: none;
   }
@@ -1494,92 +1546,6 @@
   .typetester-inline-mono.typetester-inline--compact .typetester-inline-sample {
     font-size: 4.75vw;
   }
-
-  /* After long tracks are enabled, the chip is redundant on phone cards. */
-  .yt-result-long-chip {
-    display: none;
-  }
-
-  .yt-result-card__footer {
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 0.35rem;
-    padding: 0.28rem 0.45rem;
-  }
-
-  .yt-result-card__footer-label,
-  .yt-result-card__footer-text {
-    display: none;
-  }
-
-  .yt-result-card__footer-actions {
-    flex: 1 1 auto;
-    justify-content: flex-start;
-    gap: 0.35rem;
-    min-width: 0;
-  }
-
-  .yt-result-card__enable,
-  .yt-result-card__info {
-    margin: 0;
-    border: 2px solid var(--color-maru-black);
-    border-radius: var(--radius-maru);
-    background: var(--color-maru-white);
-    color: var(--color-maru-black);
-    font-family: var(--font-maru-mono);
-    font-size: var(--text-maru-meta);
-    font-weight: 500;
-    line-height: var(--text-maru-meta--line-height);
-    letter-spacing: 0.02em;
-    text-decoration: none;
-    box-shadow: 1.5px 1.5px 0 var(--color-maru-black);
-    cursor: pointer;
-  }
-
-  .yt-result-card__enable {
-    flex: 1 1 auto;
-    min-width: 0;
-    min-height: 0;
-    padding: 0.28rem 0.55rem 0.18rem;
-    align-self: auto;
-  }
-
-  .yt-result-card__enable:hover,
-  .yt-result-card__info:hover {
-    opacity: 1;
-  }
-
-  .yt-result-card__enable:active,
-  .yt-result-card__info:active {
-    scale: 0.97;
-    opacity: 1;
-  }
-
-  .yt-result-card__info {
-    flex: 0 0 auto;
-    width: auto;
-    height: auto;
-    min-width: 1.85rem;
-    padding: 0.28rem 0.45rem 0.18rem;
-  }
-
-  .yt-long-tracks-confirm {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.65rem;
-  }
-
-  .yt-long-tracks-confirm__actions {
-    margin-left: 0;
-    width: 100%;
-  }
-
-  .yt-long-tracks-confirm__actions .maru-button {
-    flex: 1;
-    min-height: 2.75rem;
-  }
 }
 
 /* ─── ≤360px: densify — cut nested padding / double borders / hard shadows ─── */
@@ -1673,6 +1639,20 @@
     padding: 0.4rem;
     gap: 0.35rem 0.5rem;
     box-shadow: 1px 1px 0 var(--color-maru-black);
+  }
+
+  .mobile-card-track-group {
+    box-shadow: 1px 1px 0 var(--color-maru-black);
+  }
+
+  .mobile-card-track-group__header {
+    padding: 0.28rem 0.4rem;
+    gap: 0.35rem;
+  }
+
+  .mobile-card-track-group .mobile-card-track__inner {
+    padding: 0.32rem 0.4rem;
+    column-gap: 0.45rem;
   }
 
   .mobile-add-drawer__card {

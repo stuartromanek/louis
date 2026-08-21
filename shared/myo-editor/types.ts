@@ -68,6 +68,16 @@ export interface YotoCardDetail {
   chapters: YotoChapterDetail[]
 }
 
+/** One slice of a YouTube source that exceeds the per-track duration cap. */
+export interface TrackSplit {
+  groupId: string
+  /** 0-based part index. */
+  index: number
+  count: number
+  startSeconds: number
+  durationSeconds: number
+}
+
 export interface PlaylistTrack {
   id: string
   title: string
@@ -84,6 +94,8 @@ export interface PlaylistTrack {
   yotoReuse?: YotoTrackReuseSnapshot
   /** HTTPS preview for the track's 16×16 icon (playlist thumb); not sent to Yoto. */
   iconPreviewUrl?: string | null
+  /** Present when this row is one part of an auto-split YouTube source. */
+  split?: TrackSplit
 }
 
 export interface ProvenanceTrackEntry {
@@ -91,6 +103,7 @@ export interface ProvenanceTrackEntry {
   trackKey: string
   youtubeId: string
   title: string
+  split?: TrackSplit
 }
 
 export interface YotoCardsManifest {
@@ -112,7 +125,7 @@ export interface TranscodedAudioResult {
 }
 
 export type SaveTrackAction =
-  | { kind: 'extract-youtube'; youtubeId: string; playlistIndex: number }
+  | { kind: 'extract-youtube'; youtubeId: string; playlistIndex: number; split?: TrackSplit }
   | { kind: 'reuse-yoto'; snapshot: YotoTrackReuseSnapshot; playlistIndex: number }
   | { kind: 'passthrough-stream'; snapshot: YotoTrackReuseSnapshot; playlistIndex: number }
   | { kind: 'unsupported'; reason: string; playlistIndex: number }
@@ -161,4 +174,6 @@ export interface SaveJobState {
   outcomeUncertain?: boolean
   tracks: SaveJobTrackProgress[]
   createdAt: number
+  /** Last time this job was written (heartbeat while Yoto transcode polls). */
+  updatedAt?: number
 }

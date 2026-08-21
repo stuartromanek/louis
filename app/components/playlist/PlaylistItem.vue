@@ -2,8 +2,7 @@
 import { useSortable } from '@dnd-kit/vue/sortable'
 import type { PlaylistTrack } from '~/components/playlist/types'
 import { playlistDragId, type PlaylistDragData } from './dnd'
-import TrackArtThumb from '~/components/track-art/TrackArtThumb.vue'
-import { TRACK_ART_EDITOR_KEY } from '~/composables/useTrackArtEditor'
+import PlaylistTrackRow from './PlaylistTrackRow.vue'
 
 const props = defineProps<{
   track: PlaylistTrack
@@ -15,18 +14,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   remove: [id: string]
 }>()
-
-const artEditor = inject(TRACK_ART_EDITOR_KEY)
-const { playEvent } = useUiSound()
-
-function onRemoveHover() {
-  if (props.locked) return
-  playEvent('chipHover')
-}
-
-function onEditArt() {
-  artEditor?.openForTrack(props.track.id)
-}
 
 const element = ref<HTMLElement | null>(null)
 const handle = ref<HTMLElement | null>(null)
@@ -67,27 +54,10 @@ const { isDragging, isDropTarget } = useSortable({
       <span /><span /><span />
     </button>
 
-    <TrackArtThumb
+    <PlaylistTrackRow
       :track="track"
       :locked="locked"
-      size="md"
-      @edit="onEditArt"
+      @remove="emit('remove', $event)"
     />
-
-    <div class="min-w-0 flex-1 flex flex-col gap-1.5">
-      <p class="type-title-sm font-maru-medium line-clamp-2">{{ track.title }}</p>
-      <p class="playlist-item__subtitle text-maru-black/75">{{ track.subtitle }}</p>
-    </div>
-
-    <button
-      type="button"
-      class="playlist-remove"
-      :disabled="locked"
-      :aria-label="`Remove ${track.title}`"
-      @mouseenter="onRemoveHover"
-      @click="emit('remove', track.id)"
-    >
-      <MaruEmoji name="Fire" size="md" />
-    </button>
   </li>
 </template>

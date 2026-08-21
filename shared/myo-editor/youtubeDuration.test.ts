@@ -1,14 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { YOTO_MYO_MAX_TRACK_SECONDS } from './yotoMyoLimits.ts'
 import {
   formatDurationSeconds,
   formatYoutubeDurationIso,
-  isOverMyoTrackDuration,
   parseYoutubeDurationIso,
-  YOTO_MYO_OVER_TRACK_DURATION_FOOTER,
-  YOTO_MYO_OVER_TRACK_DURATION_MESSAGE,
-  YOTO_MYO_OVER_TRACK_DURATION_TOOLTIP,
 } from './youtubeDuration.ts'
 
 describe('parseYoutubeDurationIso', () => {
@@ -36,16 +31,6 @@ describe('parseYoutubeDurationIso', () => {
   })
 })
 
-describe('isOverMyoTrackDuration', () => {
-  it('allows durations at the MYO limit', () => {
-    assert.equal(isOverMyoTrackDuration(YOTO_MYO_MAX_TRACK_SECONDS), false)
-  })
-
-  it('flags durations over the MYO limit', () => {
-    assert.equal(isOverMyoTrackDuration(YOTO_MYO_MAX_TRACK_SECONDS + 1), true)
-  })
-})
-
 describe('formatDurationSeconds / formatYoutubeDurationIso', () => {
   it('formats under an hour as m:ss', () => {
     assert.equal(formatDurationSeconds(222), '3:42')
@@ -57,11 +42,5 @@ describe('formatDurationSeconds / formatYoutubeDurationIso', () => {
 
   it('formats ISO via parse', () => {
     assert.equal(formatYoutubeDurationIso('PT1H5M'), '1:05:00')
-  })
-
-  it('exposes over-limit copy', () => {
-    assert.match(YOTO_MYO_OVER_TRACK_DURATION_MESSAGE, /Over 1 hour/)
-    assert.match(YOTO_MYO_OVER_TRACK_DURATION_FOOTER, /over an hour/)
-    assert.match(YOTO_MYO_OVER_TRACK_DURATION_TOOLTIP, /max length of 1 hour/)
   })
 })

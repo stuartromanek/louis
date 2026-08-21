@@ -72,4 +72,39 @@ describe('playlistToYotoContent provenance', () => {
     assert.equal(manifest?.tracks[0]?.youtubeId, 'kept')
     assert.equal(manifest?.tracks[0]?.title, 'Kept second')
   })
+
+  it('round-trips split provenance on extract', () => {
+    const split = {
+      groupId: 'long',
+      index: 0,
+      count: 2,
+      startSeconds: 0,
+      durationSeconds: 1800,
+    }
+    const playlist: PlaylistTrack[] = [
+      {
+        id: 'long#p0',
+        title: 'Long (Part 1)',
+        subtitle: '',
+        thumbnailUrl: '',
+        source: 'app-youtube',
+        youtubeId: 'long',
+        duration: 1800,
+        split,
+      },
+    ]
+    const plan: SaveTrackAction[] = [
+      { kind: 'extract-youtube', youtubeId: 'long', playlistIndex: 0, split },
+    ]
+    const uploaded = new Map([
+      [0, {
+        transcodedSha256: 'deadbeef',
+        transcodedInfo: { duration: 1800, fileSize: 12, format: 'aac', channels: 2 },
+      }],
+    ])
+    const built = playlistToYotoContent('Card', playlist, plan, uploaded)
+    const manifest = parseProvenance(built.note, built.contentVersion)
+    assert.equal(manifest?.tracks[0]?.youtubeId, 'long')
+    assert.deepEqual(manifest?.tracks[0]?.split, split)
+  })
 })

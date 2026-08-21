@@ -39,6 +39,11 @@ export type UiSoundRegistryConfig = {
   volume?: number
   /** Play a loop asset once without repeating. */
   oneShot?: boolean
+  /**
+   * While a sound in this group is playing, later events are dropped
+   * (no overlap, no queue). Next play is allowed after the active clip ends.
+   */
+  exclusive?: string
 }
 
 export const UI_SOUND_REGISTRY: Record<UiSoundEvent, UiSoundRegistryConfig> = {
@@ -69,9 +74,9 @@ export const UI_SOUND_REGISTRY: Record<UiSoundEvent, UiSoundRegistryConfig> = {
   splashCue: { sounds: 'louis', volume: 0.9 },
   authConnected: { sounds: 'celebration', volume: 1 },
   toastDismiss: { sounds: uiSoundVariants('swipe'), volume: 0.7 },
-  pixelPaint: { sounds: ['mdn-1', 'mdn-2', 'mdn-3'], volume: 0.4 },
-  pixelErase: { sounds: 'mdn-1', volume: 0.4 },
-  pixelClear: { sounds: 'mdn-gun', volume: 0.55 },
+  pixelPaint: { sounds: ['scribble-1', 'scribble-2'], volume: 0.4, exclusive: 'pixelStroke' },
+  pixelErase: { sounds: 'erase', volume: 0.4, exclusive: 'pixelStroke' },
+  pixelClear: { sounds: 'clear', volume: 0.55 },
 }
 
 export type ResolvedUiSound = {
@@ -79,6 +84,7 @@ export type ResolvedUiSound = {
   /** Event-level gain (excludes master and per-file gain). */
   gain: number
   oneShot?: boolean
+  exclusive?: string
 }
 
 function pickSound(
@@ -96,6 +102,7 @@ export function resolveUiSoundEvent(event: UiSoundEvent): ResolvedUiSound {
     id: pickSound(config.sounds),
     gain: config.volume ?? 1,
     oneShot: config.oneShot,
+    exclusive: config.exclusive,
   }
 }
 

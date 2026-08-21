@@ -595,6 +595,21 @@
   filter: blur(0);
 }
 
+/* Ghost the check so an empty box reads as a checkbox before it's ticked. */
+.maru-checkbox__input:focus-visible:not(:checked):not(:disabled) + .maru-checkbox__box .maru-checkbox__mark {
+  opacity: 0.3;
+  scale: 1;
+  filter: blur(0);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .maru-checkbox__input:hover:not(:checked):not(:disabled) + .maru-checkbox__box .maru-checkbox__mark {
+    opacity: 0.3;
+    scale: 1;
+    filter: blur(0);
+  }
+}
+
 .maru-checkbox__input:hover:not(:disabled) + .maru-checkbox__box {
   box-shadow: 4px 4px 0 var(--color-maru-black);
   translate: -1px -1px;

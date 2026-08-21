@@ -15,6 +15,8 @@ const POOL_MAX = 24
 export type UiSoundPlayOptions = {
   /** Gain multiplied with master volume (0–1). */
   gain?: number
+  /** Drop this play if another clip in the same group is still going. */
+  exclusive?: string
 }
 
 class UiSoundPlayer {
@@ -25,6 +27,8 @@ class UiSoundPlayer {
   private loops = new Map<UiSoundId, HTMLAudioElement>()
   /** Voices currently claimed for playback (paused can still be mid-`play()`). */
   private inFlight = new WeakSet<HTMLAudioElement>()
+  /** Exclusive groups with a clip still playing (paint/erase). */
+  private exclusiveBusy = new Set<string>()
   /** True after a play() succeeded under a user gesture (browser autoplay policy). */
   private unlocked = false
 
@@ -107,11 +111,22 @@ class UiSoundPlayer {
   async tryPlayOneShot(id: UiSoundId, options?: UiSoundPlayOptions): Promise<boolean> {
     if (this.muted || typeof Audio === 'undefined') return false
 
+    const exclusive = options?.exclusive
+    if (exclusive && this.exclusiveBusy.has(exclusive)) return false
+    if (exclusive) this.exclusiveBusy.add(exclusive)
+
     const audio = this.borrowAudio(id)
     audio.loop = false
     audio.muted = false
     audio.currentTime = 0
     audio.volume = this.effectiveVolume(id, options?.gain)
+
+    const releaseExclusive = () => {
+      if (exclusive) this.exclusiveBusy.delete(exclusive)
+    }
+    audio.addEventListener('ended', releaseExclusive, { once: true })
+    audio.addEventListener('pause', releaseExclusive, { once: true })
+
     try {
       await audio.play()
       this.unlocked = true
@@ -119,6 +134,7 @@ class UiSoundPlayer {
     }
     catch {
       this.inFlight.delete(audio)
+      releaseExclusive()
       return false
     }
   }
@@ -159,6 +175,7 @@ class UiSoundPlayer {
       audio.currentTime = 0
     }
     this.loops.clear()
+    this.exclusiveBusy.clear()
 
     for (const elements of this.pools.values()) {
       for (const audio of elements) {

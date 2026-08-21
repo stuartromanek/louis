@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { resolveTrackIcon } from '#shared/myo-editor/trackArt'
+import { splitTrackAccessibleName } from '#shared/myo-editor/splitTrack'
 import type { PlaylistTrack } from '~/components/playlist/types'
 
 const props = withDefaults(defineProps<{
@@ -36,7 +37,7 @@ function onClick() {
       hasArt ? 'track-art-thumb--filled' : 'track-art-thumb--empty',
     ]"
     :disabled="locked"
-    :aria-label="hasArt ? `Edit art for ${track.title}` : `Add art for ${track.title}`"
+    :aria-label="hasArt ? `Edit art for ${splitTrackAccessibleName(track)}` : `Add art for ${splitTrackAccessibleName(track)}`"
     aria-haspopup="dialog"
     @click.stop="onClick"
   >

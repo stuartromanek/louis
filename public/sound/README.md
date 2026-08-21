@@ -4,7 +4,7 @@ Most bundled UI sound effects are from **[SND](https://snd.dev/)** (SND01 “sin
 
 Filenames match the ids in `app/utils/uiSoundCatalog.ts`.
 
-**First-party exception:** `louis.wav` is the Louis splash cue (not part of the SND kit). SND attribution and terms below do not apply to it.
+**First-party exceptions:** `louis.wav` is the Louis splash cue. `scribble-1.wav`, `scribble-2.wav`, `erase.wav`, and `clear.wav` are pixel-editor draw/erase/clear cues. SND attribution and terms below do not apply to those files.
 
 ## Attribution (SND)
 

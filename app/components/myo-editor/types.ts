@@ -13,9 +13,10 @@ export type {
 
 export { YOTO_CARDS_CONTENT_VERSION } from '#shared/myo-editor/types'
 
-import type { YotoTrackDetail, TrackSource } from '#shared/myo-editor/types'
+import type { YotoTrackDetail, TrackSource, TrackSplit } from '#shared/myo-editor/types'
 
 export interface ClassifiedTrack extends YotoTrackDetail {
   source: TrackSource
   youtubeId?: string
+  split?: TrackSplit
 }

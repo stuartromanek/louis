@@ -2,6 +2,31 @@ import type { PlaylistTrack, SavePlan, SaveTrackAction, YotoCardDetail, YotoTrac
 import { baselineRowIds, playlistRowId } from './playlistRowId.ts'
 import { findOriginalTrack, isYotoHostedTrack } from './trackLookup.ts'
 import { toYotoTrackReuseSnapshot } from './yotoTrackPayload.ts'
+import { isCompleteSplitCopy } from './splitTrack.ts'
+
+function youtubeIdForTrack(track: PlaylistTrack): string | undefined {
+  const id = track.youtubeId ?? (track.source === 'app-youtube' ? track.id : undefined)
+  const trimmed = id?.trim()
+  return trimmed || undefined
+}
+
+function duplicateYoutubeError(playlist: PlaylistTrack[]): string | null {
+  const byId = new Map<string, PlaylistTrack[]>()
+  for (const track of playlist) {
+    const youtubeId = youtubeIdForTrack(track)
+    if (!youtubeId) continue
+    const list = byId.get(youtubeId) ?? []
+    list.push(track)
+    byId.set(youtubeId, list)
+  }
+
+  for (const [youtubeId, tracks] of byId) {
+    if (tracks.length === 1) continue
+    if (isCompleteSplitCopy(tracks)) continue
+    return `Duplicate YouTube video in playlist: ${youtubeId}`
+  }
+  return null
+}
 
 function reuseSnapshotForTrack(
   track: PlaylistTrack,
@@ -67,7 +92,7 @@ function classifyTrack(
         playlistIndex: index,
       }
     }
-    return { kind: 'extract-youtube', youtubeId, playlistIndex: index }
+    return { kind: 'extract-youtube', youtubeId, playlistIndex: index, split: track.split }
   }
 
   if (track.source === 'app-youtube') {
@@ -86,7 +111,7 @@ function classifyTrack(
       return { kind: 'reuse-yoto', snapshot, playlistIndex: index }
     }
 
-    return { kind: 'extract-youtube', youtubeId, playlistIndex: index }
+    return { kind: 'extract-youtube', youtubeId, playlistIndex: index, split: track.split }
   }
 
   return {
@@ -108,17 +133,8 @@ export function buildSavePlan(
     return { tracks: [], errors }
   }
 
-  const youtubeIds = playlist
-    .map(track => track.youtubeId ?? (track.source === 'app-youtube' ? track.id : undefined))
-    .filter((id): id is string => Boolean(id))
-
-  const seen = new Set<string>()
-  for (const id of youtubeIds) {
-    if (seen.has(id)) {
-      errors.push(`Duplicate YouTube video in playlist: ${id}`)
-    }
-    seen.add(id)
-  }
+  const duplicateError = duplicateYoutubeError(playlist)
+  if (duplicateError) errors.push(duplicateError)
 
   const baselineIds = baselineRowIds(baselinePlaylist)
 

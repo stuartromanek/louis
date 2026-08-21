@@ -1,4 +1,5 @@
 import type { PlaylistTrack } from '#shared/myo-editor/types'
+import { sanitizeSplitGrouping } from '#shared/myo-editor/splitTrack'
 
 const DRAFTS_STORAGE_KEY = 'yoto-cards:pending-drafts'
 const PODCAST_STORAGE_KEY = 'yoto-cards:podcast-card-ids'
@@ -19,6 +20,16 @@ function isTrack(value: unknown): value is PlaylistTrack {
     && typeof t.subtitle === 'string'
     && typeof t.thumbnailUrl === 'string'
     && typeof t.source === 'string'
+}
+
+export function normalizePersistedDraftSnapshot(
+  snap: PersistedDraftSnapshot,
+): PersistedDraftSnapshot {
+  return {
+    ...snap,
+    playlist: sanitizeSplitGrouping(snap.playlist),
+    baseline: sanitizeSplitGrouping(snap.baseline),
+  }
 }
 
 function isSnapshot(value: unknown): value is PersistedDraftSnapshot {
@@ -43,7 +54,7 @@ export function readPersistedDrafts(): PersistedDrafts {
     const out: PersistedDrafts = {}
     for (const [cardId, snap] of Object.entries(parsed as Record<string, unknown>)) {
       if (typeof cardId === 'string' && cardId && isSnapshot(snap)) {
-        out[cardId] = snap
+        out[cardId] = normalizePersistedDraftSnapshot(snap)
       }
     }
     return out

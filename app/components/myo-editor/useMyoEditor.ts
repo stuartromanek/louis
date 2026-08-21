@@ -18,8 +18,8 @@ import {
   writePodcastCardIds,
 } from './draftPersistence'
 import type { SaveJobState, YotoCardDetail } from './types'
-import { getPlaylistPreflightLimitError, YOTO_MYO_MAX_TRACKS } from '#shared/myo-editor/yotoMyoLimits'
-import { playlistHasTrack } from '#shared/myo-editor/playlistTrackMatch'
+import { getPlaylistPreflightLimitError } from '#shared/myo-editor/yotoMyoLimits'
+import { selectIncomingTracks, snapInsertTrackIndex } from '#shared/myo-editor/splitTrack'
 import {
   collectPendingUpdateTargets,
   pendingTargetFrom,
@@ -39,6 +39,13 @@ import {
   UNNAMED_PLAYLIST_ADD_MESSAGE,
   type ClientSaveTarget,
 } from '#shared/myo-editor/standalonePlaylist'
+import {
+  SAVE_JOB_LOST_MESSAGE,
+  savePollHitCeiling,
+  savePollIsSlowWait,
+  saveProgressStamp,
+  shouldAbandonClientPoll,
+} from '#shared/myo-editor/savePoll'
 
 export type UpdatePromptKind = 'capacity' | 'normalize'
 export type UpdatePromptSurface = 'footer' | 'dialog'
@@ -51,6 +58,8 @@ export interface SaveProgress {
   operationProgress: number
   error?: string
   tracks: SaveJobState['tracks']
+  /** True when progress has not moved for a while; overlay stays up. */
+  slowWait?: boolean
 }
 
 export interface CardSaveSnapshot {
@@ -70,6 +79,7 @@ export interface CardSaveState {
   error?: string
   snapshot: CardSaveSnapshot
   startedAt: number
+  slowWait?: boolean
 }
 
 export type InsertTracksResult =
@@ -190,6 +200,7 @@ function jobToSaveProgress(state: CardSaveState): SaveProgress {
     operationProgress: state.operationProgress,
     error: state.error,
     tracks: state.tracks,
+    slowWait: state.slowWait,
   }
 }
 
@@ -214,7 +225,6 @@ function saveStateFromJob(
 }
 
 const POLL_INTERVAL_MS = 1000
-const POLL_TIMEOUT_MS = 30 * 60 * 1000
 const MIN_COMPLETE_DISPLAY_MS = 450
 
 const pollingJobIds = new Set<string>()
@@ -649,20 +659,39 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
 
     const existing = getSaveState(saveKey)
     const startedAt = existing?.startedAt ?? Date.now()
+    let lastActivityAt = Date.now()
+    let lastActivityStamp = ''
+
+    function noteJobActivity(job: SaveJobState) {
+      const stamp = saveProgressStamp(job)
+      if (stamp !== lastActivityStamp) {
+        lastActivityStamp = stamp
+        lastActivityAt = Date.now()
+      }
+      const existing = getSaveState(saveKey)
+      if (!existing) return
+      const slowWait = savePollIsSlowWait(Date.now() - lastActivityAt)
+      if (existing.slowWait === slowWait) return
+      setSaveState(saveKey, { ...existing, slowWait })
+    }
 
     try {
       let job = await $fetch<SaveJobState>(`/api/yoto/jobs/${jobId}`)
       updateSaveStateFromJob(saveKey, job)
+      noteJobActivity(job)
 
       while (!isTerminalStatus(job.status)) {
-        if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
-          handleSaveFailed(saveKey, 'Save timed out. Check your playlist in Yoto and try again.')
-          return
-        }
-
         await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS))
         job = await $fetch<SaveJobState>(`/api/yoto/jobs/${jobId}`)
         updateSaveStateFromJob(saveKey, job)
+        noteJobActivity(job)
+
+        if (!isTerminalStatus(job.status) && savePollHitCeiling(Date.now() - startedAt)) {
+          const current = getSaveState(saveKey)
+          if (current && !current.slowWait) {
+            setSaveState(saveKey, { ...current, slowWait: true })
+          }
+        }
       }
 
       if (job.status === 'failed') {
@@ -674,9 +703,8 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     }
     catch (err: unknown) {
       const e = err as { statusCode?: number; statusMessage?: string; message?: string }
-      if (e.statusCode === 404) {
-        deleteSaveState(saveKey)
-        removePersistedSave(saveKey)
+      if (shouldAbandonClientPoll({ httpStatus: e.statusCode })) {
+        handleSaveFailed(saveKey, SAVE_JOB_LOST_MESSAGE, true)
         return
       }
       handleSaveFailed(
@@ -767,8 +795,8 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
       }
       catch (err: unknown) {
         const e = err as { statusCode?: number }
-        if (e.statusCode === 404) {
-          removePersistedSave(saveKey)
+        if (shouldAbandonClientPoll({ httpStatus: e.statusCode })) {
+          handleSaveFailed(saveKey, SAVE_JOB_LOST_MESSAGE, true)
         }
       }
     }
@@ -993,31 +1021,24 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
       return { ok: false, message: 'Podcasts cannot be edited yet.' }
     }
 
-    const unique: PlaylistTrack[] = []
-    let skipped = 0
-    for (const track of tracks) {
-      if (playlistHasTrack(playlist.value, track) || playlistHasTrack(unique, track)) {
-        skipped++
-        continue
-      }
-      unique.push(track)
-    }
+    const { unique, skipped, overflow } = selectIncomingTracks(playlist.value, tracks)
 
-    const room = Math.max(0, YOTO_MYO_MAX_TRACKS - playlist.value.length)
-    const overflow = Math.max(0, unique.length - room)
-    const toAdd = unique.slice(0, room)
+    const toAdd = unique
 
     if (toAdd.length === 0) {
       return { ok: true, added: 0, skipped, overflow }
     }
 
     const cloned = clonePlaylist(toAdd)
-    if (atIndex === undefined || atIndex < 0 || atIndex >= playlist.value.length) {
+    const insertAt = atIndex === undefined
+      ? undefined
+      : snapInsertTrackIndex(playlist.value, atIndex)
+    if (insertAt === undefined || insertAt < 0 || insertAt >= playlist.value.length) {
       playlist.value = [...playlist.value, ...cloned]
     }
     else {
       const next = [...playlist.value]
-      next.splice(atIndex, 0, ...cloned)
+      next.splice(insertAt, 0, ...cloned)
       playlist.value = next
     }
     errorMessage.value = ''

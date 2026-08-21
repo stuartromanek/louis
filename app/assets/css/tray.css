@@ -144,11 +144,15 @@
 
 .tray--toast .tray__face {
   background: var(--color-maru-green-lighter);
-  padding-bottom: 0.15rem;
+  padding-bottom: 0;
 }
 
 .tray--toast .tray__body {
-  padding: 0.15rem 0.85rem 0.75rem;
+  padding: 0.75rem 0.85rem;
+}
+
+.tray--toast:not(.tray--titled) .tray__handle {
+  display: none;
 }
 
 .tray--toast .tray__handle {
