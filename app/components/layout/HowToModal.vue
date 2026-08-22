@@ -3,31 +3,13 @@ import HowToYoutubeMock from '~/components/layout/howto/HowToYoutubeMock.vue'
 import HowToCardsMock from '~/components/layout/howto/HowToCardsMock.vue'
 import HowToPlaylistMock from '~/components/layout/howto/HowToPlaylistMock.vue'
 import MaruHeading from '~/components/layout/MaruHeading.vue'
-
-type Phase = 'idle' | 'entering' | 'open' | 'exiting'
+import AppFlyout from '~/components/layout/AppFlyout.vue'
 
 const open = defineModel<boolean>('open', { default: false })
 
 const { playEvent } = useUiSound()
 
-const phase = ref<Phase>('idle')
-const prefersReducedMotion = ref(false)
 const headingId = 'howto-heading'
-let timers: ReturnType<typeof setTimeout>[] = []
-
-const visible = computed(
-  () => phase.value === 'entering' || phase.value === 'open' || phase.value === 'exiting',
-)
-
-const interactive = computed(() => phase.value === 'open')
-
-const rootClass = computed(() => ({
-  'howto-modal': true,
-  'howto-modal--entering': phase.value === 'entering',
-  'howto-modal--open': phase.value === 'open',
-  'howto-modal--exiting': phase.value === 'exiting',
-  'howto-modal--reduced': prefersReducedMotion.value,
-}))
 
 const sections = [
   {
@@ -61,111 +43,34 @@ const sections = [
       'Watch capacity meters for track count and length',
       'Tap Update to save tracks to Yoto — long videos become multiple tracks and can take a while',
       'If the save downloads YouTube audio, you can normalize those new tracks; existing playlist tracks stay as they are',
-      'The playlist menu can Rename (saves the name to Yoto now) or Delete the loaded playlist',
+      'The playlist menu can set Artwork (generated covers), Rename (saves the name to Yoto now), or Delete the loaded playlist',
     ],
   },
 ] as const
 
-function clearTimers() {
-  for (const t of timers) clearTimeout(t)
-  timers = []
-}
-
-function after(ms: number, fn: () => void) {
-  timers.push(setTimeout(fn, ms))
-}
-
-function beginOpen() {
-  clearTimers()
-  phase.value = 'entering'
-  playEvent('toggleOn')
-
-  after(prefersReducedMotion.value ? 40 : 240, () => {
-    if (phase.value === 'entering') phase.value = 'open'
-  })
-}
-
-function beginClose() {
-  if (phase.value !== 'open' && phase.value !== 'entering') return
-  clearTimers()
-  phase.value = 'exiting'
-  playEvent('buttonClick')
-
-  after(prefersReducedMotion.value ? 40 : 220, () => {
-    phase.value = 'idle'
-    open.value = false
-  })
-}
-
-function onEscape(event: KeyboardEvent) {
-  if (event.key !== 'Escape') return
-  if (phase.value === 'open') {
-    event.preventDefault()
-    beginClose()
-  }
-}
-
 watch(open, (isOpen) => {
-  if (isOpen) {
-    if (phase.value === 'idle') beginOpen()
-    return
-  }
-  if (phase.value === 'open' || phase.value === 'entering') {
-    beginClose()
-  }
+  if (isOpen) playEvent('toggleOn')
 })
 
-onMounted(() => {
-  prefersReducedMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  window.addEventListener('keydown', onEscape)
-})
-
-onUnmounted(() => {
-  clearTimers()
-  window.removeEventListener('keydown', onEscape)
-})
+function onClose() {
+  playEvent('buttonClick')
+}
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="visible"
-      :class="rootClass"
-      role="presentation"
-    >
-      <div
-        class="howto-modal__backdrop"
-        aria-hidden="true"
-        @click="interactive && beginClose()"
-      />
-
-      <div
-        class="howto-modal__window border-maru rounded-maru bg-maru-white"
-        role="dialog"
-        aria-modal="true"
-        :aria-labelledby="headingId"
-        :aria-hidden="!interactive"
-      >
-        <header class="howto-modal__header border-maru-bottom">
-          <MaruHeading
-            :id="headingId"
-            text="Help"
-            tone="white"
-            size="sm"
-            as="h2"
-          />
-          <button
-            type="button"
-            class="howto-modal__close"
-            :disabled="!interactive"
-            aria-label="Close Help"
-            @click="beginClose"
-          >
-            Close
-          </button>
-        </header>
-
-        <div class="howto-modal__body">
+  <AppFlyout
+    v-model:open="open"
+    title="Help"
+    :heading-id="headingId"
+    heading-tone="white"
+    header-class="bg-maru-yellow"
+    face-class="bg-maru-white"
+    size="lg"
+    dismiss-label="Close Help"
+    :pad-body="false"
+    body-class="howto-modal__body"
+    @close="onClose"
+  >
           <p class="howto-modal__intro text-pretty m-0">
             This app helps you build Yoto playlists from YouTube.
             Search for videos, preview the audio, open a playlist (or start a New one and name it), arrange
@@ -239,8 +144,5 @@ onUnmounted(() => {
             >Report Issues</a>
             in the status bar (desktop) or Menu (phone).
           </p>
-        </div>
-      </div>
-    </div>
-  </Teleport>
+  </AppFlyout>
 </template>

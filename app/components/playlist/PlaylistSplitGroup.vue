@@ -2,8 +2,10 @@
 import { useSortable } from '@dnd-kit/vue/sortable'
 import type { PlaylistTrack } from '~/components/playlist/types'
 import { splitGroupSourceTitle, splitPartNumberLabel } from '#shared/myo-editor/splitTrack'
+import { canTrimTrack, isTrimmed } from '#shared/myo-editor/trackTrim'
 import { playlistDragId, type PlaylistDragData } from './dnd'
 import PlaylistTrackRow from './PlaylistTrackRow.vue'
+import { TRACK_TRIM_EDITOR_KEY } from '~/composables/useTrackTrimEditor'
 
 const props = defineProps<{
   tracks: PlaylistTrack[]
@@ -20,10 +22,12 @@ const firstTrack = computed(() => props.tracks[0]!)
 const groupId = computed(() => firstTrack.value.split?.groupId || firstTrack.value.id)
 const partCount = computed(() => props.tracks.length)
 const sourceTitle = computed(() => splitGroupSourceTitle(firstTrack.value.title))
+const canTrim = computed(() => canTrimTrack(firstTrack.value))
 
 const element = ref<HTMLElement | null>(null)
 const handle = ref<HTMLElement | null>(null)
 const { playEvent } = useUiSound()
+const trimEditor = inject(TRACK_TRIM_EDITOR_KEY)
 
 const { isDragging, isDropTarget } = useSortable({
   id: () => playlistDragId(`split:${groupId.value}`),
@@ -54,6 +58,12 @@ function onRemoveHover() {
 function onRemove() {
   emit('remove', firstTrack.value.id)
 }
+
+function onTrim() {
+  if (props.locked || !canTrim.value) return
+  playEvent('buttonClick')
+  trimEditor?.openForTrack(firstTrack.value.id)
+}
 </script>
 
 <template>
@@ -67,7 +77,7 @@ function onRemove() {
       'bg-maru-yellow-light ring-2 ring-maru-blue': isDropTarget && !isDragging,
     }"
   >
-    <header class="playlist-split-group__header border-maru-bottom bg-maru-yellow flex items-start gap-2 min-w-0 p-2 pr-2.5">
+    <header class="playlist-split-group__header border-maru-bottom bg-maru-yellow flex items-center gap-2 min-w-0 p-2 pr-2.5">
       <button
         ref="handle"
         type="button"
@@ -77,6 +87,19 @@ function onRemove() {
         <span /><span /><span />
       </button>
       <h3 class="type-title-sm font-maru-medium line-clamp-2 min-w-0 flex-1">{{ sourceTitle }}</h3>
+      <button
+        v-if="canTrim"
+        type="button"
+        class="playlist-trim"
+        :class="{ 'playlist-trim--on': isTrimmed(firstTrack) }"
+        :disabled="locked"
+        :aria-label="`Trim ${sourceTitle}`"
+        aria-haspopup="dialog"
+        @mouseenter="onRemoveHover"
+        @click="onTrim"
+      >
+        <MaruEmoji name="Scissors" size="md" />
+      </button>
       <button
         type="button"
         class="playlist-remove"
@@ -99,6 +122,7 @@ function onRemove() {
         :display-title="splitPartNumberLabel(track.split?.index ?? 0)"
         :part-label="partLabel(track)"
         hide-remove
+        hide-trim
       />
     </div>
   </li>

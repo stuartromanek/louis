@@ -13,6 +13,7 @@ const emit = defineEmits<{
 }>()
 
 const { showError } = useToast()
+const { trackArtIconSize, setTrackArtIconSize } = useUserPreferences()
 
 const search = ref('')
 const publicIcons = ref<TrackArtIconItem[]>([])
@@ -33,8 +34,18 @@ const columnCount = ref(1)
 
 const ICON_SIZES = [32, 64] as const
 type IconSize = (typeof ICON_SIZES)[number]
-/** Index into ICON_SIZES — desktop default 32; phone forced to 64. */
-const iconSizeIndex = ref(0)
+
+function indexForSize(size: 32 | 64): number {
+  const idx = ICON_SIZES.indexOf(size)
+  return idx >= 0 ? idx : 0
+}
+
+function isPhoneLayout() {
+  return import.meta.client && window.matchMedia('(max-width: 599px)').matches
+}
+
+/** Index into ICON_SIZES — desktop from prefs (default 32); phone forced to 64. */
+const iconSizeIndex = ref(indexForSize(trackArtIconSize.value))
 
 const iconSize = computed<IconSize>(() => ICON_SIZES[iconSizeIndex.value] ?? 32)
 
@@ -58,15 +69,19 @@ const uploadAriaLabel = computed(() => {
 
 function syncPhoneIconSize() {
   if (!import.meta.client) return
-  if (window.matchMedia('(max-width: 599px)').matches) {
+  if (isPhoneLayout()) {
     iconSizeIndex.value = ICON_SIZES.indexOf(64)
+    return
   }
+  iconSizeIndex.value = indexForSize(trackArtIconSize.value)
 }
 
 function onIconSizeInput(event: Event) {
   const value = Number((event.target as HTMLInputElement).value)
   if (!Number.isFinite(value)) return
   iconSizeIndex.value = Math.min(ICON_SIZES.length - 1, Math.max(0, Math.round(value)))
+  const size = ICON_SIZES[iconSizeIndex.value]
+  if (size && !isPhoneLayout()) setTrackArtIconSize(size)
 }
 
 let communityTimer: ReturnType<typeof setTimeout> | null = null

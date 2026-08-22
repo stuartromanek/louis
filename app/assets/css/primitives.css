@@ -294,3 +294,9 @@
   text-wrap: pretty;
   pointer-events: none;
 }
+
+.maru-tooltip__bubble--media {
+  padding: 0.3rem;
+  line-height: 0;
+  font-size: 0;
+}

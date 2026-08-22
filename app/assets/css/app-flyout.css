@@ -1,0 +1,225 @@
+/* ─── Shared centered flyout (trim / artwork / track art / help / settings) ─── */
+
+.app-flyout {
+  --app-flyout-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --app-flyout-dur: 180ms;
+  --app-flyout-width: 36rem;
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  pointer-events: auto;
+}
+
+.app-flyout--sm {
+  --app-flyout-width: 24rem;
+}
+
+.app-flyout--md {
+  --app-flyout-width: 36rem;
+}
+
+.app-flyout--lg {
+  --app-flyout-width: 44rem;
+}
+
+.app-flyout--xl {
+  --app-flyout-width: min(1100px, 100%);
+}
+
+.app-flyout--full {
+  --app-flyout-width: min(64rem, calc(100vw - 1.5rem));
+}
+
+.app-flyout__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  background: rgb(0 0 0 / 0.45);
+}
+
+.app-flyout__backdrop:disabled {
+  cursor: default;
+}
+
+.app-flyout__panel {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+  overflow: visible;
+  width: var(--app-flyout-width);
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100dvh - 2rem);
+  transform-origin: center;
+}
+
+.app-flyout--lg .app-flyout__panel,
+.app-flyout--xl .app-flyout__panel,
+.app-flyout--full .app-flyout__panel {
+  height: min(85dvh, calc(100dvh - 2rem));
+  max-height: min(85dvh, calc(100dvh - 2rem));
+}
+
+.app-flyout--full .app-flyout__panel {
+  height: calc(100dvh - 1.5rem);
+  max-height: calc(100dvh - 1.5rem);
+}
+
+.app-flyout__face {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: inherit;
+  overflow: hidden;
+  border-radius: var(--radius-maru);
+  box-shadow:
+    4px 4px 0 var(--color-maru-black),
+    8px 8px 0 var(--color-maru-black);
+}
+
+.app-flyout--lg .app-flyout__face,
+.app-flyout--xl .app-flyout__face,
+.app-flyout--full .app-flyout__face {
+  height: 100%;
+}
+
+.app-flyout__header .maru-heading {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+}
+
+.app-flyout__header .maru-heading__label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  line-height: 1;
+  padding-block: 0.12em;
+  /* Same-element stroke so the ellipsis gets the outline too.
+     MaruHeading's ::before duplicate skips punctuation like …. */
+  -webkit-text-stroke: 3.2px var(--color-maru-black);
+  paint-order: stroke fill;
+}
+
+.app-flyout__header .maru-heading__label::before {
+  content: none;
+}
+
+.app-flyout__body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.app-flyout__body--pad {
+  padding: 1rem;
+}
+
+.app-flyout__body--scroll {
+  overflow-y: auto;
+}
+
+.app-flyout__body--flush {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-flyout__footer-content {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.app-flyout__footer-content > :last-child {
+  margin-inline-start: auto;
+}
+
+.app-flyout .toast__dismiss {
+  z-index: 2;
+  animation: toast-dismiss-enter 560ms linear backwards;
+  animation-delay: var(--app-flyout-dur);
+}
+
+.app-flyout .toast__dismiss:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .app-flyout--yellow .toast__dismiss:hover:not(:disabled) {
+    background: var(--color-maru-white);
+  }
+}
+
+.app-flyout-enter-active,
+.app-flyout-leave-active {
+  transition: opacity var(--app-flyout-dur) var(--app-flyout-ease);
+}
+
+.app-flyout-enter-active .app-flyout__panel,
+.app-flyout-leave-active .app-flyout__panel {
+  transition: transform var(--app-flyout-dur) var(--app-flyout-ease);
+}
+
+.app-flyout-enter-from,
+.app-flyout-leave-to {
+  opacity: 0;
+}
+
+.app-flyout-enter-from .app-flyout__panel,
+.app-flyout-leave-to .app-flyout__panel {
+  transform: scale(0.95);
+}
+
+@media (max-width: 599px) {
+  .app-flyout--full {
+    padding: max(0.35rem, env(safe-area-inset-top)) max(0.35rem, env(safe-area-inset-right))
+      max(0.35rem, env(safe-area-inset-bottom)) max(0.35rem, env(safe-area-inset-left));
+    align-items: stretch;
+  }
+
+  .app-flyout--full .app-flyout__panel {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+  }
+}
+
+@media (max-width: 310px) {
+  .app-flyout {
+    padding: 0.5rem;
+  }
+
+  .app-flyout__panel {
+    max-width: calc(100vw - 1rem);
+    max-height: calc(100dvh - 1rem);
+  }
+
+  .app-flyout__face {
+    box-shadow: 3px 3px 0 var(--color-maru-black);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-flyout-enter-active .app-flyout__panel,
+  .app-flyout-leave-active .app-flyout__panel {
+    transition: none;
+  }
+
+  .app-flyout-enter-from .app-flyout__panel,
+  .app-flyout-leave-to .app-flyout__panel {
+    transform: none;
+  }
+
+  .app-flyout .toast__dismiss {
+    animation: none;
+  }
+}

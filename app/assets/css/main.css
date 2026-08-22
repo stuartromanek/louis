@@ -17,9 +17,11 @@
 @import "./panel-footer.css";
 @import "./mobile.css";
 @import "./tray.css";
+@import "./app-flyout.css";
 @import "./status-bar.css";
 @import "./splash.css";
 @import "./auth-gate.css";
 @import "./preferences.css";
 @import "./howto.css";
 @import "./track-art.css";
+@import "./track-trim.css";

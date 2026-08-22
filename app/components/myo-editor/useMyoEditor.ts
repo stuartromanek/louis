@@ -18,8 +18,16 @@ import {
   writePodcastCardIds,
 } from './draftPersistence'
 import type { SaveJobState, YotoCardDetail } from './types'
-import { getPlaylistPreflightLimitError } from '#shared/myo-editor/yotoMyoLimits'
-import { selectIncomingTracks, snapInsertTrackIndex } from '#shared/myo-editor/splitTrack'
+import { getPlaylistCapacitySnapshot, getPlaylistPreflightLimitError } from '#shared/myo-editor/yotoMyoLimits'
+import {
+  applySourceTrimAndSplit,
+  blockIndexForTrack,
+  playlistBlocks,
+  selectIncomingTracks,
+  snapInsertTrackIndex,
+  splitSourceDuration,
+  trackIndexForBlock,
+} from '#shared/myo-editor/splitTrack'
 import {
   collectPendingUpdateTargets,
   pendingTargetFrom,
@@ -46,6 +54,7 @@ import {
   saveProgressStamp,
   shouldAbandonClientPoll,
 } from '#shared/myo-editor/savePoll'
+import type { PlaylistArtworkSpec } from '#shared/myo-editor/playlistArtwork'
 
 export type UpdatePromptKind = 'capacity' | 'normalize'
 export type UpdatePromptSurface = 'footer' | 'dialog'
@@ -90,6 +99,12 @@ export interface UseMyoEditorOptions {
   onPlaylistCreated?: (cardId: string) => void
   onPlaylistRenamed?: (cardId: string, title: string) => void
   onPlaylistDeleted?: (cardId: string) => void
+  onPlaylistCoverChanged?: (cardId: string, coverUrl: string) => void
+  onPlaylistSaved?: (cardId: string, stats: {
+    duration: number
+    trackCount: number
+    title?: string
+  }) => void
 }
 
 export interface MyoEditorContext {
@@ -150,13 +165,20 @@ export interface MyoEditorContext {
     icon16x16: string,
     previewUrl: string,
   ) => Promise<{ patched: boolean; error?: string }>
+  setTrackTrim: (trackId: string, trim: PlaylistTrack['trim'] | null) => void
   playlistManagePrompt: Ref<PlaylistManagePrompt | null>
   playlistManageBusy: Ref<boolean>
+  playlistArtworkOpen: Ref<boolean>
+  playlistCoverUrl: ComputedRef<string | null>
   startRename: () => boolean
   startDelete: () => boolean
+  startArtwork: () => boolean
+  closeArtwork: () => void
   cancelPlaylistManage: () => void
   confirmRename: (title: string) => Promise<boolean>
   confirmDelete: () => Promise<boolean>
+  confirmArtwork: (spec: PlaylistArtworkSpec) => Promise<boolean>
+  confirmArtworkUpload: (file: Blob) => Promise<boolean>
 }
 
 export const MYO_EDITOR_KEY: InjectionKey<MyoEditorContext> = Symbol('myoEditor')
@@ -165,6 +187,9 @@ function playlistSnapshot(playlist: PlaylistTrack[]): string {
   return JSON.stringify(playlist.map(track => ({
     id: playlistRowId(track),
     icon: resolveTrackIcon(track).icon16x16,
+    trim: track.trim
+      ? [track.trim.startSeconds, track.trim.endSeconds]
+      : null,
   })))
 }
 
@@ -178,6 +203,8 @@ function clonePlaylist(playlist: PlaylistTrack[]): PlaylistTrack[] {
           display: item.yotoReuse.display ? { ...item.yotoReuse.display } : item.yotoReuse.display,
         }
       : item.yotoReuse,
+    split: item.split ? { ...item.split } : item.split,
+    trim: item.trim ? { ...item.trim } : item.trim,
   }))
 }
 
@@ -613,6 +640,19 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
       playEvent('saveComplete')
     }
 
+    const savedPlaylist = isSelected
+      ? playlist.value
+      : (existing?.snapshot.playlist ?? [])
+    const savedTitle = isSelected
+      ? cardTitle.value
+      : (existing?.snapshot.cardTitle ?? titleFallback ?? '')
+    const capacity = getPlaylistCapacitySnapshot(savedPlaylist)
+    options.onPlaylistSaved?.(cardId, {
+      duration: capacity.knownDurationSeconds,
+      trackCount: capacity.trackCount,
+      title: savedTitle,
+    })
+
     deleteSaveState(cardId)
     removePersistedSave(cardId)
     clearPendingDraft(cardId)
@@ -808,6 +848,9 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     cancelPlaylistManage()
 
     if (selectedCardId.value === card.cardId && !errorMessage.value && !isNewPlaylist.value) {
+      if (!libraryCoverUrl.value && card.coverUrl?.trim()) {
+        libraryCoverUrl.value = card.coverUrl.trim()
+      }
       return
     }
 
@@ -834,6 +877,7 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     errorMessage.value = ''
     selectedCardId.value = card.cardId
     cardTitle.value = card.title
+    libraryCoverUrl.value = card.coverUrl?.trim() || null
 
     const inFlightSave = getSaveState(card.cardId)
     if (inFlightSave && !isTerminalStatus(inFlightSave.status)) {
@@ -915,6 +959,7 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     isNewPlaylist.value = true
     isPodcast.value = false
     originalCardDetail.value = null
+    libraryCoverUrl.value = null
     errorMessage.value = ''
     setCreateOutcomeUncertain(false)
     pendingCreateTracks.value = []
@@ -1086,6 +1131,7 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     playlist.value = []
     baselinePlaylist.value = []
     originalCardDetail.value = null
+    libraryCoverUrl.value = null
     errorMessage.value = ''
     setCreateOutcomeUncertain(false)
     cancelPlaylistManage(true)
@@ -1116,6 +1162,34 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     const next = applyTrackIcon(current, icon16x16, previewUrl)
     const copy = clonePlaylist(playlist.value)
     copy[index] = next
+    playlist.value = copy
+  }
+
+  function setTrackTrim(trackId: string, trim: PlaylistTrack['trim'] | null) {
+    if (isPlaylistLocked.value || isPodcast.value) return
+    const index = playlist.value.findIndex(track => track.id === trackId)
+    if (index < 0) return
+    const current = playlist.value[index]!
+    const blockIndex = blockIndexForTrack(playlist.value, index)
+    if (blockIndex < 0) return
+    const block = playlistBlocks(playlist.value)[blockIndex]
+    if (!block) return
+    const sourceDuration = splitSourceDuration(current, playlist.value)
+    const start = trackIndexForBlock(playlist.value, blockIndex)
+    const copy = clonePlaylist(playlist.value)
+    if (!(sourceDuration > 0)) {
+      for (let offset = 0; offset < block.tracks.length; offset++) {
+        const row = copy[start + offset]
+        if (!row) continue
+        if (trim) row.trim = { ...trim }
+        else delete row.trim
+      }
+      playlist.value = copy
+      return
+    }
+    const source = clonePlaylist([block.tracks[0]!])[0]!
+    const rows = applySourceTrimAndSplit(source, trim, sourceDuration)
+    copy.splice(start, block.tracks.length, ...clonePlaylist(rows))
     playlist.value = copy
   }
 
@@ -1180,6 +1254,15 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
 
   const playlistManagePrompt = ref<PlaylistManagePrompt | null>(null)
   const playlistManageBusy = ref(false)
+  const playlistArtworkOpen = ref(false)
+  const libraryCoverUrl = ref<string | null>(null)
+
+  const playlistCoverUrl = computed(() => {
+    const imageL = originalCardDetail.value?.metadata?.cover?.imageL
+    if (typeof imageL === 'string' && imageL.trim()) return imageL.trim()
+    const fromLibrary = libraryCoverUrl.value?.trim()
+    return fromLibrary || null
+  })
 
   function canManageLoadedPlaylist(): boolean {
     return Boolean(
@@ -1195,11 +1278,13 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
   function cancelPlaylistManage(force = false) {
     if (playlistManageBusy.value && !force) return
     playlistManagePrompt.value = null
+    playlistArtworkOpen.value = false
   }
 
   function startRename(): boolean {
     if (!canManageLoadedPlaylist()) return false
     cancelUpdatePrompt()
+    playlistArtworkOpen.value = false
     playlistManagePrompt.value = 'rename'
     return true
   }
@@ -1207,8 +1292,22 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
   function startDelete(): boolean {
     if (!canManageLoadedPlaylist()) return false
     cancelUpdatePrompt()
+    playlistArtworkOpen.value = false
     playlistManagePrompt.value = 'delete'
     return true
+  }
+
+  function startArtwork(): boolean {
+    if (!canManageLoadedPlaylist()) return false
+    cancelUpdatePrompt()
+    playlistManagePrompt.value = null
+    playlistArtworkOpen.value = true
+    return true
+  }
+
+  function closeArtwork() {
+    if (playlistManageBusy.value) return
+    playlistArtworkOpen.value = false
   }
 
   function apiErrorMessage(err: unknown, fallback: string): string {
@@ -1283,6 +1382,98 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     }
     catch (err: unknown) {
       errorMessage.value = apiErrorMessage(err, 'Failed to delete playlist')
+      playEvent('saveError')
+      return false
+    }
+    finally {
+      playlistManageBusy.value = false
+    }
+  }
+
+  async function confirmArtwork(spec: PlaylistArtworkSpec): Promise<boolean> {
+    const cardId = selectedCardId.value
+    if (!cardId || !playlistArtworkOpen.value) return false
+    if (!canManageLoadedPlaylist() && !playlistManageBusy.value) return false
+    if (isPlaylistLocked.value || saveStarting.value || loading.value) return false
+    if (playlistManageBusy.value) return false
+
+    playlistManageBusy.value = true
+    try {
+      const result = await $fetch<{ ok: true; coverUrl: string }>(
+        `/api/yoto/content/${cardId}/patch-cover`,
+        {
+          method: 'POST',
+          body: spec,
+        },
+      )
+      const coverUrl = result.coverUrl?.trim()
+      if (!coverUrl) {
+        throw new Error('Cover save did not return an image URL')
+      }
+      if (originalCardDetail.value) {
+        originalCardDetail.value = {
+          ...originalCardDetail.value,
+          metadata: {
+            ...originalCardDetail.value.metadata,
+            cover: { imageL: coverUrl },
+          },
+        }
+      }
+      libraryCoverUrl.value = coverUrl
+      errorMessage.value = ''
+      playlistArtworkOpen.value = false
+      options.onPlaylistCoverChanged?.(cardId, coverUrl)
+      return true
+    }
+    catch (err: unknown) {
+      errorMessage.value = apiErrorMessage(err, 'Failed to save playlist artwork')
+      playEvent('saveError')
+      return false
+    }
+    finally {
+      playlistManageBusy.value = false
+    }
+  }
+
+  async function confirmArtworkUpload(file: Blob): Promise<boolean> {
+    const cardId = selectedCardId.value
+    if (!cardId || !playlistArtworkOpen.value) return false
+    if (!canManageLoadedPlaylist() && !playlistManageBusy.value) return false
+    if (isPlaylistLocked.value || saveStarting.value || loading.value) return false
+    if (playlistManageBusy.value) return false
+
+    playlistManageBusy.value = true
+    try {
+      const body = new FormData()
+      body.append('file', file, 'cover.png')
+      const result = await $fetch<{ ok: true; coverUrl: string }>(
+        `/api/yoto/content/${cardId}/patch-cover-upload`,
+        {
+          method: 'POST',
+          body,
+        },
+      )
+      const coverUrl = result.coverUrl?.trim()
+      if (!coverUrl) {
+        throw new Error('Cover save did not return an image URL')
+      }
+      if (originalCardDetail.value) {
+        originalCardDetail.value = {
+          ...originalCardDetail.value,
+          metadata: {
+            ...originalCardDetail.value.metadata,
+            cover: { imageL: coverUrl },
+          },
+        }
+      }
+      libraryCoverUrl.value = coverUrl
+      errorMessage.value = ''
+      playlistArtworkOpen.value = false
+      options.onPlaylistCoverChanged?.(cardId, coverUrl)
+      return true
+    }
+    catch (err: unknown) {
+      errorMessage.value = apiErrorMessage(err, 'Failed to save playlist artwork')
       playEvent('saveError')
       return false
     }
@@ -1650,12 +1841,19 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     updateCard,
     setTrackArt,
     persistTrackArt,
+    setTrackTrim,
     playlistManagePrompt,
     playlistManageBusy,
+    playlistArtworkOpen,
+    playlistCoverUrl,
     startRename,
     startDelete,
+    startArtwork,
+    closeArtwork,
     cancelPlaylistManage,
     confirmRename,
     confirmDelete,
+    confirmArtwork,
+    confirmArtworkUpload,
   }
 }

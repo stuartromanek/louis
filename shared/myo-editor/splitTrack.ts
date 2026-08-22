@@ -1,6 +1,14 @@
 import type { PlaylistTrack, TrackSplit } from './types.ts'
 import { playlistHasTrack } from './playlistTrackMatch.ts'
 import {
+  clampTrim,
+  isFullFileTrim,
+  scaleTrimToDuration,
+  sourceDurationSeconds,
+  sourceFileDurationSeconds,
+  type TrackTrim,
+} from './trackTrim.ts'
+import {
   YOTO_MYO_MAX_TRACKS,
   YOTO_MYO_MAX_TRACK_SECONDS,
   YOTO_MYO_SPLIT_TRACK_SECONDS,
@@ -84,14 +92,23 @@ export function makeTrackSplit(
   groupId: string,
   index: number,
   plan: TrackSplitPlan,
+  options?: {
+    sourceDurationSeconds?: number
+    offsetSeconds?: number
+  },
 ): TrackSplit {
   const part = plan.parts[index]!
+  const offset = options?.offsetSeconds ?? 0
+  const sourceDurationSeconds = options?.sourceDurationSeconds
   return {
     groupId,
     index,
     count: plan.count,
-    startSeconds: part.start,
+    startSeconds: offset + part.start,
     durationSeconds: part.duration,
+    ...(typeof sourceDurationSeconds === 'number' && sourceDurationSeconds > 0
+      ? { sourceDurationSeconds }
+      : {}),
   }
 }
 
@@ -109,6 +126,8 @@ export function isValidTrackSplit(value: unknown): value is TrackSplit {
     && split.startSeconds >= 0
     && Number.isFinite(split.durationSeconds)
     && split.durationSeconds > 0
+    && (split.sourceDurationSeconds === undefined
+      || (Number.isFinite(split.sourceDurationSeconds) && split.sourceDurationSeconds > 0))
 }
 
 export function playlistBlocks(playlist: PlaylistTrack[]): PlaylistBlock[] {
@@ -325,29 +344,6 @@ export function scaleSplitParts(
   })
 }
 
-export function expandUnsplitTrack(
-  track: PlaylistTrack,
-  actualDuration: number,
-): PlaylistTrack[] | null {
-  if (track.split) return null
-  const youtubeId = track.youtubeId?.trim()
-  if (!youtubeId) return null
-  const plan = planTrackSplit(actualDuration)
-  if (!plan) return null
-
-  const baseTitle = splitGroupSourceTitle(track.title)
-  return plan.parts.map((part, index) => ({
-    ...track,
-    id: splitPartTrackId(youtubeId, index),
-    title: splitPartTitle(baseTitle, index),
-    duration: part.duration,
-    split: makeTrackSplit(youtubeId, index, plan),
-    chapterKey: undefined,
-    trackKey: undefined,
-    yotoReuse: undefined,
-  }))
-}
-
 function asUnsplitSource(track: PlaylistTrack, actualDuration: number): PlaylistTrack {
   const { split: _split, ...rest } = track
   return {
@@ -357,8 +353,110 @@ function asUnsplitSource(track: PlaylistTrack, actualDuration: number): Playlist
   }
 }
 
-export function scaledPartsExceedMaxTrack(parts: SplitPartRange[]): boolean {
-  return parts.some(part => part.duration > YOTO_MYO_MAX_TRACK_SECONDS)
+/**
+ * Apply a full-file keep-region, then auto-split the keep duration.
+ * Split offsets are absolute in the YouTube file.
+ */
+export function applySourceTrimAndSplit(
+  source: PlaylistTrack,
+  trim: TrackTrim | null,
+  sourceDuration: number,
+): PlaylistTrack[] {
+  const youtubeId = source.youtubeId?.trim()
+  const duration = Number.isFinite(sourceDuration) && sourceDuration > 0 ? sourceDuration : 0
+  const baseTitle = splitGroupSourceTitle(source.title)
+  const { split: _split, ...rest } = source
+
+  const resolved = trim
+    ? clampTrim(trim.startSeconds, trim.endSeconds, duration)
+    : { startSeconds: 0, endSeconds: duration }
+  const keepTrim = duration > 0
+    && !isFullFileTrim(resolved.startSeconds, resolved.endSeconds, duration)
+    ? resolved
+    : null
+  const keepStart = keepTrim?.startSeconds ?? 0
+  const keepDuration = keepTrim
+    ? keepTrim.endSeconds - keepTrim.startSeconds
+    : duration
+
+  const base: PlaylistTrack = {
+    ...rest,
+    title: baseTitle,
+    duration,
+  }
+  delete base.split
+  if (keepTrim) base.trim = { ...keepTrim }
+  else delete base.trim
+
+  if (!youtubeId || duration <= 0) {
+    return [base]
+  }
+
+  const plan = planTrackSplit(keepDuration)
+  if (!plan) {
+    return [{
+      ...base,
+      id: youtubeId,
+      title: baseTitle,
+      duration,
+      chapterKey: undefined,
+      trackKey: undefined,
+      yotoReuse: undefined,
+    }]
+  }
+
+  return plan.parts.map((part, index) => ({
+    ...base,
+    id: splitPartTrackId(youtubeId, index),
+    title: splitPartTitle(baseTitle, index),
+    duration: part.duration,
+    split: makeTrackSplit(youtubeId, index, plan, {
+      sourceDurationSeconds: duration,
+      offsetSeconds: keepStart,
+    }),
+    chapterKey: undefined,
+    trackKey: undefined,
+    yotoReuse: undefined,
+  }))
+}
+
+export function expandUnsplitTrack(
+  track: PlaylistTrack,
+  actualDuration: number,
+): PlaylistTrack[] | null {
+  if (track.split) return null
+  const youtubeId = track.youtubeId?.trim()
+  if (!youtubeId) return null
+  const rows = applySourceTrimAndSplit(track, track.trim ?? null, actualDuration)
+  return rows.length >= 2 ? rows : null
+}
+
+export function splitGroupSourceDuration(tracks: PlaylistTrack[]): number {
+  const stored = tracks[0]?.split?.sourceDurationSeconds
+  if (typeof stored === 'number' && stored > 0) return stored
+  return tracks.reduce(
+    (max, item) => Math.max(max, (item.split?.startSeconds ?? 0) + (item.split?.durationSeconds ?? 0)),
+    0,
+  )
+}
+
+/** Full YouTube length for the trim editor / replan (not the chapter length). */
+export function splitSourceDuration(
+  track: PlaylistTrack,
+  playlist: PlaylistTrack[] = [],
+): number {
+  const file = sourceFileDurationSeconds(track)
+  if (file) return file
+  if (track.split && playlist.length > 0) {
+    const block = playlistBlocks(playlist).find(
+      item => item.kind === 'split' && item.tracks.some(row => row.id === track.id),
+    )
+    if (block?.kind === 'split') {
+      const inferred = splitGroupSourceDuration(block.tracks)
+      if (inferred > 0) return inferred
+    }
+  }
+  return sourceDurationSeconds(track) ?? 0
 }
 
 /**
@@ -379,7 +477,33 @@ export function resolveSplitCuts(
   return { ranges: plan.parts, replanned: plan }
 }
 
-/** Expand unsplit longs and re-plan split groups whose scaled parts would exceed 60 minutes. */
+export function scaledPartsExceedMaxTrack(parts: SplitPartRange[]): boolean {
+  return parts.some(part => part.duration > YOTO_MYO_MAX_TRACK_SECONDS)
+}
+
+function mergeReplannedGroup(
+  previous: PlaylistTrack[],
+  next: PlaylistTrack[],
+): PlaylistTrack[] {
+  if (previous.length !== next.length) return next
+  return next.map((row, index) => {
+    const prior = previous[index]
+    if (!prior) return row
+    if (Boolean(prior.split) !== Boolean(row.split)) return row
+    if (prior.split && row.split && prior.split.index !== row.split.index) return row
+    const merged: PlaylistTrack = {
+      ...prior,
+      duration: row.duration,
+      title: row.title,
+      split: row.split,
+    }
+    if (row.trim) merged.trim = { ...row.trim }
+    else delete merged.trim
+    return merged
+  })
+}
+
+/** Expand unsplit longs and re-plan split groups from source trim + probed duration. */
 export function applyProbedDurations(
   playlist: PlaylistTrack[],
   durationByYoutubeId: ReadonlyMap<string, number>,
@@ -387,41 +511,20 @@ export function applyProbedDurations(
   const out: PlaylistTrack[] = []
   for (const block of playlistBlocks(playlist)) {
     if (block.kind === 'split') {
-      const youtubeId = block.tracks[0]?.youtubeId?.trim()
+      const first = block.tracks[0]!
+      const youtubeId = first.youtubeId?.trim()
       const actual = youtubeId ? durationByYoutubeId.get(youtubeId) : undefined
       if (!actual) {
         out.push(...block.tracks)
         continue
       }
-      const planned: SplitPartRange[] = block.tracks.map(item => ({
-        start: item.split!.startSeconds,
-        duration: item.split!.durationSeconds,
-      }))
-      const plannedTotal = planned.reduce(
-        (sum, part) => Math.max(sum, part.start + part.duration),
-        0,
-      )
-      const { ranges, replanned } = resolveSplitCuts(planned, plannedTotal, actual)
-      if (replanned && replanned.count !== block.tracks.length) {
-        const expanded = expandUnsplitTrack(asUnsplitSource(block.tracks[0]!, actual), actual)
-        if (expanded) {
-          out.push(...expanded)
-          continue
-        }
-      }
-      out.push(...block.tracks.map((item, index) => {
-        const range = ranges[index]
-        if (!range || !item.split) return item
-        return {
-          ...item,
-          duration: range.duration,
-          split: {
-            ...item.split,
-            startSeconds: range.start,
-            durationSeconds: range.duration,
-          },
-        }
-      }))
+      const plannedSource = splitGroupSourceDuration(block.tracks)
+      const source = asUnsplitSource(first, actual)
+      const trim = scaleTrimToDuration(first.trim ?? null, plannedSource, actual)
+      out.push(...mergeReplannedGroup(
+        block.tracks,
+        applySourceTrimAndSplit(source, trim, actual),
+      ))
       continue
     }
 
@@ -429,11 +532,22 @@ export function applyProbedDurations(
     const youtubeId = track.youtubeId?.trim()
     const actual = youtubeId ? durationByYoutubeId.get(youtubeId) : undefined
     if (actual) {
-      const expanded = expandUnsplitTrack(track, actual)
-      if (expanded) {
-        out.push(...expanded)
+      const fromDuration = track.duration ?? actual
+      const trim = scaleTrimToDuration(track.trim ?? null, fromDuration, actual)
+      const rows = applySourceTrimAndSplit(
+        { ...track, duration: actual },
+        trim,
+        actual,
+      )
+      if (rows.length === 1 && !rows[0]?.split) {
+        const merged: PlaylistTrack = { ...track, duration: actual }
+        if (trim) merged.trim = { ...trim }
+        else delete merged.trim
+        out.push(merged)
         continue
       }
+      out.push(...rows)
+      continue
     }
     out.push(track)
   }

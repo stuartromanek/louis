@@ -1,141 +1,14 @@
-/* ─── Settings projector modal ─── */
+/* ─── Settings flyout content ─── */
 
-.prefs-projector {
-  position: fixed;
-  inset: 0;
-  z-index: 130;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 0 1rem;
-  overflow: hidden;
-  pointer-events: auto;
-}
-
-.prefs-projector__backdrop {
-  position: absolute;
-  inset: 0;
-  background: color-mix(in srgb, var(--color-maru-black) 55%, transparent);
-  opacity: 0;
-  transition: opacity 0.45s ease-out;
-}
-
-.prefs-projector--entering .prefs-projector__backdrop,
-.prefs-projector--open .prefs-projector__backdrop {
-  opacity: 1;
-}
-
-.prefs-projector--exiting .prefs-projector__backdrop {
-  opacity: 0;
-  transition-duration: 0.28s;
-}
-
-.prefs-projector__stage {
-  position: relative;
-  z-index: 1;
-  /* Fixed shell height so General ↔ Advanced does not resize the projector */
-  width: min(100%, 44rem);
-  height: min(85dvh, calc(100dvh - 3.5rem));
-  max-height: min(85dvh, calc(100dvh - 3.5rem));
-  margin-top: 0;
-  pointer-events: none;
-}
-
-.prefs-projector__screen {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  max-height: inherit;
-  margin-inline: auto;
-  border: 3px solid var(--color-maru-black);
-  border-radius: 0 0 var(--radius-maru) var(--radius-maru);
-  border-top: none;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--color-maru-yellow-light) 35%, var(--color-maru-white)) 0%,
-      var(--color-maru-white) 40%
-    );
-  box-shadow: 6px 6px 0 var(--color-maru-black);
-  transform: translateY(-105%);
-  transform-origin: top center;
-  pointer-events: auto;
-  overflow: hidden;
-}
-
-.prefs-projector__screen::before {
-  content: '';
-  position: absolute;
-  top: -14px;
-  left: -3px;
-  right: -3px;
-  height: 14px;
-  background: var(--color-maru-black);
-  border-radius: 0;
-  /* Sits under the viewport top; clipped by .prefs-projector overflow */
-}
-
-.prefs-projector__screen::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--color-maru-black) 5%, transparent) 0,
-    color-mix(in srgb, var(--color-maru-black) 5%, transparent) 1px,
-    transparent 1px,
-    transparent 3px
-  );
-  opacity: 0.25;
-  mix-blend-mode: multiply;
-}
-
-.prefs-projector--entering .prefs-projector__screen {
-  animation: prefs-screen-drop 0.6s cubic-bezier(0.33, 0.1, 0.25, 1) 0.1s both;
-}
-
-.prefs-projector--open .prefs-projector__screen {
-  transform: translateY(0);
-}
-
-.prefs-projector--exiting .prefs-projector__screen {
-  /* Keep seated until raise animation owns transform — avoids snap to -105% */
-  transform: translateY(0);
-  animation: prefs-screen-raise 0.28s cubic-bezier(0.55, 0.05, 0.9, 0.35) forwards;
-}
-
-.prefs-projector__projected {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.prefs-projector__layout-wrap {
   flex: 1 1 auto;
-  height: 100%;
   min-height: 0;
-  padding: 1.75rem 1.25rem 1.5rem;
-  opacity: 0;
-  filter: brightness(2.2) contrast(1.4);
+  height: 100%;
+  padding: 1rem 1.25rem;
 }
 
-.prefs-projector--entering .prefs-projector__projected {
-  animation: prefs-projector-flicker 0.6s steps(2, end) 0.65s both;
-}
-
-.prefs-projector--open .prefs-projector__projected,
-.prefs-projector__projected--live {
-  opacity: 1;
-  filter: none;
-}
-
-.prefs-projector--exiting .prefs-projector__projected {
-  opacity: 1;
-  filter: none;
-  /* Slight fade as shade rises so cut isn't a hard flash */
-  animation: prefs-projected-exit 0.2s ease-in forwards;
+.prefs-projector__layout-wrap .prefs-projector__layout {
+  height: 100%;
 }
 
 .prefs-projector__layout {
@@ -226,18 +99,6 @@
   padding-bottom: 0.25rem;
 }
 
-.prefs-projector__footer {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem 1rem;
-  flex-shrink: 0;
-  margin-top: 0.25rem;
-  padding-top: 0.85rem;
-  border-top: 1px solid color-mix(in srgb, var(--color-maru-black) 18%, transparent);
-}
-
 @media (max-width: 599px) {
   .prefs-projector__layout {
     flex-direction: column;
@@ -258,77 +119,6 @@
     text-align: center;
     padding: 0.45rem 0.4rem;
     font-size: var(--text-maru-meta);
-  }
-}
-
-.prefs-projector__title {
-  margin: 0 0 0.75rem;
-  display: flex;
-  flex-wrap: wrap;
-  flex-shrink: 0;
-  gap: 0.08em;
-  /* Intentional one-off — not a shared type role */
-  font-size: clamp(1.35rem, 1rem + 1.2vw, 1.85rem);
-  line-height: 0.85;
-  letter-spacing: 0.04em;
-  color: var(--color-maru-black);
-}
-
-.prefs-projector__title-char {
-  position: relative;
-  z-index: 1;
-  isolation: isolate;
-  display: inline-block;
-  line-height: 0.85;
-  text-transform: uppercase;
-}
-
-.prefs-projector__title-char::before {
-  content: attr(data-outline-duplicate-text) / "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  color: transparent;
-  -webkit-text-stroke: 6px var(--color-maru-black);
-  text-transform: uppercase;
-  line-height: inherit;
-  letter-spacing: inherit;
-  pointer-events: none;
-}
-
-.prefs-projector__title-char:nth-child(6n + 1) {
-  color: var(--color-maru-yellow);
-  rotate: -3deg;
-}
-
-.prefs-projector__title-char:nth-child(6n + 2) {
-  color: var(--color-maru-magenta-light);
-  rotate: 2.5deg;
-}
-
-.prefs-projector__title-char:nth-child(6n + 3) {
-  color: var(--color-maru-blue-light);
-  rotate: -1.5deg;
-}
-
-.prefs-projector__title-char:nth-child(6n + 4) {
-  color: var(--color-maru-green-light);
-  rotate: 3deg;
-}
-
-.prefs-projector__title-char:nth-child(6n + 5) {
-  color: var(--color-maru-orange);
-  rotate: -2deg;
-}
-
-.prefs-projector__title-char:nth-child(6n + 6) {
-  color: var(--color-maru-turquoise-light);
-  rotate: 1.5deg;
-}
-
-@media (min-width: 600px) {
-  .prefs-projector__title-char::before {
-    -webkit-text-stroke-width: 7px;
   }
 }
 
@@ -702,8 +492,7 @@
 }
 
 .prefs-projector__done:disabled,
-.prefs-projector__browse:disabled,
-.prefs-projector__pull:disabled {
+.prefs-projector__browse:disabled {
   opacity: 0.45;
   cursor: not-allowed;
   box-shadow: 2px 2px 0 color-mix(in srgb, var(--color-maru-black) 28%, transparent);
@@ -1001,22 +790,6 @@
     scale 0.15s ease-out;
 }
 
-.prefs-projector__footer .prefs-projector__done {
-  flex-shrink: 0;
-  align-self: center;
-}
-
-.prefs-projector__meta {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
 .prefs-projector__meta-line {
   margin: 0;
   font-size: var(--text-maru-label);
@@ -1025,169 +798,4 @@
   font-weight: 500;
   color: var(--color-maru-gray);
   text-wrap: pretty;
-}
-
-.prefs-projector__pull {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 2.5rem;
-  padding: 0;
-  border: none;
-  background: transparent;
-  transform: translate(-50%, 100%);
-  cursor: pointer;
-  pointer-events: auto;
-}
-
-.prefs-projector__string {
-  display: block;
-  width: 2px;
-  height: 1.75rem;
-  background: var(--color-maru-black);
-}
-
-.prefs-projector__ring {
-  display: block;
-  width: 1.1rem;
-  height: 1.1rem;
-  margin-top: -2px;
-  border: 3px solid var(--color-maru-black);
-  border-radius: 999px;
-  background: var(--color-maru-yellow);
-  box-shadow: 2px 2px 0 var(--color-maru-black);
-}
-
-.prefs-projector__burn-in {
-  position: fixed;
-  inset: 0;
-  z-index: 4;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 0 1rem;
-  pointer-events: none;
-  animation: prefs-burn-in 0.35s ease-out forwards;
-}
-
-.prefs-projector__burn-in-panel {
-  width: min(100%, 44rem);
-  margin-top: 0;
-  padding: 1.5rem 1.25rem;
-  border: 3px solid var(--color-maru-black);
-  border-radius: 0 0 var(--radius-maru) var(--radius-maru);
-  background: color-mix(in srgb, var(--color-maru-white) 70%, transparent);
-  box-shadow: 6px 6px 0 color-mix(in srgb, var(--color-maru-black) 35%, transparent);
-  filter: saturate(0.35) brightness(1.15);
-  mix-blend-mode: screen;
-}
-
-.prefs-projector__burn-in-title {
-  margin: 0;
-  font-size: clamp(1.35rem, 1rem + 1.2vw, 1.85rem);
-  line-height: 0.9;
-  text-transform: uppercase;
-  color: var(--color-maru-black);
-}
-
-/* Reduced motion: simple fade */
-.prefs-projector--reduced .prefs-projector__screen {
-  animation: none;
-  transform: translateY(0);
-  opacity: 0;
-}
-
-.prefs-projector--reduced.prefs-projector--entering .prefs-projector__screen,
-.prefs-projector--reduced.prefs-projector--open .prefs-projector__screen {
-  opacity: 1;
-  /* transition: opacity 0.28s ease-out; */
-}
-
-.prefs-projector--reduced.prefs-projector--exiting .prefs-projector__screen {
-  opacity: 0;
-  /* transition: opacity 0.28s ease-out; */
-}
-
-.prefs-projector--reduced .prefs-projector__projected {
-  animation: none;
-  opacity: 1;
-  filter: none;
-}
-
-.prefs-projector--reduced .prefs-projector__burn-in {
-  display: none;
-}
-
-@keyframes prefs-screen-drop {
-  from {
-    transform: translateY(-105%);
-  }
-
-  to {
-    transform: translateY(0);
-  }
-}
-
-@keyframes prefs-screen-raise {
-  from {
-    transform: translateY(0);
-  }
-
-  to {
-    transform: translateY(-105%);
-  }
-}
-
-@keyframes prefs-projected-exit {
-  from {
-    opacity: 1;
-  }
-
-  to {
-    opacity: 0;
-  }
-}
-
-@keyframes prefs-projector-flicker {
-  0% {
-    opacity: 0;
-    filter: brightness(2.4);
-  }
-
-  25% {
-    opacity: 0.55;
-    filter: brightness(1.6);
-  }
-
-  45% {
-    opacity: 0.15;
-  }
-
-  70% {
-    opacity: 1;
-    filter: brightness(1.1);
-  }
-
-  100% {
-    opacity: 1;
-    filter: none;
-  }
-}
-
-@keyframes prefs-burn-in {
-  0% {
-    opacity: 0.85;
-  }
-
-  55% {
-    opacity: 0.55;
-  }
-
-  100% {
-    opacity: 0;
-  }
 }

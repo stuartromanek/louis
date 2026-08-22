@@ -99,6 +99,10 @@
       v-model:open="trackArtOpen"
       v-model:track-id="trackArtTrackId"
     />
+    <TrackTrimDialog
+      v-model:open="trackTrimOpen"
+      v-model:track-id="trackTrimTrackId"
+    />
   </div>
 </template>
 
@@ -133,6 +137,7 @@ import AppStatusBar from '~/components/layout/AppStatusBar.vue'
 import AppDevToolsStrip from '~/components/dev/AppDevToolsStrip.vue'
 import UserPreferencesModal from '~/components/layout/UserPreferencesModal.vue'
 import TrackArtEditorModal from '~/components/track-art/TrackArtEditorModal.vue'
+import TrackTrimDialog from '~/components/track-trim/TrackTrimDialog.vue'
 import YotoAuthGate from '~/components/yoto-myo/YotoAuthGate.vue'
 import YotoConnectedModal from '~/components/yoto-myo/YotoConnectedModal.vue'
 import AppSplash from '~/components/splash/AppSplash.vue'
@@ -148,6 +153,10 @@ import {
   TRACK_ART_EDITOR_KEY,
   useTrackArtEditorShell,
 } from '~/composables/useTrackArtEditor'
+import {
+  TRACK_TRIM_EDITOR_KEY,
+  useTrackTrimEditorShell,
+} from '~/composables/useTrackTrimEditor'
 
 const yoto = useYotoMyo()
 provide(YOTO_MYO_KEY, yoto)
@@ -164,6 +173,12 @@ const editor = useMyoEditor({
     yoto.forgetCard(cardId)
     void yoto.refresh({ quiet: true })
   },
+  onPlaylistCoverChanged: (cardId, coverUrl) => {
+    yoto.updateCardCover(cardId, coverUrl)
+  },
+  onPlaylistSaved: (cardId, stats) => {
+    yoto.updateCardStats(cardId, stats)
+  },
 })
 provide(MYO_EDITOR_KEY, editor)
 
@@ -174,6 +189,11 @@ const trackArtEditor = useTrackArtEditorShell()
 provide(TRACK_ART_EDITOR_KEY, trackArtEditor)
 const trackArtOpen = trackArtEditor.open
 const trackArtTrackId = trackArtEditor.trackId
+
+const trackTrimEditor = useTrackTrimEditorShell()
+provide(TRACK_TRIM_EDITOR_KEY, trackTrimEditor)
+const trackTrimOpen = trackTrimEditor.open
+const trackTrimTrackId = trackTrimEditor.trackId
 
 const route = useRoute()
 const router = useRouter()
@@ -225,7 +245,7 @@ const showDesktopSetup = computed(
 
 /** Block editor interaction while a gate/setup owns the screen — not the shell root. */
 const mainContentInert = computed(
-  () => authGateBlocksApp.value || welcomeBlocksApp.value || appBootHold.value || trackArtOpen.value,
+  () => authGateBlocksApp.value || welcomeBlocksApp.value || appBootHold.value || trackArtOpen.value || trackTrimOpen.value,
 )
 
 async function refreshDesktopSetupNeeded() {

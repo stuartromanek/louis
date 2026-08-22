@@ -71,6 +71,19 @@ function waitForCanPlay(audio: HTMLAudioElement, signal: AbortSignal): Promise<v
   })
 }
 
+export function pauseSharedYoutubePreview() {
+  sharedAudio?.pause()
+}
+
+const previewPlayListeners = new Set<() => void>()
+
+export function onSharedYoutubePreviewPlay(listener: () => void): () => void {
+  previewPlayListeners.add(listener)
+  return () => {
+    previewPlayListeners.delete(listener)
+  }
+}
+
 export function useYoutubeAudioPlayer(): YoutubeAudioPlayerApi {
   const activeId = ref<string | null>(null)
   const isPlaying = ref(false)
@@ -202,6 +215,7 @@ export function useYoutubeAudioPlayer(): YoutubeAudioPlayerApi {
     ready.value = false
     isLoading.value = true
     error.value = null
+    for (const listener of previewPlayListeners) listener()
 
     try {
       if (!sameSource) {

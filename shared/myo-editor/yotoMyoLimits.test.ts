@@ -238,6 +238,19 @@ describe('getPlaylistCapacitySnapshot / formatCapacityDuration', () => {
     assert.equal(snapshot.durationComplete, false)
   })
 
+  it('uses trimmed duration in the capacity sum', () => {
+    const snapshot = getPlaylistCapacitySnapshot([
+      track({
+        id: 'a',
+        title: 'A',
+        duration: 90,
+        trim: { startSeconds: 10, endSeconds: 40 },
+      }),
+    ])
+    assert.equal(snapshot.knownDurationSeconds, 30)
+    assert.equal(snapshot.durationComplete, true)
+  })
+
   it('formats compact duration labels', () => {
     assert.equal(formatCapacityDuration(42 * 60), '42m')
     assert.equal(formatCapacityDuration(3600), '1h')

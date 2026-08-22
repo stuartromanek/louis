@@ -7,6 +7,7 @@ import {
 } from './yotoMyoLimits.ts'
 import {
   applyProbedDurations,
+  applySourceTrimAndSplit,
   blockIndexForTrack,
   expandUnsplitTrack,
   extractGroupShouldCutParts,
@@ -221,6 +222,7 @@ describe('scaleSplitParts / expandUnsplitTrack', () => {
     assert.equal(parts.length, 3)
     assert.equal(parts[0]?.title, 'Bedtime (Part 1)')
     assert.equal(parts[0]?.split?.groupId, 'long')
+    assert.equal(parts[0]?.split?.sourceDurationSeconds, 7200)
     assert.equal(parts[2]?.split?.index, 2)
   })
 
@@ -345,5 +347,104 @@ describe('split completeness / insert / probe', () => {
       }),
       'Storytime, Part 1',
     )
+  })
+})
+
+describe('applySourceTrimAndSplit', () => {
+  const source = track({
+    id: 'concert',
+    youtubeId: 'concert',
+    title: 'Concert',
+    duration: 5400,
+  })
+
+  it('collapses a 90 minute source to one unsplit track when keep is 50 minutes', () => {
+    const rows = applySourceTrimAndSplit(
+      source,
+      { startSeconds: 120, endSeconds: 3120 },
+      5400,
+    )
+    assert.equal(rows.length, 1)
+    assert.equal(rows[0]?.id, 'concert')
+    assert.equal(rows[0]?.split, undefined)
+    assert.deepEqual(rows[0]?.trim, { startSeconds: 120, endSeconds: 3120 })
+    assert.equal(rows[0]?.duration, 5400)
+  })
+
+  it('replans 70 minutes of keep into two parts with absolute starts', () => {
+    const rows = applySourceTrimAndSplit(
+      source,
+      { startSeconds: 600, endSeconds: 4800 },
+      5400,
+    )
+    assert.equal(rows.length, 2)
+    assert.equal(rows[0]?.id, 'concert#p0')
+    assert.equal(rows[1]?.id, 'concert#p1')
+    assert.equal(rows[0]?.split?.startSeconds, 600)
+    assert.equal(rows[1]?.split?.startSeconds, 600 + (rows[0]?.duration ?? 0))
+    assert.equal(rows[0]?.split?.sourceDurationSeconds, 5400)
+    assert.deepEqual(rows[0]?.trim, { startSeconds: 600, endSeconds: 4800 })
+    assert.deepEqual(rows[1]?.trim, { startSeconds: 600, endSeconds: 4800 })
+    assert.equal(
+      Math.round((rows[0]?.duration ?? 0) + (rows[1]?.duration ?? 0)),
+      4200,
+    )
+  })
+
+  it('clears trim by replanning from the full file', () => {
+    const trimmed = applySourceTrimAndSplit(
+      source,
+      { startSeconds: 600, endSeconds: 4800 },
+      5400,
+    )
+    const cleared = applySourceTrimAndSplit(trimmed[0]!, null, 5400)
+    const full = applySourceTrimAndSplit(source, null, 5400)
+    assert.equal(cleared.length, full.length)
+    assert.equal(cleared[0]?.trim, undefined)
+    assert.equal(cleared[0]?.split?.startSeconds, 0)
+    assert.equal(cleared[1]?.split?.startSeconds, full[1]?.split?.startSeconds)
+    assert.equal(cleared.length, 2)
+  })
+})
+
+describe('applyProbedDurations with source trim', () => {
+  it('does not scale trimmed-away intro back in', () => {
+    const trim = { startSeconds: 600, endSeconds: 3600 }
+    const p0 = track({
+      id: 'album#p0',
+      youtubeId: 'album',
+      title: 'Album (Part 1)',
+      duration: 1500,
+      trim,
+      split: {
+        groupId: 'album',
+        index: 0,
+        count: 2,
+        startSeconds: 600,
+        durationSeconds: 1500,
+        sourceDurationSeconds: 5400,
+      },
+    })
+    const p1 = track({
+      id: 'album#p1',
+      youtubeId: 'album',
+      title: 'Album (Part 2)',
+      duration: 1500,
+      trim,
+      split: {
+        groupId: 'album',
+        index: 1,
+        count: 2,
+        startSeconds: 2100,
+        durationSeconds: 1500,
+        sourceDurationSeconds: 5400,
+      },
+    })
+    const next = applyProbedDurations([p0, p1], new Map([['album', 5460]]))
+    assert.equal(next.length, 1)
+    assert.equal(next[0]?.split, undefined)
+    assert.ok(next[0]?.trim)
+    assert.ok((next[0]?.trim?.startSeconds ?? 0) > 500)
+    assert.ok((next[0]?.trim?.endSeconds ?? 0) < 4000)
   })
 })

@@ -70,6 +70,10 @@ Cut intros/outros (and similar) before save. Non-trivial UX; trim points per tra
 
 ~~Name a new playlist before tracks can be added; confirming the name creates it on Yoto immediately (empty, or with tracks already picked in Search). Rename / Delete from the playlist header menu.~~ — **done**.
 
+### Playlist artwork
+
+~~Generate DiceBear covers for playlists: auto-applied on create, and Artwork in the playlist menu (generate / history / save).~~ — **done**.
+
 ## Done / shipped
 
 Tracked in git history, [CHANGELOG.md](CHANGELOG.md), and the README feature list rather than here. Recent unreleased highlights: normalize new YouTube extracts at Update, batch Update of dirty playlists from Menu, duplicate-track toast, Yoto playlist nomenclature (Playlists / New playlist; physical MYO linking stays in the Yoto app).

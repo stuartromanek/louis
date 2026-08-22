@@ -1,105 +1,4 @@
-/* ─── How To modal ─── */
-
-.howto-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  display: grid;
-  place-items: center;
-  padding: 1rem;
-  pointer-events: auto;
-}
-
-.howto-modal__backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgb(0 0 0 / 0.45);
-  opacity: 0;
-  transition: opacity 220ms ease;
-}
-
-.howto-modal--entering .howto-modal__backdrop,
-.howto-modal--open .howto-modal__backdrop {
-  opacity: 1;
-}
-
-.howto-modal--exiting .howto-modal__backdrop {
-  opacity: 0;
-  transition-duration: 180ms;
-}
-
-.howto-modal__window {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  /* 100% of padded grid area — 94vw ignored padding and hugged the right edge */
-  width: min(1100px, 100%);
-  max-height: 85vh;
-  overflow: hidden;
-  box-sizing: border-box;
-  box-shadow: 6px 6px 0 var(--color-maru-black);
-  opacity: 0;
-  transform: translateY(12px);
-  transition:
-    opacity 240ms cubic-bezier(0.2, 0, 0, 1),
-    transform 240ms cubic-bezier(0.2, 0, 0, 1);
-}
-
-.howto-modal--entering .howto-modal__window,
-.howto-modal--open .howto-modal__window {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.howto-modal--exiting .howto-modal__window {
-  opacity: 0;
-  transform: translateY(8px);
-  transition-duration: 200ms;
-}
-
-.howto-modal--reduced .howto-modal__backdrop,
-.howto-modal--reduced .howto-modal__window {
-  transition-duration: 1ms;
-}
-
-.howto-modal__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.85rem 1.1rem;
-  background: var(--color-maru-yellow);
-  flex-shrink: 0;
-}
-
-.howto-modal__close {
-  margin: 0;
-  padding: 0.3rem 0.75rem 0.2rem;
-  border: 3px solid var(--color-maru-black);
-  border-radius: var(--radius-maru);
-  background: var(--color-maru-white);
-  color: var(--color-maru-black);
-  font-family: var(--font-maru-mono);
-  font-size: var(--text-maru-button-secondary);
-  line-height: var(--text-maru-button-secondary--line-height);
-  font-weight: 500;
-  letter-spacing: 0.03em;
-  text-decoration: none;
-  box-shadow: 2px 2px 0 var(--color-maru-black);
-  cursor: pointer;
-  transition: scale 0.12s ease-out;
-}
-
-.howto-modal__close:active:not(:disabled) {
-  scale: 0.96;
-}
-
-.howto-modal__close:disabled {
-  opacity: 0.45;
-  cursor: default;
-  box-shadow: none;
-}
+/* ─── How To content ─── */
 
 .howto-modal__body {
   overflow-y: auto;
@@ -253,7 +152,7 @@
   letter-spacing: var(--tracking-maru-ui);
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.5rem;
 }
 
 .howto-mock__panel {
@@ -437,38 +336,14 @@
 }
 
 @media (min-width: 600px) {
-  .howto-modal__header {
-    padding: 1rem 1.35rem;
-  }
-
   .howto-modal__body {
     padding: 1.25rem 1.35rem 1.6rem;
     gap: 2.1rem;
   }
 }
 
-/* Stu's phone — keep modal inset evenly; shrink fake UI to fit */
+/* Stu's phone — shrink fake UI to fit */
 @media (max-width: 310px) {
-  .howto-modal {
-    padding: 0.5rem;
-  }
-
-  .howto-modal__window {
-    max-height: calc(100dvh - 1rem);
-    box-shadow: 3px 3px 0 var(--color-maru-black);
-  }
-
-  .howto-modal__header {
-    gap: 0.5rem;
-    padding: 0.55rem 0.65rem;
-  }
-
-  .howto-modal__close {
-    padding: 0.25rem 0.55rem 0.15rem;
-    border-width: 2px;
-    box-shadow: 1px 1px 0 var(--color-maru-black);
-  }
-
   .howto-modal__body {
     padding: 0.7rem 0.65rem 0.9rem;
     gap: 1.15rem;

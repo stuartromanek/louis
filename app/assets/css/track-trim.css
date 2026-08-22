@@ -1,0 +1,443 @@
+/* ─── Track trim dialog ─── */
+
+.track-trim-flyout__body {
+  padding: 1rem;
+  padding-right: 1.5rem;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.track-trim-tray {
+  padding: 0.35rem 0.55rem 0.55rem;
+}
+
+.tray:has(.track-trim-tray) .tray__face {
+  background: var(--color-maru-green-lighter);
+}
+
+.track-trim-panel {
+  --track-trim-handle-w: 1.2rem;
+  --track-trim-wave-pad-start: 0.5rem;
+  --track-trim-inner-left: calc(var(--track-trim-handle-w) + var(--track-trim-wave-pad-start));
+  --track-trim-inner-right: var(--track-trim-handle-w);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.track-trim-panel__row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.track-trim-panel__wave-col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.track-trim-panel__wave {
+  min-width: 0;
+}
+
+.track-trim-panel__times {
+  position: relative;
+  min-width: 0;
+}
+
+.track-trim-panel__times-track {
+  position: relative;
+  margin-left: var(--track-trim-inner-left);
+  margin-right: var(--track-trim-inner-right);
+  min-height: 1.15rem;
+}
+
+.track-trim-panel__stat {
+  position: absolute;
+  top: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: max-content;
+  white-space: nowrap;
+  text-align: center;
+  translate: -50% 0;
+}
+
+.track-trim-panel__stat--length {
+  z-index: 1;
+}
+
+.track-trim-panel__stat-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.track-trim-panel__footer {
+  display: flex;
+  align-items: stretch;
+  gap: 0.35rem;
+}
+
+.track-trim-panel__cancel,
+.track-trim-panel__save {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  box-shadow: 3px 3px 0 var(--color-maru-black);
+  transition:
+    scale 0.15s ease-out,
+    opacity 0.15s ease-out,
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    box-shadow 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.track-trim-panel__cancel .maru-button__label,
+.track-trim-panel__save .maru-button__label {
+  top: 1px;
+}
+
+.track-trim-play {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 3.25rem;
+  height: 7.25rem;
+  padding: 0;
+  border: 3px solid var(--color-maru-black);
+  border-radius: var(--radius-maru);
+  background: var(--color-maru-yellow);
+  color: var(--color-maru-black);
+  cursor: pointer;
+  box-shadow:
+    4px 4px 0 var(--color-maru-black),
+    8px 8px 0 var(--color-maru-black);
+  transition:
+    background-color 0.2s ease,
+    scale 0.15s ease-out,
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    box-shadow 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.track-trim-play--error {
+  background: var(--color-maru-red-lighter);
+}
+
+.track-trim-play:active {
+  scale: 0.96;
+  transform: translate(1px, 1px);
+  box-shadow:
+    2px 2px 0 var(--color-maru-black),
+    4px 4px 0 var(--color-maru-black);
+}
+
+.track-trim-play:disabled {
+  cursor: wait;
+  opacity: 0.85;
+}
+
+.track-trim-play__icon {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  scale: 0.25;
+  filter: blur(4px);
+  pointer-events: none;
+  transition:
+    opacity 180ms cubic-bezier(0.2, 0, 0, 1),
+    scale 180ms cubic-bezier(0.2, 0, 0, 1),
+    filter 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.track-trim-play__icon.is-active {
+  opacity: 1;
+  scale: 1;
+  filter: blur(0);
+}
+
+.track-trim-play__icon--play {
+  display: block;
+  width: 0;
+  height: 0;
+  margin-left: 3px;
+  border-style: solid;
+  border-width: 10px 0 10px 16px;
+  border-color: transparent transparent transparent currentColor;
+}
+
+.track-trim-play__icon--pause {
+  display: inline-flex;
+  gap: 5px;
+  height: 20px;
+}
+
+.track-trim-play__icon--pause span {
+  display: block;
+  width: 4px;
+  height: 100%;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+/* ─── Waveform ─── */
+
+.track-trim-wave {
+  --track-trim-wave-pad-y: 1.15rem;
+  --track-trim-handle-w: 1.2rem;
+  --track-trim-wave-pad-start: 0.5rem;
+  --track-trim-inner-left: calc(var(--track-trim-handle-w) + var(--track-trim-wave-pad-start));
+  --track-trim-inner-right: var(--track-trim-handle-w);
+  position: relative;
+  box-sizing: border-box;
+  height: 7.25rem;
+  border-radius: var(--radius-maru);
+  background: var(--color-maru-white);
+  box-shadow:
+    4px 4px 0 var(--color-maru-black),
+    8px 8px 0 var(--color-maru-black);
+  touch-action: none;
+  user-select: none;
+}
+
+.track-trim-wave--dragging {
+  cursor: grabbing;
+}
+
+.track-trim-wave.is-loading .track-trim-wave__bar {
+  height: 72% !important;
+  opacity: 1;
+  transform-origin: center;
+  will-change: transform;
+  animation-name: track-trim-bar-bounce;
+  animation-duration: calc(0.64s + var(--bar-phase, 0) * 0.1s);
+  animation-timing-function: cubic-bezier(0.33, 1.52, 0.46, 1);
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  animation-delay: calc(var(--bar-i, 0) * -22ms);
+}
+
+.track-trim-wave.is-loading .track-trim-wave__bar--dim {
+  opacity: 1;
+}
+
+@keyframes track-trim-bar-bounce {
+  from {
+    transform: scaleY(0.22);
+  }
+  to {
+    transform: scaleY(var(--bar-amp, 1));
+  }
+}
+
+.track-trim-wave__track {
+  position: absolute;
+  inset: 0 var(--track-trim-inner-right) 0 var(--track-trim-inner-left);
+  overflow: visible;
+}
+
+.track-trim-wave__bars {
+  position: absolute;
+  inset: var(--track-trim-wave-pad-y) 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.track-trim-wave__bar {
+  flex: 1 1 0;
+  min-width: 0;
+  background: var(--color-maru-blue);
+  border-radius: 999px;
+  opacity: 1;
+}
+
+.track-trim-wave__bar--dim {
+  opacity: 0.28;
+}
+
+.track-trim-wave__window {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  border: 3px solid var(--color-maru-black);
+  border-radius: var(--radius-maru);
+  background: color-mix(in srgb, var(--color-maru-orange) 42%, transparent);
+  box-shadow: 2px 2px 0 var(--color-maru-black);
+  cursor: grab;
+  z-index: 1;
+}
+
+.track-trim-wave--dragging .track-trim-wave__window {
+  cursor: grabbing;
+}
+
+.track-trim-wave__controls {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.track-trim-wave__handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: var(--track-trim-handle-w);
+  padding: 0;
+  border: 3px solid var(--color-maru-black);
+  border-radius: var(--radius-maru);
+  background: var(--color-maru-orange);
+  box-shadow: 2px 2px 0 var(--color-maru-black);
+  cursor: ew-resize;
+  pointer-events: auto;
+  z-index: 2;
+  transition:
+    box-shadow 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    scale 0.15s ease-out;
+}
+
+.track-trim-wave__handle::before {
+  content: "";
+  position: absolute;
+  top: -0.5rem;
+  bottom: -0.5rem;
+  left: 50%;
+  width: 44px;
+  translate: -50% 0;
+}
+
+.track-trim-wave__handle-grip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  pointer-events: none;
+}
+
+.track-trim-wave__handle-grip span {
+  display: block;
+  width: 5px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--color-maru-black);
+}
+
+.track-trim-wave__handle--start {
+  left: 0;
+}
+
+.track-trim-wave__handle--end {
+  right: 0;
+}
+
+.track-trim-wave__handle:active {
+  scale: 0.96;
+  transform: translate(1px, 1px);
+  box-shadow: 0 0 0 var(--color-maru-black);
+}
+
+.track-trim-wave__playhead {
+  position: absolute;
+  top: 12%;
+  bottom: 12%;
+  left: calc(var(--playhead-t, 0) * (100% - 7px));
+  width: 7px;
+  padding: 0;
+  border: 0;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--color-maru-red);
+  cursor: ew-resize;
+  pointer-events: auto;
+  z-index: 2;
+}
+
+.track-trim-wave__playhead::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  translate: -50% -50%;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .track-trim-panel__cancel:hover:not(:disabled),
+  .track-trim-panel__save:hover:not(:disabled),
+  .track-trim-wave__handle:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 var(--color-maru-black);
+  }
+
+  .track-trim-play:hover:not(:disabled) {
+    transform: translate(-1px, -1px);
+    box-shadow:
+      5px 5px 0 var(--color-maru-black),
+      10px 10px 0 var(--color-maru-black);
+  }
+}
+
+.track-trim-panel__cancel:active:not(:disabled),
+.track-trim-panel__save:active:not(:disabled) {
+  transform: translate(1px, 1px) scale(0.96);
+  box-shadow: 0 0 0 var(--color-maru-black);
+}
+
+@media (max-width: 310px) {
+  .track-trim-panel__footer {
+    flex-direction: column;
+  }
+
+  .track-trim-panel__cancel,
+  .track-trim-panel__save {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track-trim-panel__cancel:hover:not(:disabled),
+  .track-trim-panel__save:hover:not(:disabled),
+  .track-trim-panel__cancel:active:not(:disabled),
+  .track-trim-panel__save:active:not(:disabled),
+  .track-trim-play:hover:not(:disabled),
+  .track-trim-play:active:not(:disabled),
+  .track-trim-wave__handle:hover,
+  .track-trim-wave__handle:active {
+    transform: none;
+  }
+
+  .track-trim-play__icon {
+    transition-duration: 40ms;
+  }
+
+  .track-trim-wave.is-loading .track-trim-wave__bar {
+    animation: none;
+    transform: scaleY(0.45);
+    will-change: auto;
+  }
+}

@@ -107,4 +107,13 @@ describe('playlistToYotoContent provenance', () => {
     assert.equal(manifest?.tracks[0]?.youtubeId, 'long')
     assert.deepEqual(manifest?.tracks[0]?.split, split)
   })
+
+  it('builds empty chapters when the playlist is cleared', () => {
+    const built = playlistToYotoContent('Card', [], [], new Map())
+    assert.deepEqual(built.chapters, [])
+    assert.equal(built.totalDuration, 0)
+    assert.equal(built.totalFileSize, 0)
+    const manifest = parseProvenance(built.note, built.contentVersion)
+    assert.equal(manifest?.tracks.length, 0)
+  })
 })

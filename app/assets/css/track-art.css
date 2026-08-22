@@ -89,80 +89,7 @@
   translate: 0 0.02em;
 }
 
-/* Modal shell */
-
-.track-art-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right))
-    max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
-  pointer-events: none;
-}
-
-.track-art-modal__backdrop {
-  position: absolute;
-  inset: 0;
-  border: 0;
-  padding: 0;
-  margin: 0;
-  background: rgb(0 0 0 / 0.45);
-  opacity: 0;
-  /* Enter: card leads slightly — backdrop 240ms behind window's 280ms punch */
-  transition: opacity 240ms cubic-bezier(0.2, 0, 0, 1);
-  pointer-events: auto;
-}
-
-.track-art-modal--entering .track-art-modal__backdrop,
-.track-art-modal--open .track-art-modal__backdrop {
-  opacity: 1;
-}
-
-.track-art-modal--exiting .track-art-modal__backdrop {
-  opacity: 0;
-  transition-duration: 180ms;
-}
-
-.track-art-modal__window {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  width: min(64rem, calc(100vw - 1.5rem));
-  /* Definite height so flex children can shrink and scroll (max-height alone is not enough). */
-  height: calc(100dvh - 1.5rem);
-  max-height: calc(100dvh - 1.5rem);
-  overflow: hidden;
-  pointer-events: auto;
-  box-shadow: 7px 7px 0 var(--color-maru-black);
-  opacity: 0;
-  transform: translateY(16px) scale(0.96);
-  transition:
-    opacity 280ms cubic-bezier(0.23, 1, 0.32, 1),
-    transform 280ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.track-art-modal--entering .track-art-modal__window,
-.track-art-modal--open .track-art-modal__window {
-  opacity: 1;
-  transform: none;
-}
-
-.track-art-modal--exiting .track-art-modal__window {
-  opacity: 0;
-  transform: translateY(8px) scale(0.98);
-  transition:
-    opacity 180ms cubic-bezier(0.2, 0, 0, 1),
-    transform 180ms cubic-bezier(0.2, 0, 0, 1);
-}
-
-.track-art-modal--reduced .track-art-modal__backdrop,
-.track-art-modal--reduced .track-art-modal__window {
-  transition: none;
-}
+/* Track art editor chrome (hosted in AppFlyout) */
 
 .track-art-modal__header {
   flex-shrink: 0;
@@ -448,8 +375,6 @@
 /* Maru focus rings */
 .track-art-thumb:focus-visible,
 .track-art-modal__tab:focus-visible,
-.track-art-modal__cancel:focus-visible,
-.track-art-modal__apply:focus-visible,
 .track-art-icons__search-input:focus-visible,
 .track-art-icons__upload:focus-visible,
 .track-art-icons__cell:focus-visible,
@@ -463,8 +388,6 @@
   .track-art-thumb:not(:disabled),
   .track-art-icons__cell,
   .track-art-modal__tab,
-  .track-art-modal__cancel,
-  .track-art-modal__apply,
   .track-art-icons__upload,
   .track-art-draw__tool,
   .track-art-draw__swatch {
@@ -479,86 +402,6 @@
 
 .track-art-modal--reduced .track-art-modal__body {
   transition: none;
-}
-
-.track-art-modal__footer {
-  flex-shrink: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.55rem 0.85rem;
-  padding: 0.75rem 0.95rem;
-  border-top: 4px solid var(--color-maru-black);
-  background: var(--color-maru-red-lighter);
-}
-
-.track-art-modal__footer-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.55rem;
-}
-
-.track-art-modal__cancel,
-.track-art-modal__apply {
-  appearance: none;
-  margin: 0;
-  padding: 0.35rem 0.95rem 0.28rem;
-  border: 3px solid var(--color-maru-black);
-  border-radius: var(--radius-maru);
-  color: var(--color-maru-black);
-  font-family: var(--font-maru);
-  font-size: var(--text-maru-button-secondary);
-  line-height: var(--text-maru-button-secondary--line-height);
-  font-weight: 500;
-  letter-spacing: 0.03em;
-  cursor: pointer;
-  transition:
-    transform 80ms ease,
-    box-shadow 80ms ease,
-    scale 0.12s ease-out;
-}
-
-.track-art-modal__cancel {
-  background: var(--color-maru-white);
-  box-shadow: 3px 3px 0 var(--color-maru-black);
-}
-
-.track-art-modal__apply {
-  background: var(--color-maru-white);
-  box-shadow: 4px 4px 0 var(--color-maru-black);
-  font-weight: 700;
-  transform: rotate(-1.5deg);
-}
-
-.track-art-modal__cancel:not(:disabled):hover,
-.track-art-modal__apply:not(:disabled):hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 var(--color-maru-black);
-}
-
-.track-art-modal__apply:not(:disabled):hover {
-  transform: rotate(-1.5deg) translate(-1px, -1px);
-  box-shadow: 5px 5px 0 var(--color-maru-black);
-}
-
-.track-art-modal__cancel:not(:disabled):active,
-.track-art-modal__apply:not(:disabled):active {
-  transform: translate(2px, 2px);
-  box-shadow: 0 0 0 var(--color-maru-black);
-  scale: 0.96;
-}
-
-.track-art-modal__apply:not(:disabled):active {
-  transform: rotate(0deg) translate(2px, 2px);
-}
-
-.track-art-modal__cancel:disabled,
-.track-art-modal__apply:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 /* Icons tab */
@@ -1292,50 +1135,6 @@
 
 /* ─── Phone (≤599): stack chrome, canvas above rail ─── */
 @media (max-width: 599px) {
-  .track-art-modal {
-    padding: max(0.35rem, env(safe-area-inset-top)) max(0.35rem, env(safe-area-inset-right))
-      max(0.35rem, env(safe-area-inset-bottom)) max(0.35rem, env(safe-area-inset-left));
-    align-items: stretch;
-  }
-
-  .track-art-modal__backdrop {
-    transition-duration: 280ms;
-  }
-
-  .track-art-modal--exiting .track-art-modal__backdrop {
-    transition-duration: 240ms;
-  }
-
-  .track-art-modal__window {
-    width: 100%;
-    height: 100%;
-    max-height: none;
-    border-radius: calc(var(--radius-maru) - 2px);
-    box-shadow: 5px 5px 0 var(--color-maru-black);
-    /* Sheet: same edge in/out — no scale */
-    opacity: 1;
-    transform: translateY(100%);
-    transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
-  }
-
-  .track-art-modal--entering .track-art-modal__window,
-  .track-art-modal--open .track-art-modal__window {
-    opacity: 1;
-    transform: none;
-  }
-
-  .track-art-modal--exiting .track-art-modal__window {
-    opacity: 1;
-    transform: translateY(100%);
-    transition: transform 260ms cubic-bezier(0.32, 0.72, 0, 1);
-  }
-
-  .track-art-modal--reduced .track-art-modal__window {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-
   .track-art-modal__header-bar {
     gap: 0.55rem 0.75rem;
     padding: 0.65rem 0.75rem 0.55rem;
@@ -1376,40 +1175,6 @@
 
   .track-art-modal__pane {
     padding: 0.55rem 0.65rem;
-  }
-
-  .track-art-modal__footer {
-    padding: 0.55rem 0.65rem;
-    padding-bottom: max(0.55rem, env(safe-area-inset-bottom));
-    justify-content: stretch;
-  }
-
-  .track-art-modal__footer-actions {
-    width: 100%;
-    justify-content: stretch;
-  }
-
-  .track-art-modal__cancel,
-  .track-art-modal__apply {
-    flex: 1 1 0;
-    text-align: center;
-    min-height: 2.85rem;
-    padding: 0.7rem 1rem 0.6rem;
-    font-size: var(--text-maru-button-sm);
-    line-height: var(--text-maru-button-sm--line-height);
-    font-weight: 700;
-  }
-
-  .track-art-modal__apply {
-    transform: none;
-  }
-
-  .track-art-modal__apply:not(:disabled):hover {
-    transform: translate(-1px, -1px);
-  }
-
-  .track-art-modal__apply:not(:disabled):active {
-    transform: translate(2px, 2px);
   }
 
   /* Icons */
@@ -1590,20 +1355,6 @@
     padding: 0.45rem 0.5rem;
   }
 
-  .track-art-modal__footer {
-    padding: 0.45rem 0.5rem;
-    padding-bottom: max(0.45rem, env(safe-area-inset-bottom));
-    border-top-width: 3px;
-  }
-
-  .track-art-modal__cancel,
-  .track-art-modal__apply {
-    border-width: 3px;
-    min-height: 2.65rem;
-    padding: 0.6rem 0.85rem 0.5rem;
-    box-shadow: 2px 2px 0 var(--color-maru-black);
-  }
-
   .track-art-icons__search-input {
     border-width: 3px;
     padding: 0.45rem 0.55rem;
@@ -1669,15 +1420,6 @@
 
   .track-art-modal__tab--active {
     padding-bottom: calc(0.4rem + 4px);
-  }
-
-  .track-art-modal__footer-actions {
-    flex-direction: column;
-  }
-
-  .track-art-modal__cancel,
-  .track-art-modal__apply {
-    width: 100%;
   }
 
   .track-art-icons__grid {

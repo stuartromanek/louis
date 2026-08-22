@@ -4,8 +4,8 @@ import { useDesktopHost } from '~/composables/useDesktopHost'
 import { usePreferencesShell } from '~/composables/usePreferencesShell'
 import DesktopApiKeysFields from '~/components/desktop/DesktopApiKeysFields.vue'
 import ToolsUpdateSection from '~/components/layout/ToolsUpdateSection.vue'
+import AppFlyout from '~/components/layout/AppFlyout.vue'
 
-type Phase = 'idle' | 'entering' | 'open' | 'exiting'
 type PrefsNav = 'general' | 'advanced'
 
 const open = defineModel<boolean>('open', { default: false })
@@ -23,9 +23,7 @@ const { open: shellOpen } = usePreferencesShell()
 const runtimeConfig = useRuntimeConfig()
 const appVersion = computed(() => String(runtimeConfig.public.appVersion || '0.0.0'))
 
-const phase = ref<Phase>('idle')
 const prefsNav = ref<PrefsNav>('general')
-const prefersReducedMotion = ref(false)
 const placeholdersDraft = ref('')
 
 const yotoClientIdDraft = ref('')
@@ -41,15 +39,9 @@ const credentialsSaving = ref(false)
 const credentialsError = ref('')
 
 const headingId = 'user-prefs-heading'
-const prefsTitleChars = 'Settings'.split('')
 const navId = 'user-prefs-nav'
-let timers: ReturnType<typeof setTimeout>[] = []
 
-const visible = computed(
-  () => phase.value === 'entering' || phase.value === 'open' || phase.value === 'exiting',
-)
-
-const formInteractive = computed(() => phase.value === 'open' && !credentialsSaving.value)
+const formInteractive = computed(() => open.value && !credentialsSaving.value)
 
 const credentialsDirty = computed(() => {
   if (!isDesktop.value) return false
@@ -65,23 +57,6 @@ const doneLabel = computed(() => {
   if (!credentialsDirty.value) return 'Done'
   return desktopPrefsDebug.value ? 'Save' : 'Save & restart'
 })
-
-const rootClass = computed(() => ({
-  'prefs-projector': true,
-  'prefs-projector--entering': phase.value === 'entering',
-  'prefs-projector--open': phase.value === 'open',
-  'prefs-projector--exiting': phase.value === 'exiting',
-  'prefs-projector--reduced': prefersReducedMotion.value,
-}))
-
-function clearTimers() {
-  for (const t of timers) clearTimeout(t)
-  timers = []
-}
-
-function after(ms: number, fn: () => void) {
-  timers.push(setTimeout(fn, ms))
-}
 
 function syncDraftFromPrefs() {
   placeholdersDraft.value = searchPlaceholdersText.value
@@ -119,54 +94,21 @@ function setPrefsNav(next: PrefsNav) {
 }
 
 function beginOpen() {
-  clearTimers()
   prefsNav.value = 'general'
   syncDraftFromPrefs()
   void syncDesktopCredentials()
-  phase.value = 'entering'
   playEvent('toggleOn')
-
-  if (prefersReducedMotion.value) {
-    after(280, () => {
-      phase.value = 'open'
-    })
-    return
-  }
-
-  after(1300, () => {
-    if (phase.value === 'entering') phase.value = 'open'
-  })
 }
 
-function beginClose() {
-  if (phase.value !== 'open' && phase.value !== 'entering') return
+function onFlyoutClose() {
   if (credentialsSaving.value) return
-  clearTimers()
-  phase.value = 'exiting'
   playEvent('buttonClick')
-
-  if (prefersReducedMotion.value) {
-    after(280, () => {
-      phase.value = 'idle'
-      open.value = false
-      shellOpen.value = false
-    })
-    return
-  }
-
-  after(320, () => {
-    phase.value = 'idle'
-    open.value = false
-    shellOpen.value = false
-  })
+  shellOpen.value = false
 }
 
-function onEscape(event: KeyboardEvent) {
-  if (event.key !== 'Escape') return
-  if (phase.value === 'open') {
-    event.preventDefault()
-    beginClose()
-  }
+function finishClose() {
+  open.value = false
+  shellOpen.value = false
 }
 
 function toggleSounds() {
@@ -232,74 +174,43 @@ async function onDone() {
     const ok = await saveDesktopCredentials()
     if (!ok) return
   }
-  beginClose()
+  else {
+    playEvent('buttonClick')
+  }
+  finishClose()
 }
 
 watch(open, (isOpen) => {
   if (isOpen) {
     shellOpen.value = true
-    if (phase.value === 'idle') beginOpen()
+    beginOpen()
     return
   }
-  if (phase.value === 'open' || phase.value === 'entering') {
-    beginClose()
-  }
+  shellOpen.value = false
 })
 
 watch(shellOpen, (isOpen) => {
   if (isOpen && !open.value) open.value = true
 })
-
-onMounted(() => {
-  prefersReducedMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  window.addEventListener('keydown', onEscape)
-})
-
-onUnmounted(() => {
-  clearTimers()
-  window.removeEventListener('keydown', onEscape)
-})
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="visible"
-      :class="rootClass"
-      role="presentation"
-    >
-      <div
-        class="prefs-projector__backdrop"
-        aria-hidden="true"
-        @click="phase === 'open' && beginClose()"
-      />
-
-      <div class="prefs-projector__stage">
-        <div
-          class="prefs-projector__screen"
-          role="dialog"
-          aria-modal="true"
-          :aria-labelledby="headingId"
-          :aria-hidden="!formInteractive"
-        >
-          <div
-            class="prefs-projector__projected"
-            :class="{ 'prefs-projector__projected--live': formInteractive }"
-          >
-            <h2
-              :id="headingId"
-              class="prefs-projector__title maru-heading maru-heading--lg maru-heading--left"
-              aria-label="Settings"
-            >
-              <span
-                v-for="(ch, i) in prefsTitleChars"
-                :key="`${ch}-${i}`"
-                class="prefs-projector__title-char"
-                :data-outline-duplicate-text="ch === ' ' ? '\u00a0' : ch"
-                aria-hidden="true"
-              >{{ ch === ' ' ? '\u00a0' : ch }}</span>
-            </h2>
-
+  <AppFlyout
+    v-model:open="open"
+    title="Settings"
+    :heading-id="headingId"
+    heading-tone="white"
+    header-class="bg-maru-yellow"
+    face-class="bg-maru-white"
+    size="lg"
+    :z-index="130"
+    dismiss-label="Close settings"
+    :dismiss-disabled="credentialsSaving"
+    :pad-body="false"
+    :body-scroll="false"
+    body-class="prefs-projector__layout-wrap"
+    @close="onFlyoutClose"
+  >
             <div class="prefs-projector__layout">
               <nav
                 :id="navId"
@@ -446,37 +357,18 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <div class="prefs-projector__footer">
-              <footer class="prefs-projector__meta">
-                <p class="prefs-projector__meta-line">
-                  Louis v{{ appVersion }}
-                </p>
-              </footer>
-
-              <button
-                type="button"
-                class="prefs-projector__done maru-button"
-                :class="credentialsDirty ? 'bg-maru-green-light' : 'bg-maru-yellow'"
-                :disabled="!formInteractive"
-                @click="onDone"
-              >
-                <span class="maru-button__label">{{ doneLabel }}</span>
-              </button>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            class="prefs-projector__pull"
-            aria-label="Close settings"
-            :disabled="!formInteractive"
-            @click="beginClose"
-          >
-            <span class="prefs-projector__string" aria-hidden="true" />
-            <span class="prefs-projector__ring" aria-hidden="true" />
-          </button>
-        </div>
-      </div>
-    </div>
-  </Teleport>
+    <template #footer>
+      <p class="prefs-projector__meta-line">
+        Louis v{{ appVersion }}
+      </p>
+      <button
+        type="button"
+        class="panel-footer-btn panel-footer-btn--short panel-footer-btn--primary shrink-0"
+        :disabled="!formInteractive"
+        @click="onDone"
+      >
+        <span class="panel-footer-btn__label">{{ doneLabel }}</span>
+      </button>
+    </template>
+  </AppFlyout>
 </template>

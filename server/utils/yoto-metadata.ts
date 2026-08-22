@@ -1,4 +1,4 @@
-import type { YotoCardMetadata } from '#shared/myo-editor/types'
+import type { YotoCardCover, YotoCardMetadata } from '#shared/myo-editor/types'
 
 export interface ContentMetadataPatch {
   title: string
@@ -8,6 +8,7 @@ export interface ContentMetadataPatch {
     fileSize: number
     readableFileSize: number
   }
+  cover?: YotoCardCover
 }
 
 /** Merge playlist updates into existing card metadata without dropping cover art, author, etc. */
@@ -19,7 +20,7 @@ export function mergeContentMetadata(
     ? existing.media
     : {}
 
-  return {
+  const next: YotoCardMetadata = {
     ...existing,
     title: patch.title,
     note: patch.note,
@@ -30,4 +31,13 @@ export function mergeContentMetadata(
       readableFileSize: patch.media.readableFileSize,
     },
   }
+
+  if (patch.cover) {
+    next.cover = {
+      ...existing?.cover,
+      ...patch.cover,
+    }
+  }
+
+  return next
 }

@@ -203,15 +203,17 @@ export function useYotoMyo() {
     cards.value = cards.value.filter(card => card.cardId !== id)
   }
 
-  function rememberCreatedCard(card: { cardId: string, title: string }) {
+  function rememberCreatedCard(card: { cardId: string, title: string, coverUrl?: string | null }) {
     const cardId = card.cardId.trim()
     if (!cardId) return
 
     createdCardIds.add(cardId)
     const title = card.title.trim() || 'New playlist'
+    const coverUrl = card.coverUrl?.trim() || null
     const existing = cards.value.find(item => item.cardId === cardId)
     if (existing) {
       if (existing.title !== title) existing.title = title
+      if (coverUrl) existing.coverUrl = coverUrl
       return
     }
 
@@ -220,13 +222,37 @@ export function useYotoMyo() {
         cardId,
         title,
         author: '',
-        coverUrl: null,
+        coverUrl,
         duration: 0,
         trackCount: 0,
         updatedAt: new Date().toISOString(),
       },
       ...cards.value,
     ]
+  }
+
+  function updateCardCover(cardId: string, coverUrl: string) {
+    const id = cardId.trim()
+    const url = coverUrl.trim()
+    if (!id || !url) return
+    const existing = cards.value.find(item => item.cardId === id)
+    if (existing) existing.coverUrl = url
+  }
+
+  function updateCardStats(cardId: string, stats: {
+    duration: number
+    trackCount: number
+    title?: string
+  }) {
+    const id = cardId.trim()
+    if (!id) return
+    const existing = cards.value.find(item => item.cardId === id)
+    if (!existing) return
+    existing.duration = Math.max(0, stats.duration)
+    existing.trackCount = Math.max(0, stats.trackCount)
+    const title = stats.title?.trim()
+    if (title) existing.title = title
+    existing.updatedAt = new Date().toISOString()
   }
 
   onMounted(() => {
@@ -247,6 +273,8 @@ export function useYotoMyo() {
     disconnect,
     refresh,
     rememberCreatedCard,
+    updateCardCover,
+    updateCardStats,
     forgetCard,
     fetchCards,
   }

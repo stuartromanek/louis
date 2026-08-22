@@ -1136,7 +1136,7 @@
 
 .mobile-card-track-group .mobile-card-track__inner {
   display: grid;
-  grid-template-columns: 4.75rem minmax(0, 1fr);
+  grid-template-columns: 4.75rem minmax(0, 1fr) auto;
   gap: 0.5rem 0.85rem;
   align-items: center;
   padding: 0.45rem 0.55rem;
@@ -1154,7 +1154,7 @@
   }
 
   .mobile-card-track-group .mobile-card-track__inner {
-    grid-template-columns: 3rem minmax(0, 1fr);
+    grid-template-columns: 3rem minmax(0, 1fr) auto;
     column-gap: 0.6rem;
   }
 }
@@ -1422,8 +1422,13 @@
     gap: 0.28rem;
   }
 
+  .mobile-card-track-group__header .playlist-trim {
+    width: 32px;
+    height: 32px;
+  }
+
   .mobile-card-track-group .mobile-card-track__inner {
-    grid-template-columns: 3rem minmax(0, 1fr);
+    grid-template-columns: 3rem minmax(0, 1fr) auto;
     padding: 0.22rem 0.3rem;
     column-gap: 0.35rem;
   }

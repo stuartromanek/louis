@@ -74,8 +74,11 @@ export interface TrackSplit {
   /** 0-based part index. */
   index: number
   count: number
+  /** Absolute start in the YouTube file (keep-region already applied). */
   startSeconds: number
   durationSeconds: number
+  /** Full YouTube file length; keep-region is `trim` on the same row. */
+  sourceDurationSeconds?: number
 }
 
 export interface PlaylistTrack {
@@ -96,6 +99,11 @@ export interface PlaylistTrack {
   iconPreviewUrl?: string | null
   /** Present when this row is one part of an auto-split YouTube source. */
   split?: TrackSplit
+  /** Front/back keep-region, relative to the full YouTube source. */
+  trim?: {
+    startSeconds: number
+    endSeconds: number
+  }
 }
 
 export interface ProvenanceTrackEntry {

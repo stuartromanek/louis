@@ -1,4 +1,5 @@
 import type { PlaylistTrack } from './types'
+import { trimmedDurationSeconds } from './trackTrim.ts'
 
 /** Official Yoto playlist capacity (support.yotoplay.com). */
 export const YOTO_MYO_MAX_TRACKS = 100
@@ -79,14 +80,7 @@ export function getCardTotalsLimitError(input: {
 }
 
 function trackDurationSeconds(track: PlaylistTrack): number | undefined {
-  if (typeof track.duration === 'number' && Number.isFinite(track.duration) && track.duration > 0) {
-    return track.duration
-  }
-  const reuse = track.yotoReuse?.duration
-  if (typeof reuse === 'number' && Number.isFinite(reuse) && reuse > 0) {
-    return reuse
-  }
-  return undefined
+  return trimmedDurationSeconds(track)
 }
 
 export interface PlaylistCapacitySnapshot {

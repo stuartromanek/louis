@@ -6,6 +6,7 @@ import {
 } from '~/composables/useMobileEditorChrome'
 import type { YotoMyoCard as YotoMyoCardType } from '~/components/yoto-myo/types'
 import type { PlaylistTrack } from '~/components/playlist/types'
+import type { PlaylistArtworkSpec } from '#shared/myo-editor/playlistArtwork'
 import { movePlaylistBlock, playlistBlocks, removeTrackOrGroup, trackIndexForBlock, blockIndexForTrack, splitGroupSourceTitle, splitPartNumberLabel, splitTrackAccessibleName } from '#shared/myo-editor/splitTrack'
 import PlaylistSaveProgress from '~/components/playlist/PlaylistSaveProgress.vue'
 import PlaylistEmptyState from '~/components/playlist/PlaylistEmptyState.vue'
@@ -25,15 +26,19 @@ import {
   PLAYLIST_NOT_ON_YOTO_YET_MESSAGE,
 } from '#shared/myo-editor/standalonePlaylist'
 import { formatDurationSeconds } from '#shared/myo-editor/youtubeDuration'
+import { canTrimTrack, isTrimmed, trimmedDurationSeconds } from '#shared/myo-editor/trackTrim'
 import TrackArtThumb from '~/components/track-art/TrackArtThumb.vue'
 import { TRACK_ART_EDITOR_KEY } from '~/composables/useTrackArtEditor'
+import { TRACK_TRIM_EDITOR_KEY } from '~/composables/useTrackTrimEditor'
 import PlaylistUpdatePrompt from '~/components/playlist/PlaylistUpdatePrompt.vue'
+import PlaylistArtworkEditor from '~/components/playlist/PlaylistArtworkEditor.vue'
 import { usePlaylistEnterStagger } from '~/components/playlist/usePlaylistEnterStagger'
 
 const yoto = inject(YOTO_MYO_KEY)
 const editor = inject(MYO_EDITOR_KEY)
 const chrome = inject(MOBILE_EDITOR_CHROME_KEY)
 const artEditor = inject(TRACK_ART_EDITOR_KEY)
+const trimEditor = inject(TRACK_TRIM_EDITOR_KEY)
 
 if (!yoto || !editor || !chrome) {
   throw new Error('MobileLibraryView requires YOTO_MYO_KEY, MYO_EDITOR_KEY, and MOBILE_EDITOR_CHROME_KEY')
@@ -64,6 +69,8 @@ const {
   keepVolumeAsIs,
   saveProgress,
   isKnownPodcast,
+  playlistCoverUrl,
+  playlistManageBusy,
 } = editor
 
 const { enterIndex } = usePlaylistEnterStagger(playlist)
@@ -154,7 +161,6 @@ const footerHint = computed(() => {
   if (isPodcast.value) return 'Podcasts cannot be edited yet.'
   if (createOutcomeUncertain.value) return 'Check Playlists before trying again.'
   if (overTrackLimit.value) return YOTO_MYO_TRACK_COUNT_MESSAGE
-  if (isNewPlaylist.value && cardTitle.value.trim()) return PLAYLIST_NOT_ON_YOTO_YET_MESSAGE
   return ''
 })
 
@@ -255,8 +261,9 @@ const playlistBlockList = computed(() => playlistBlocks(playlist.value))
 
 function splitRowLabel(track: PlaylistTrack) {
   const part = splitPartNumberLabel(track.split?.index ?? 0)
-  if (typeof track.duration !== 'number' || track.duration <= 0) return part
-  return `${part} \u00B7 ${formatDurationSeconds(track.duration)}`
+  const seconds = trimmedDurationSeconds(track)
+  if (typeof seconds !== 'number' || seconds <= 0) return part
+  return `${part} \u00B7 ${formatDurationSeconds(seconds)}`
 }
 
 const menuBlockIndex = computed(() => {
@@ -296,6 +303,8 @@ function removeTrack(id: string) {
 const trackMenuIndex = ref<number | null>(null)
 /** Track id to remove after the action tray finishes closing. */
 const pendingRemoveTrackId = ref<string | null>(null)
+/** Open trim after the action tray finishes closing. */
+const pendingTrimTrackId = ref<string | null>(null)
 /** Keep the list mounted while the last track’s leave animation runs. */
 const trackLeavePending = ref(false)
 let pendingRemoveTimer: ReturnType<typeof setTimeout> | null = null
@@ -374,6 +383,13 @@ function onMenuMove(delta: number) {
   moveTrack(index, delta)
 }
 
+function onMenuTrim() {
+  const track = menuTrack.value
+  if (!track || tracksLocked.value || !canTrimTrack(track)) return
+  pendingTrimTrackId.value = track.id
+  trackMenuIndex.value = null
+}
+
 function onMenuRemove() {
   const track = menuTrack.value
   if (!track || tracksLocked.value) return
@@ -384,6 +400,13 @@ function onMenuRemove() {
 
 /** After tray exit: brief beat, then remove so the row exit is visible. */
 function onTrackMenuClosed() {
+  const trimId = pendingTrimTrackId.value
+  pendingTrimTrackId.value = null
+  if (trimId) {
+    trimEditor?.openForTrack(trimId)
+    return
+  }
+
   const id = pendingRemoveTrackId.value
   pendingRemoveTrackId.value = null
   if (!id) return
@@ -424,6 +447,7 @@ function openPlaylistMenu() {
   }
   playEvent('buttonClick')
   trackMenuIndex.value = null
+  editor.closeArtwork()
   playlistMenuOpen.value = true
 }
 
@@ -433,11 +457,42 @@ function onPlaylistRename() {
   editor.startRename()
 }
 
+function onPlaylistArtwork() {
+  playEvent('buttonClick')
+  playlistMenuOpen.value = false
+  editor.startArtwork()
+}
+
 function onPlaylistDelete() {
   playEvent('buttonClick')
   playlistMenuOpen.value = false
   editor.startDelete()
 }
+
+async function onSavePlaylistArtwork(spec: PlaylistArtworkSpec) {
+  await editor.confirmArtwork(spec)
+}
+
+async function onSavePlaylistArtworkUpload(file: Blob) {
+  await editor.confirmArtworkUpload(file)
+}
+
+function onArtworkDismiss() {
+  if (playlistManageBusy.value) {
+    playEvent('disabled')
+    return
+  }
+  playEvent('buttonClick')
+  editor.closeArtwork()
+}
+
+const artworkOpen = computed({
+  get: () => editor.playlistArtworkOpen.value,
+  set: (open) => {
+    if (!open) editor.closeArtwork()
+    else editor.startArtwork()
+  },
+})
 
 watch(libraryMode, () => {
   clearPendingRemoveTimer()
@@ -445,6 +500,7 @@ watch(libraryMode, () => {
   trackLeavePending.value = false
   trackMenuIndex.value = null
   playlistMenuOpen.value = false
+  editor.closeArtwork()
 })
 
 watch(tracksLocked, (locked) => {
@@ -453,6 +509,7 @@ watch(tracksLocked, (locked) => {
     pendingRemoveTrackId.value = null
     trackMenuIndex.value = null
     playlistMenuOpen.value = false
+    editor.closeArtwork()
   }
 })
 
@@ -698,6 +755,18 @@ onMounted(() => {
                 {{ splitGroupSourceTitle(block.tracks[0]!.title) }}
               </h3>
               <button
+                v-if="canTrimTrack(block.tracks[0]!)"
+                type="button"
+                class="playlist-trim shrink-0"
+                :class="{ 'playlist-trim--on': isTrimmed(block.tracks[0]!) }"
+                :disabled="tracksLocked"
+                :aria-label="`Trim ${splitGroupSourceTitle(block.tracks[0]!.title)}`"
+                aria-haspopup="dialog"
+                @click="trimEditor?.openForTrack(block.tracks[0]!.id)"
+              >
+                <MaruEmoji name="Scissors" size="md" />
+              </button>
+              <button
                 type="button"
                 class="mobile-card-track__menu shrink-0"
                 :disabled="tracksLocked"
@@ -748,10 +817,10 @@ onMounted(() => {
                       {{ track.title }}
                     </p>
                     <p
-                      v-if="track.duration"
+                      v-if="trimmedDurationSeconds(track)"
                       class="mobile-card-track__meta type-meta-sm font-maru-mono tabular-nums text-maru-black/70"
                     >
-                      {{ formatDurationSeconds(track.duration) }}
+                      {{ formatDurationSeconds(trimmedDurationSeconds(track)!) }}
                     </p>
                   </template>
                 </div>
@@ -842,6 +911,21 @@ onMounted(() => {
               >Becomes track {{ moveDownBecomesTrack }}</span>
             </button>
             <button
+              v-if="menuTrack && canTrimTrack(menuTrack) && !menuTrack.split"
+              type="button"
+              class="mobile-overflow-menu__item"
+              role="menuitem"
+              :disabled="tracksLocked"
+              @click="onMenuTrim"
+            >
+              <MaruEmoji
+                name="Scissors"
+                size="md"
+                class="mobile-overflow-menu__item-emoji"
+              />
+              <span class="mobile-overflow-menu__item-label">Trim</span>
+            </button>
+            <button
               type="button"
               class="mobile-overflow-menu__item mobile-overflow-menu__item--signout"
               role="menuitem"
@@ -872,6 +956,19 @@ onMounted(() => {
               type="button"
               class="mobile-overflow-menu__item"
               role="menuitem"
+              @click="onPlaylistArtwork"
+            >
+              <MaruEmoji
+                name="ArtistPalette"
+                size="md"
+                class="mobile-overflow-menu__item-emoji"
+              />
+              <span class="mobile-overflow-menu__item-label">Artwork</span>
+            </button>
+            <button
+              type="button"
+              class="mobile-overflow-menu__item"
+              role="menuitem"
               @click="onPlaylistRename"
             >
               <MaruEmoji
@@ -894,6 +991,38 @@ onMounted(() => {
               />
               <span class="mobile-overflow-menu__item-label">Delete</span>
             </button>
+          </div>
+        </Tray>
+
+        <Tray
+          v-model:open="artworkOpen"
+          role="dialog"
+          aria-label="Playlist artwork"
+          title="Artwork"
+          height="auto"
+        >
+          <template #badge>
+            <button
+              type="button"
+              class="toast__dismiss"
+              aria-label="Cancel"
+              :disabled="playlistManageBusy"
+              @click="onArtworkDismiss"
+            >
+              <span
+                class="toast__dismiss-mark"
+                aria-hidden="true"
+              >×</span>
+            </button>
+          </template>
+          <div class="playlist-artwork-tray">
+            <PlaylistArtworkEditor
+              :card-id="selectedCardId"
+              :cover-url="playlistCoverUrl"
+              :busy="playlistManageBusy"
+              @save="onSavePlaylistArtwork"
+              @save-upload="onSavePlaylistArtworkUpload"
+            />
           </div>
         </Tray>
       </div>

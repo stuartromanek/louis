@@ -3,6 +3,7 @@ import { baselineRowIds, playlistRowId } from './playlistRowId.ts'
 import { findOriginalTrack, isYotoHostedTrack } from './trackLookup.ts'
 import { toYotoTrackReuseSnapshot } from './yotoTrackPayload.ts'
 import { isCompleteSplitCopy } from './splitTrack.ts'
+import { isTrimmed } from './trackTrim.ts'
 
 function youtubeIdForTrack(track: PlaylistTrack): string | undefined {
   const id = track.youtubeId ?? (track.source === 'app-youtube' ? track.id : undefined)
@@ -107,7 +108,7 @@ function classifyTrack(
     const snapshot = reuseSnapshotForTrack(track, detail)
     const inBaseline = baselineIds.has(playlistRowId(track))
 
-    if (inBaseline && snapshot) {
+    if (inBaseline && snapshot && !isTrimmed(track)) {
       return { kind: 'reuse-yoto', snapshot, playlistIndex: index }
     }
 

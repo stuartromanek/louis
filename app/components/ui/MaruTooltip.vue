@@ -1,13 +1,15 @@
 <script setup lang="ts">
 const props = withDefaults(defineProps<{
-  /** Tooltip body text. */
-  text: string
+  /** Tooltip body text. Optional when a `content` slot is provided. */
+  text?: string
   /** Prefer `top` near screen edges / footers; `right` beside vertical tool rails. */
   placement?: 'top' | 'bottom' | 'right'
 }>(), {
+  text: '',
   placement: 'top',
 })
 
+const slots = useSlots()
 const open = ref(false)
 const triggerRef = ref<HTMLElement | null>(null)
 const bubbleStyle = ref<Record<string, string>>({})
@@ -72,7 +74,7 @@ function updatePosition() {
 }
 
 function show() {
-  if (!props.text.trim()) return
+  if (!props.text.trim() && !slots.content) return
   open.value = true
   nextTick(updatePosition)
 }
@@ -120,14 +122,17 @@ onUnmounted(() => {
 
     <Teleport to="body">
       <div
-        v-show="open"
+        v-if="open"
         :id="tooltipId"
         role="tooltip"
         class="maru-tooltip__bubble font-maru-mono"
-        :class="`maru-tooltip__bubble--${placement}`"
+        :class="[
+          `maru-tooltip__bubble--${placement}`,
+          { 'maru-tooltip__bubble--media': Boolean($slots.content) },
+        ]"
         :style="bubbleStyle"
       >
-        {{ text }}
+        <slot name="content">{{ text }}</slot>
       </div>
     </Teleport>
   </span>

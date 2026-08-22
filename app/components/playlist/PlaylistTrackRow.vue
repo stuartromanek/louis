@@ -2,8 +2,10 @@
 import type { PlaylistTrack } from '~/components/playlist/types'
 import TrackArtThumb from '~/components/track-art/TrackArtThumb.vue'
 import { TRACK_ART_EDITOR_KEY } from '~/composables/useTrackArtEditor'
+import { TRACK_TRIM_EDITOR_KEY } from '~/composables/useTrackTrimEditor'
 import { formatDurationSeconds } from '#shared/myo-editor/youtubeDuration'
 import { splitTrackAccessibleName } from '#shared/myo-editor/splitTrack'
+import { canTrimTrack, isTrimmed, trimmedDurationSeconds } from '#shared/myo-editor/trackTrim'
 
 const props = defineProps<{
   track: PlaylistTrack
@@ -12,6 +14,7 @@ const props = defineProps<{
   partLabel?: string
   removeLabel?: string
   hideRemove?: boolean
+  hideTrim?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -19,6 +22,7 @@ const emit = defineEmits<{
 }>()
 
 const artEditor = inject(TRACK_ART_EDITOR_KEY)
+const trimEditor = inject(TRACK_TRIM_EDITOR_KEY)
 const { playEvent } = useUiSound()
 
 function onRemoveHover() {
@@ -30,9 +34,18 @@ function onEditArt() {
   artEditor?.openForTrack(props.track.id)
 }
 
+function onTrim() {
+  if (props.locked || !canTrim.value) return
+  playEvent('buttonClick')
+  trimEditor?.openForTrack(props.track.id)
+}
+
+const canTrim = computed(() => canTrimTrack(props.track))
+
 const durationLabel = computed(() => {
-  if (typeof props.track.duration !== 'number' || props.track.duration <= 0) return ''
-  return formatDurationSeconds(props.track.duration)
+  const seconds = trimmedDurationSeconds(props.track)
+  if (typeof seconds !== 'number' || seconds <= 0) return ''
+  return formatDurationSeconds(seconds)
 })
 
 const partLine = computed(() => {
@@ -68,6 +81,20 @@ const partLine = computed(() => {
         class="playlist-item__subtitle text-maru-black/75"
       >{{ track.subtitle }}</p>
     </div>
+
+    <button
+      v-if="canTrim && !hideTrim"
+      type="button"
+      class="playlist-trim"
+      :class="{ 'playlist-trim--on': isTrimmed(track) }"
+      :disabled="locked"
+      :aria-label="`Trim ${splitTrackAccessibleName(track)}`"
+      aria-haspopup="dialog"
+      @mouseenter="onRemoveHover"
+      @click="onTrim"
+    >
+      <MaruEmoji name="Scissors" size="md" />
+    </button>
 
     <button
       v-if="!hideRemove"

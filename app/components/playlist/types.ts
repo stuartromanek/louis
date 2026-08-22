@@ -1,11 +1,6 @@
 import type { YoutubeVideoSummary } from '~/components/youtube-picker/types'
 import { sanitizeYoutubeTitle } from '#shared/myo-editor/sanitizeYoutubeTitle'
-import {
-  makeTrackSplit,
-  planTrackSplit,
-  splitPartTitle,
-  splitPartTrackId,
-} from '#shared/myo-editor/splitTrack'
+import { applySourceTrimAndSplit } from '#shared/myo-editor/splitTrack'
 
 export type { PlaylistTrack } from '#shared/myo-editor/types'
 import type { PlaylistTrack } from '#shared/myo-editor/types'
@@ -16,30 +11,17 @@ export function pickerVideoToPlaylistTracks(video: YoutubeVideoSummary): Playlis
   const duration = typeof video.durationSeconds === 'number' && video.durationSeconds > 0
     ? video.durationSeconds
     : undefined
-  const plan = duration ? planTrackSplit(duration) : null
-
-  if (!plan) {
-    return [{
-      id: video.id,
-      title,
-      subtitle: video.channelTitle,
-      thumbnailUrl: video.thumbnailUrl,
-      source: 'app-youtube',
-      youtubeId: video.id,
-      duration,
-    }]
-  }
-
-  return plan.parts.map((part, index) => ({
-    id: splitPartTrackId(video.id, index),
-    title: splitPartTitle(title, index),
+  const source: PlaylistTrack = {
+    id: video.id,
+    title,
     subtitle: video.channelTitle,
     thumbnailUrl: video.thumbnailUrl,
-    source: 'app-youtube' as const,
+    source: 'app-youtube',
     youtubeId: video.id,
-    duration: part.duration,
-    split: makeTrackSplit(video.id, index, plan),
-  }))
+    duration,
+  }
+  if (!duration) return [source]
+  return applySourceTrimAndSplit(source, null, duration)
 }
 
 /** @deprecated Prefer pickerVideoToPlaylistTracks — long videos expand into multiple rows. */

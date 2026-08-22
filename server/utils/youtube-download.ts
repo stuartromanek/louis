@@ -147,7 +147,9 @@ export async function getYoutubePreviewAudio(
 ): Promise<Pick<DownloadedAudio, 'filePath' | 'filename' | 'fromCache'>> {
   const result = await downloadYoutubeAudioInternal(youtubeId, event, {
     transcode: false,
-    enforceMyoSizeLimit: true,
+    // Preview is the full YouTube file (split parts share it). The 100 MB
+    // cap is a Yoto upload limit, not a local waveform/play limit.
+    enforceMyoSizeLimit: false,
   })
   return {
     filePath: result.filePath,

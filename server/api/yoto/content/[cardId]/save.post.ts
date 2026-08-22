@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
   await getYotoAccessToken(event)
 
   const body = await readBody<SaveRequestBody>(event)
-  if (!Array.isArray(body?.playlist) || body.playlist.length === 0) {
+  if (!Array.isArray(body?.playlist)) {
     throw createError({ statusCode: 400, statusMessage: 'playlist is required' })
   }
 

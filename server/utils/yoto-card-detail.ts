@@ -31,6 +31,7 @@ interface YotoApiCardDetail {
     chapters?: YotoApiChapter[]
   }
   metadata?: YotoCardMetadata
+  cover?: { imageL?: string | null }
 }
 
 interface YotoApiCardDetailResponse {
@@ -75,7 +76,21 @@ export function mapYotoCardDetail(data: YotoApiCardDetail): YotoCardDetail {
     tracks: (chapter.tracks ?? []).map(track => mapTrack(chapter.key, track)),
   }))
 
-  const metadata = data.metadata ?? null
+  const metadata = data.metadata ? { ...data.metadata } : null
+  const coverImageL = metadata?.cover?.imageL?.trim() || data.cover?.imageL?.trim() || ''
+  if (coverImageL) {
+    const nextMetadata = metadata ?? {}
+    nextMetadata.cover = { ...nextMetadata.cover, imageL: coverImageL }
+    return {
+      cardId: data.cardId,
+      title: data.title,
+      contentVersion: data.content?.version ?? null,
+      metadataNote: nextMetadata.note ?? null,
+      feedUrl: nextMetadata.feedUrl ?? null,
+      metadata: nextMetadata,
+      chapters,
+    }
+  }
 
   return {
     cardId: data.cardId,

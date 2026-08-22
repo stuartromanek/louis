@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { MYO_EDITOR_KEY } from '~/components/myo-editor/keys'
+import PlaylistArtworkEditor from './PlaylistArtworkEditor.vue'
+import AppFlyout from '~/components/layout/AppFlyout.vue'
+import type { PlaylistArtworkSpec } from '#shared/myo-editor/playlistArtwork'
 
 const editor = inject(MYO_EDITOR_KEY, null)
 const { playEvent } = useUiSound()
@@ -7,11 +10,21 @@ const { playEvent } = useUiSound()
 const open = ref(false)
 const triggerEl = ref<HTMLButtonElement | null>(null)
 const menuEl = ref<HTMLElement | null>(null)
+const flyoutRef = ref<{ panelRef?: HTMLElement | null } | null>(null)
+const artworkEditorRef = ref<{
+  commit: () => void
+  upload: () => void
+  saveLabel: string
+  commitDisabled: boolean
+  uploadDisabled: boolean
+} | null>(null)
 const menuPos = ref({ top: '0px', right: '0px' })
 
 const visible = computed(() =>
   Boolean(editor?.selectedCardId.value && !editor.isNewPlaylist.value),
 )
+
+const artworkOpen = computed(() => Boolean(editor?.playlistArtworkOpen.value))
 
 const disabled = computed(() => Boolean(
   !editor
@@ -41,8 +54,18 @@ function toggle() {
     return
   }
   playEvent('buttonClick')
+  if (artworkOpen.value) {
+    editor?.closeArtwork()
+    return
+  }
   if (!open.value) positionMenu()
   open.value = !open.value
+}
+
+function onArtwork() {
+  playEvent('buttonClick')
+  close()
+  editor?.startArtwork()
 }
 
 function onRename() {
@@ -57,21 +80,47 @@ function onDelete() {
   editor?.startDelete()
 }
 
+async function onSaveArtwork(spec: PlaylistArtworkSpec) {
+  await editor?.confirmArtwork(spec)
+}
+
+async function onSaveArtworkUpload(file: Blob) {
+  await editor?.confirmArtworkUpload(file)
+}
+
+function onArtworkDismiss() {
+  if (editor?.playlistManageBusy.value) {
+    playEvent('disabled')
+    return
+  }
+  playEvent('buttonClick')
+  editor?.closeArtwork()
+}
+
 function onPointerDown(event: PointerEvent) {
-  if (!open.value) return
   const target = event.target as Node | null
-  if (triggerEl.value?.contains(target) || menuEl.value?.contains(target)) return
-  close()
+  if (triggerEl.value?.contains(target)) return
+  if (open.value && menuEl.value?.contains(target)) return
+  if (artworkOpen.value && flyoutRef.value?.panelRef?.contains(target)) return
+  if (open.value) close()
+  if (artworkOpen.value) editor?.closeArtwork()
 }
 
 function onKeydown(event: KeyboardEvent) {
-  if (event.key !== 'Escape' || !open.value) return
+  if (event.key !== 'Escape') return
+  if (artworkOpen.value) return
+  if (!open.value) return
   event.preventDefault()
   close()
 }
 
+function closePopovers() {
+  close()
+  editor?.closeArtwork()
+}
+
 watch(visible, (show) => {
-  if (!show) close()
+  if (!show) closePopovers()
 })
 
 onMounted(() => {
@@ -98,7 +147,7 @@ onBeforeUnmount(() => {
       class="playlist-header-menu__trigger"
       aria-label="Playlist menu"
       aria-haspopup="menu"
-      :aria-expanded="open"
+      :aria-expanded="open || artworkOpen"
       :disabled="disabled"
       @click="toggle"
     >
@@ -118,6 +167,19 @@ onBeforeUnmount(() => {
           :style="menuPos"
         >
           <div class="mobile-overflow-menu__list playlist-header-menu__list">
+            <button
+              type="button"
+              class="mobile-overflow-menu__item"
+              role="menuitem"
+              @click="onArtwork"
+            >
+              <MaruEmoji
+                name="ArtistPalette"
+                size="md"
+                class="mobile-overflow-menu__item-emoji"
+              />
+              <span class="mobile-overflow-menu__item-label">Artwork</span>
+            </button>
             <button
               type="button"
               class="mobile-overflow-menu__item"
@@ -147,6 +209,49 @@ onBeforeUnmount(() => {
           </div>
         </div>
       </Transition>
+      <AppFlyout
+        ref="flyoutRef"
+        :open="artworkOpen"
+        title="Artwork"
+        heading-id="playlist-artwork-heading"
+        heading-tone="white"
+        header-class="bg-maru-blue"
+        face-class="bg-maru-red-lighter"
+        size="sm"
+        :dismiss-disabled="Boolean(editor?.playlistManageBusy.value)"
+        @close="onArtworkDismiss"
+      >
+        <PlaylistArtworkEditor
+          ref="artworkEditorRef"
+          hide-commit
+          :card-id="editor?.selectedCardId.value ?? null"
+          :cover-url="editor?.playlistCoverUrl.value ?? null"
+          :busy="Boolean(editor?.playlistManageBusy.value)"
+          :disabled="disabled && !editor?.playlistManageBusy.value"
+          @save="onSaveArtwork"
+          @save-upload="onSaveArtworkUpload"
+        />
+        <template #footer>
+          <div class="ml-auto flex items-center gap-2 sm:gap-3 shrink-0">
+            <button
+              type="button"
+              class="panel-footer-btn panel-footer-btn--short panel-footer-btn--secondary shrink-0"
+              :disabled="Boolean(artworkEditorRef?.uploadDisabled)"
+              @click="artworkEditorRef?.upload()"
+            >
+              <span class="panel-footer-btn__label">Upload</span>
+            </button>
+            <button
+              type="button"
+              class="panel-footer-btn panel-footer-btn--short bg-maru-red-lighter text-maru-black shrink-0"
+              :disabled="Boolean(artworkEditorRef?.commitDisabled)"
+              @click="artworkEditorRef?.commit()"
+            >
+              <span class="panel-footer-btn__label">{{ artworkEditorRef?.saveLabel ?? 'Save' }}</span>
+            </button>
+          </div>
+        </template>
+      </AppFlyout>
     </Teleport>
   </div>
 </template>

@@ -78,6 +78,7 @@ export const EMOJI_IDS = [
   'RedTrianglePointedUp',
   'RollerSkate',
   'RollingOnTheFloorLaughing',
+  'Scissors',
   'ShushingFace',
   'SpeakerHighVolume',
   'ThreeFingerOperation',

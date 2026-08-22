@@ -42,6 +42,28 @@ describe('playlistSaveExtractsYoutube', () => {
     assert.equal(playlistSaveExtractsYoutube([existing], [existing], null), false)
   })
 
+  it('extracts a reused YouTube track when it has a trim', () => {
+    const existing = youtubeTrack({
+      duration: 60,
+      yotoReuse: {
+        trackUrl: 'yoto:#deadbeef',
+        type: 'audio',
+        format: 'opus',
+        duration: 60,
+        fileSize: 1000,
+        channels: 'stereo',
+        display: { icon16x16: null },
+      },
+    })
+    const trimmed = {
+      ...existing,
+      trim: { startSeconds: 5, endSeconds: 40 },
+    }
+    assert.equal(playlistSaveExtractsYoutube([existing], [trimmed], null), true)
+    const plan = buildSavePlan([existing], [trimmed], EMPTY_CARD_DETAIL)
+    assert.equal(plan.tracks[0]?.kind, 'extract-youtube')
+  })
+
   it('is false for a reuse-only reorder', () => {
     const a = youtubeTrack({
       id: 'a',
@@ -69,6 +91,26 @@ describe('playlistSaveExtractsYoutube', () => {
       },
     })
     assert.equal(playlistSaveExtractsYoutube([a, b], [b, a], null), false)
+  })
+})
+
+describe('empty playlist save', () => {
+  it('plans a clear with no extracts or errors', () => {
+    const existing = youtubeTrack({
+      yotoReuse: {
+        trackUrl: 'yoto:#deadbeef',
+        type: 'audio',
+        format: 'opus',
+        duration: 12,
+        fileSize: 1000,
+        channels: 'stereo',
+        display: { icon16x16: null },
+      },
+    })
+    const plan = buildSavePlan([existing], [], EMPTY_CARD_DETAIL)
+    assert.deepEqual(plan.tracks, [])
+    assert.deepEqual(plan.errors, [])
+    assert.equal(playlistSaveExtractsYoutube([existing], [], null), false)
   })
 })
 

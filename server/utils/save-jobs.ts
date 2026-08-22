@@ -7,7 +7,6 @@ import type {
   SaveJobTrackProgress,
   SaveTrackAction,
   SaveTrackStatus,
-  TrackSplit,
   TranscodedAudioResult,
 } from '#shared/myo-editor/types'
 import {
@@ -31,6 +30,8 @@ import { downloadYoutubeAudio } from './youtube-download'
 import { hashFileSha256, uploadAudioFile } from './yoto-media'
 import { loudnormAudioFile } from './ffmpeg-loudnorm'
 import { probeAudioDurationSeconds, splitAudioFile } from './ffmpeg-split'
+import { trimAudioFile } from './ffmpeg-trim'
+import { effectiveCutRange, isTrimmed } from '#shared/myo-editor/trackTrim'
 import {
   readSplitPartTranscodeCache,
   shouldSkipSplitSourceDownload,
@@ -46,6 +47,7 @@ import {
   withContentCardId,
 } from './yoto-content-contract'
 import { mergeContentMetadata } from './yoto-metadata'
+import { tryGeneratePlaylistCover } from './yoto-cover'
 import { fetchYotoCardDetail } from './yoto-card-detail'
 import { getYotoAccessToken } from './yoto'
 import { resolveAudioWorkDirConfig } from './audio-work-dir'
@@ -57,18 +59,27 @@ export type SaveTarget =
   | { operation: 'create' }
   | { operation: 'update'; cardId: string }
 
-function splitPartCacheKey(
+function extractCutCacheKey(
   youtubeId: string,
-  split: TrackSplit,
+  track: PlaylistTrack,
   normalizeVolume: boolean,
-): SplitPartTranscodeCacheKey {
+  actualDuration?: number,
+): SplitPartTranscodeCacheKey | null {
+  const range = effectiveCutRange(track, actualDuration)
+    ?? (track.split
+      ? {
+          startSeconds: track.split.startSeconds,
+          durationSeconds: track.split.durationSeconds,
+        }
+      : null)
+  if (!range) return null
   return {
     youtubeId,
-    index: split.index,
-    count: split.count,
+    index: track.split?.index ?? 0,
+    count: track.split?.count ?? 1,
     normalizeVolume,
-    startSeconds: split.startSeconds,
-    durationSeconds: split.durationSeconds,
+    startSeconds: range.startSeconds,
+    durationSeconds: range.durationSeconds,
   }
 }
 
@@ -284,10 +295,11 @@ async function runSaveJob(
       const group = extractActions.filter(action => action.youtubeId === youtubeId)
       if (!isCompleteSplitGroup(group)) continue
       const cached = await Promise.all(group.map(async (part) => {
-        const record = await readSplitPartTranscodeCache(
-          audioWorkDir,
-          splitPartCacheKey(youtubeId, part.split, normalizeVolume),
-        )
+        const track = workingPlaylist[part.playlistIndex]
+        if (!track) return null
+        const key = extractCutCacheKey(youtubeId, track, normalizeVolume)
+        if (!key) return null
+        const record = await readSplitPartTranscodeCache(audioWorkDir, key)
         return transcodedFromSplitCache(record)
       }))
       if (shouldSkipSplitSourceDownload(cached)) skipDownloadYoutubeIds.add(youtubeId)
@@ -395,6 +407,10 @@ async function runSaveJob(
       const trackBase = OVERALL_START + extractOrdinal * trackSpan * group.length
       const actualDuration = durationByYoutubeId.get(action.youtubeId)
       const shouldCut = extractGroupShouldCutParts(group)
+        || group.some((item) => {
+          const track = workingPlaylist[item.playlistIndex]
+          return Boolean(track && effectiveCutRange(track, actualDuration))
+        })
 
       const finishExtractedPart = (
         playlistIndex: number,
@@ -419,19 +435,24 @@ async function runSaveJob(
       }
 
       if (shouldCut) {
-        const ordered = [...group]
-          .filter((part): part is typeof part & { split: TrackSplit } => Boolean(part.split))
-          .sort((a, b) => a.split.index - b.split.index)
+        const ordered = [...group].sort((a, b) => {
+          const aIndex = workingPlaylist[a.playlistIndex]?.split?.index ?? a.playlistIndex
+          const bIndex = workingPlaylist[b.playlistIndex]?.split?.index ?? b.playlistIndex
+          return aIndex - bIndex
+        })
         const cachedHits = await Promise.all(ordered.map(async (part) => {
-          const record = await readSplitPartTranscodeCache(
-            audioWorkDir,
-            splitPartCacheKey(action.youtubeId, part.split, normalizeVolume),
-          )
+          const track = workingPlaylist[part.playlistIndex]
+          if (!track) return null
+          const key = extractCutCacheKey(action.youtubeId, track, normalizeVolume, actualDuration)
+          if (!key) return null
+          const record = await readSplitPartTranscodeCache(audioWorkDir, key)
           return transcodedFromSplitCache(record)
         }))
         if (shouldSkipSplitSourceDownload(cachedHits)) {
           for (let partIndex = 0; partIndex < ordered.length; partIndex++) {
-            finishExtractedPart(ordered[partIndex]!.playlistIndex, cachedHits[partIndex]!)
+            const hit = cachedHits[partIndex]
+            if (!hit) continue
+            finishExtractedPart(ordered[partIndex]!.playlistIndex, hit)
           }
           setJobProgress({
             status: 'uploading',
@@ -453,7 +474,7 @@ async function runSaveJob(
       let uploadSourcePath = downloaded.filePath
       let uploadSourceName = downloaded.filename
       let didNormalize = false
-      if (normalizeVolume) {
+      if (normalizeVolume && !shouldCut) {
         for (const part of group) updateTrack(job, part.playlistIndex, 'leveling')
         setJobProgress({
           status: 'downloading',
@@ -477,9 +498,11 @@ async function runSaveJob(
       }
 
       if (shouldCut) {
-        const ordered = [...group]
-          .filter((part): part is typeof part & { split: TrackSplit } => Boolean(part.split))
-          .sort((a, b) => a.split.index - b.split.index)
+        const ordered = [...group].sort((a, b) => {
+          const aIndex = workingPlaylist[a.playlistIndex]?.split?.index ?? a.playlistIndex
+          const bIndex = workingPlaylist[b.playlistIndex]?.split?.index ?? b.playlistIndex
+          return aIndex - bIndex
+        })
 
         const splitDir = path.join(audioWorkDir, 'jobs', jobId, action.youtubeId, 'parts')
         await mkdir(splitDir, { recursive: true })
@@ -487,46 +510,79 @@ async function runSaveJob(
 
         for (let partIndex = 0; partIndex < ordered.length; partIndex++) {
           const part = ordered[partIndex]!
-          const range = {
-            start: part.split.startSeconds,
-            duration: part.split.durationSeconds,
+          const track = workingPlaylist[part.playlistIndex]!
+          const range = effectiveCutRange(track, actualDuration)
+          if (!range) {
+            throw createError({
+              statusCode: 500,
+              message: `Could not cut "${track.title}".`,
+            })
           }
-          const cacheKey = splitPartCacheKey(action.youtubeId, part.split, didNormalize)
-          const cached = transcodedFromSplitCache(
-            await readSplitPartTranscodeCache(audioWorkDir, cacheKey, sourceSha256),
+          const cacheKey = extractCutCacheKey(
+            action.youtubeId,
+            track,
+            normalizeVolume,
+            actualDuration,
           )
-          if (cached) {
-            finishExtractedPart(part.playlistIndex, cached)
-            continue
+          if (cacheKey) {
+            const cached = transcodedFromSplitCache(
+              await readSplitPartTranscodeCache(audioWorkDir, cacheKey, sourceSha256),
+            )
+            if (cached) {
+              finishExtractedPart(part.playlistIndex, cached)
+              continue
+            }
           }
 
-          const destPath = path.join(splitDir, `part${part.split.index}.m4a`)
-          const cut = await splitAudioFile({
-            sourcePath: uploadSourcePath,
-            destPath,
-            startSeconds: range.start,
-            durationSeconds: range.duration,
-            codec: 'aac',
-          })
+          const destPath = path.join(splitDir, `part${track.split?.index ?? partIndex}.m4a`)
+          const cut = isTrimmed(track)
+            ? await trimAudioFile({
+                sourcePath: downloaded.filePath,
+                destPath,
+                startSeconds: range.startSeconds,
+                endSeconds: range.startSeconds + range.durationSeconds,
+                sourceDurationSeconds: actualDuration,
+              })
+            : await splitAudioFile({
+                sourcePath: downloaded.filePath,
+                destPath,
+                startSeconds: range.startSeconds,
+                durationSeconds: range.durationSeconds,
+                codec: 'aac',
+              })
           if (!cut) {
             throw createError({
               statusCode: 500,
-              message: `Could not split "${workingPlaylist[part.playlistIndex]?.title ?? 'track'}".`,
+              message: `Could not trim "${track.title}".`,
             })
+          }
+
+          let uploadPath = destPath
+          if (normalizeVolume) {
+            updateTrack(job, part.playlistIndex, 'leveling')
+            const leveledPath = path.join(splitDir, `part${track.split?.index ?? partIndex}-leveled.m4a`)
+            const leveled = await loudnormAudioFile(
+              destPath,
+              leveledPath,
+              range.durationSeconds,
+            )
+            if (leveled) uploadPath = leveled
           }
 
           updateTrack(job, part.playlistIndex, 'uploading')
           const transcoded = await uploadAudioFile(
             accessToken,
-            destPath,
-            path.basename(destPath),
+            uploadPath,
+            path.basename(uploadPath),
             {
               meta: {
                 jobId,
                 youtubeId: action.youtubeId,
-                title: workingPlaylist[part.playlistIndex]?.title,
-                durationSeconds: range.duration,
-                partLabel: `${part.split.index + 1}/${part.split.count}`,
+                title: track.title,
+                durationSeconds: range.durationSeconds,
+                partLabel: track.split
+                  ? `${track.split.index + 1}/${track.split.count}`
+                  : undefined,
               },
               onTranscodePoll: ({ percent }) => {
                 updateTrack(job, part.playlistIndex, 'transcoding')
@@ -539,7 +595,9 @@ async function runSaveJob(
               },
             },
           )
-          await writeSplitPartTranscodeCache(audioWorkDir, cacheKey, transcoded, sourceSha256)
+          if (cacheKey) {
+            await writeSplitPartTranscodeCache(audioWorkDir, cacheKey, transcoded, sourceSha256)
+          }
           finishExtractedPart(part.playlistIndex, transcoded)
         }
       }
@@ -670,6 +728,11 @@ async function runSaveJob(
       }
     }
 
+    let coverImageL: string | null = null
+    if (target.operation === 'create') {
+      coverImageL = await tryGeneratePlaylistCover(accessToken)
+    }
+
     let response
     try {
       response = await createOrUpdateContent(accessToken, withContentCardId(
@@ -691,6 +754,7 @@ async function runSaveJob(
                 fileSize: built.totalFileSize,
                 readableFileSize: Math.round((built.totalFileSize / 1024 / 1024) * 10) / 10,
               },
+              ...(coverImageL ? { cover: { imageL: coverImageL } } : {}),
             },
           ),
         },
