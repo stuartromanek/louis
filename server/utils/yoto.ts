@@ -1,14 +1,16 @@
 import type { H3Event } from 'h3'
 import {
+  decideYotoAccess,
   getAccessTokenCookie,
   getRefreshTokenCookie,
   getScopeCookie,
-  refreshAccessToken,
+  refreshAccessTokenSingleFlight,
   setAccessTokenCookie,
   setRefreshTokenCookie,
   setScopeCookie,
   YOTO_API_BASE_URL,
   type YotoConfig,
+  type YotoTokenResponse,
 } from './yoto-auth'
 import {
   clearYotoDesktopSession,
@@ -69,32 +71,19 @@ export function getYotoAuthScope(event: H3Event): string | undefined {
 export async function getYotoAccessToken(event: H3Event): Promise<string> {
   const config = getYotoConfig(event)
   const session = readYotoDesktopSession()
-  const refreshToken = getRefreshTokenCookie(event) || session?.refreshToken || ''
-  const cookieAccess = getAccessTokenCookie(event) || ''
-  const sessionAccess = session?.accessToken || ''
-  const sessionExpired = Boolean(session?.accessExpiresAt && Date.now() > session.accessExpiresAt)
+  const decision = decideYotoAccess({
+    cookieAccess: getAccessTokenCookie(event) || '',
+    sessionAccess: session?.accessToken || '',
+    sessionExpired: Boolean(session?.accessExpiresAt && Date.now() > session.accessExpiresAt),
+    refreshToken: getRefreshTokenCookie(event) || session?.refreshToken || '',
+  })
 
-  if (refreshToken) {
+  if (decision.action === 'use') return decision.accessToken
+
+  if (decision.action === 'refresh') {
     try {
-      const tokens = await refreshAccessToken(config, refreshToken)
-
-      setAccessTokenCookie(event, tokens.access_token, tokens.expires_in)
-      if (tokens.refresh_token) {
-        setRefreshTokenCookie(event, tokens.refresh_token)
-      }
-      if (tokens.scope) {
-        setScopeCookie(event, tokens.scope)
-      }
-
-      if (isDesktopAuthMode()) {
-        writeYotoDesktopSession({
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token || refreshToken,
-          scope: tokens.scope || readYotoDesktopSession()?.scope || '',
-          accessExpiresAt: Date.now() + Math.max(tokens.expires_in - 60, 60) * 1000,
-        })
-      }
-
+      const tokens = await refreshAccessTokenSingleFlight(config, decision.refreshToken)
+      persistRefreshedTokens(event, tokens, decision.refreshToken)
       return tokens.access_token
     }
     catch (err: unknown) {
@@ -110,8 +99,7 @@ export async function getYotoAccessToken(event: H3Event): Promise<string> {
     }
   }
 
-  // Expired desktop access with no refresh → force reconnect (do not call Yoto with a dead token).
-  if (sessionAccess && sessionExpired) {
+  if (decision.action === 'expired') {
     clearYotoDesktopSession()
     throw createError({
       statusCode: 401,
@@ -119,14 +107,31 @@ export async function getYotoAccessToken(event: H3Event): Promise<string> {
     })
   }
 
-  const accessToken = cookieAccess || sessionAccess
-  if (accessToken) {
-    return accessToken
-  }
-
   throw createError({
     statusCode: 401,
     statusMessage: 'Not connected to Yoto. Click Connect to sign in.',
+  })
+}
+
+function persistRefreshedTokens(
+  event: H3Event,
+  tokens: YotoTokenResponse,
+  previousRefreshToken: string,
+) {
+  setAccessTokenCookie(event, tokens.access_token, tokens.expires_in)
+  if (tokens.refresh_token) {
+    setRefreshTokenCookie(event, tokens.refresh_token)
+  }
+  if (tokens.scope) {
+    setScopeCookie(event, tokens.scope)
+  }
+
+  if (!isDesktopAuthMode()) return
+  writeYotoDesktopSession({
+    accessToken: tokens.access_token,
+    refreshToken: tokens.refresh_token || previousRefreshToken,
+    scope: tokens.scope || readYotoDesktopSession()?.scope || '',
+    accessExpiresAt: Date.now() + Math.max(tokens.expires_in - 60, 60) * 1000,
   })
 }
 

@@ -8,7 +8,7 @@ export const YOTO_ACCESS_TOKEN_COOKIE = 'yoto_access_token'
 export const YOTO_AUTH_BASE_URL = 'https://login.yotoplay.com'
 export const YOTO_API_AUDIENCE = 'https://api.yotoplay.com'
 export const YOTO_API_BASE_URL = 'https://api.yotoplay.com'
-export const YOTO_SCOPES = 'user:content:view user:content:manage user:icons:manage'
+export const YOTO_SCOPES = 'offline_access user:content:view user:content:manage user:icons:manage'
 export const YOTO_SCOPE_COOKIE = 'yoto_token_scope'
 
 export type YotoAuthFlow = 'confidential' | 'public-pkce'
@@ -117,6 +117,64 @@ export async function refreshAccessToken(
     refresh_token: refreshToken,
     audience: YOTO_API_AUDIENCE,
   })
+}
+
+/** Yoto refresh tokens rotate. Share one in-flight refresh per token so parallel API calls cannot reuse it. */
+const refreshInFlight = new Map<string, Promise<YotoTokenResponse>>()
+const recentRefresh = new Map<string, { tokens: YotoTokenResponse, until: number }>()
+const RECENT_REFRESH_MS = 15_000
+
+export async function refreshAccessTokenSingleFlight(
+  config: YotoConfig,
+  refreshToken: string,
+): Promise<YotoTokenResponse> {
+  const key = refreshToken.trim()
+  const recent = recentRefresh.get(key)
+  if (recent && recent.until > Date.now()) return recent.tokens
+
+  const existing = refreshInFlight.get(key)
+  if (existing) return existing
+
+  const pending = refreshAccessToken(config, key)
+    .then((tokens) => {
+      const until = Date.now() + RECENT_REFRESH_MS
+      recentRefresh.set(key, { tokens, until })
+      if (tokens.refresh_token) recentRefresh.set(tokens.refresh_token, { tokens, until })
+      return tokens
+    })
+    .finally(() => {
+      refreshInFlight.delete(key)
+    })
+  refreshInFlight.set(key, pending)
+  return pending
+}
+
+export type YotoAccessDecision =
+  | { action: 'use', accessToken: string }
+  | { action: 'refresh', refreshToken: string }
+  | { action: 'expired' }
+  | { action: 'disconnected' }
+
+/** Prefer a still-valid access token. Refresh only when it is gone or past desktop expiry. */
+export function decideYotoAccess(input: {
+  cookieAccess: string
+  sessionAccess: string
+  sessionExpired: boolean
+  refreshToken: string
+}): YotoAccessDecision {
+  const cookieAccess = input.cookieAccess.trim()
+  if (cookieAccess) return { action: 'use', accessToken: cookieAccess }
+
+  const sessionAccess = input.sessionAccess.trim()
+  if (sessionAccess && !input.sessionExpired) {
+    return { action: 'use', accessToken: sessionAccess }
+  }
+
+  const refreshToken = input.refreshToken.trim()
+  if (refreshToken) return { action: 'refresh', refreshToken }
+
+  if (sessionAccess && input.sessionExpired) return { action: 'expired' }
+  return { action: 'disconnected' }
 }
 
 async function postTokenRequest(body: Record<string, string>): Promise<YotoTokenResponse> {

@@ -11,7 +11,6 @@ import type {
 } from '#shared/myo-editor/types'
 import {
   applyProbedDurations,
-  extractGroupShouldCutParts,
   isCompleteSplitGroup,
   saveNeedsProbedDuration,
 } from '#shared/myo-editor/splitTrack'
@@ -34,11 +33,13 @@ import { trimAudioFile } from './ffmpeg-trim'
 import { effectiveCutRange, isTrimmed } from '#shared/myo-editor/trackTrim'
 import {
   readSplitPartTranscodeCache,
-  shouldSkipSplitSourceDownload,
   transcodedFromSplitCache,
   writeSplitPartTranscodeCache,
-  type SplitPartTranscodeCacheKey,
 } from './split-transcode-cache'
+import {
+  extractCutCacheKey,
+  planYoutubeGroupExtract,
+} from './save-extract-steps'
 import { createOrUpdateContent } from './yoto-content'
 import {
   isUncertainCreatePostError,
@@ -58,30 +59,6 @@ const jobs = new Map<string, SaveJobState>()
 export type SaveTarget =
   | { operation: 'create' }
   | { operation: 'update'; cardId: string }
-
-function extractCutCacheKey(
-  youtubeId: string,
-  track: PlaylistTrack,
-  normalizeVolume: boolean,
-  actualDuration?: number,
-): SplitPartTranscodeCacheKey | null {
-  const range = effectiveCutRange(track, actualDuration)
-    ?? (track.split
-      ? {
-          startSeconds: track.split.startSeconds,
-          durationSeconds: track.split.durationSeconds,
-        }
-      : null)
-  if (!range) return null
-  return {
-    youtubeId,
-    index: track.split?.index ?? 0,
-    count: track.split?.count ?? 1,
-    normalizeVolume,
-    startSeconds: range.startSeconds,
-    durationSeconds: range.durationSeconds,
-  }
-}
 
 function findActiveJobForCard(cardId: string): SaveJobState | undefined {
   for (const job of jobs.values()) {
@@ -302,7 +279,16 @@ async function runSaveJob(
         const record = await readSplitPartTranscodeCache(audioWorkDir, key)
         return transcodedFromSplitCache(record)
       }))
-      if (shouldSkipSplitSourceDownload(cached)) skipDownloadYoutubeIds.add(youtubeId)
+      const tracks = group
+        .map(part => workingPlaylist[part.playlistIndex])
+        .filter((track): track is PlaylistTrack => Boolean(track))
+      const extractPlan = planYoutubeGroupExtract({
+        youtubeId,
+        tracks,
+        normalizeVolume,
+        cacheHits: cached,
+      })
+      if (extractPlan.skipDownload) skipDownloadYoutubeIds.add(youtubeId)
     }
 
     let pauseBeforeNextExtract = false
@@ -406,11 +392,21 @@ async function runSaveJob(
       const firstIndex = group[0]!.playlistIndex
       const trackBase = OVERALL_START + extractOrdinal * trackSpan * group.length
       const actualDuration = durationByYoutubeId.get(action.youtubeId)
-      const shouldCut = extractGroupShouldCutParts(group)
-        || group.some((item) => {
-          const track = workingPlaylist[item.playlistIndex]
-          return Boolean(track && effectiveCutRange(track, actualDuration))
-        })
+      const orderedGroup = [...group].sort((a, b) => {
+        const aIndex = workingPlaylist[a.playlistIndex]?.split?.index ?? a.playlistIndex
+        const bIndex = workingPlaylist[b.playlistIndex]?.split?.index ?? b.playlistIndex
+        return aIndex - bIndex
+      })
+      const groupTracks = orderedGroup
+        .map(item => workingPlaylist[item.playlistIndex])
+        .filter((track): track is PlaylistTrack => Boolean(track))
+      let extractPlan = planYoutubeGroupExtract({
+        youtubeId: action.youtubeId,
+        tracks: groupTracks,
+        normalizeVolume,
+        actualDuration,
+      })
+      const shouldCut = extractPlan.shouldCut
 
       const finishExtractedPart = (
         playlistIndex: number,
@@ -448,7 +444,14 @@ async function runSaveJob(
           const record = await readSplitPartTranscodeCache(audioWorkDir, key)
           return transcodedFromSplitCache(record)
         }))
-        if (shouldSkipSplitSourceDownload(cachedHits)) {
+        extractPlan = planYoutubeGroupExtract({
+          youtubeId: action.youtubeId,
+          tracks: groupTracks,
+          normalizeVolume,
+          actualDuration,
+          cacheHits: cachedHits,
+        })
+        if (extractPlan.skipDownload) {
           for (let partIndex = 0; partIndex < ordered.length; partIndex++) {
             const hit = cachedHits[partIndex]
             if (!hit) continue
@@ -474,7 +477,7 @@ async function runSaveJob(
       let uploadSourcePath = downloaded.filePath
       let uploadSourceName = downloaded.filename
       let didNormalize = false
-      if (normalizeVolume && !shouldCut) {
+      if (extractPlan.loudnormFullFile) {
         for (const part of group) updateTrack(job, part.playlistIndex, 'leveling')
         setJobProgress({
           status: 'downloading',

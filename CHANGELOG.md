@@ -11,6 +11,7 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ### Added
 - **Playlist artwork** — new playlists get a generated [DiceBear](https://www.dicebear.com/how-to-use/http-api/) cover on create. Playlist menu → **Artwork** opens a generate / upload / crop flyout (5×7 cover, session history; Yoto `metadata.cover.imageL`).
+- **Track trim** — scissors on a YouTube track (or a split group) edits the **full** source. Trim keeps that region and re-splits if the keep is still over 55 minutes (or collapses to one slat if it is not). Waveform + preview in a flyout (desktop) or tray (phone).
 - **Auto-split long tracks** — YouTube sources over 55 minutes expand into connected Part 1 / Part 2 / … playlist slats on add (move and delete as a group). Save downloads the audio once, then ffmpeg-splits into legal MYO chapters. Replaces the old “Enable long tracks?” confirm gate.
 - **Track Art Editor** — per-track 16×16 Yoto icons from the playlist (desktop) and mobile playlist detail: Icons tab (Yoto public library + [yotoicons.com](https://yotoicons.com/) search + upload) and Draw tab (pixel canvas, palette, undo/redo).
 - Instant icon patch for existing playlist tracks (`PATCH`-style content update) so art saves without a full playlist rewrite; new tracks stay local until Update.
@@ -30,13 +31,20 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - **New playlist** in the idle playlist empty state is a link that starts the New playlist flow.
 
 ### Changed
+- Artwork, Trim, Track Art, How To, and Settings share one **AppFlyout** (dismiss ×, compact footer commit).
 - Confirming a new playlist name creates the playlist on Yoto immediately. Checked Search results (desktop New) or Add → New playlist (phone) upload with that create; otherwise the playlist starts empty and you add tracks, then Update.
+- Update can save an empty playlist (clears chapters on Yoto). The create footer no longer says the playlist is not on Yoto yet.
+- Track Art icon size preference persists on desktop; phone still uses 64 without overwriting that pref.
+- After Update, the library fan shows the new track count and duration.
+- How To uses a smaller flyout and more space between bullets.
+- Trim **Play** is disabled while the waveform is loading; the times row shimmers until peaks arrive.
 - Product copy uses Yoto’s playlist terms for library items (**Playlists**, **New playlist**, **Open a playlist**). Louis does not link physical MYO cards — that stays in the Yoto app.
 - YouTube results have a maru checkbox next to the drag handle; checked rows import together when you drag (desktop) or tap Add (phone).
 - Playlist URL results sit in a nested Playlist title box with a Select all / Deselect all toggle.
 - Menu and the desktop status bar paint as soon as auth status is known; the library fetch no longer blocks chrome. Library / fan / add-to-playlist show placeholders while playlists load.
 - Toasts default to bottom-end (top on iOS so they don't cover Safari's Share control).
 - Yoto OAuth scopes now include `user:icons:manage` (reconnect if icon upload/patch is denied).
+- Yoto Connect requests `offline_access` and reuses the access token until it expires (Yoto refresh tokens rotate; parallel refreshes are coalesced). Reconnect once so Louis can store a refresh token.
 - Docker / GHCR: OAuth callback no longer defaults to `localhost` — unset `LOUIS_YOTO_REDIRECT_URI` uses the Host the browser actually opened (LAN / Portainer). Image and compose default `LOUIS_COOKIE_SECURE=false` for plain HTTP; set `true` behind TLS. Compose pulls `ghcr.io/stuartromanek/louis:latest`, uses named volume `louis-audio`, and no longer requires a Git-tracked `env_file`.
 - Yoto transcode waits scale with chapter size and duration (6-minute floor, 20-minute cap; ~30s wait per minute of audio so long split chapters actually reach the cap). Timeout copy names the part and last percent; the overlay keeps polling while the save job is still moving.
 - Pixel editor draw sounds use `scribble-*` / `erase` / `clear` instead of the old `mdn-*` ticks.

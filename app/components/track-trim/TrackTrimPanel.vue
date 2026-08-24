@@ -29,9 +29,12 @@ const emit = defineEmits<{
 
 const playLabel = computed(() => {
   if (props.error) return props.error
+  if (props.peaksLoading) return 'Loading waveform'
   if (props.isLoading) return 'Loading preview'
   return props.isPlaying ? 'Pause' : 'Play'
 })
+
+const playDisabled = computed(() => props.peaksLoading || props.isLoading)
 
 function formatTime(seconds: number) {
   return formatDurationSeconds(seconds) || '0:00'
@@ -74,6 +77,7 @@ const lengthStyle = computed(() => ({
           'track-trim-play--error': Boolean(error),
         }"
         :aria-label="playLabel"
+        :disabled="playDisabled"
         @click="emit('play')"
       >
         <span
@@ -108,7 +112,10 @@ const lengthStyle = computed(() => ({
           role="group"
           aria-label="Trim times"
         >
-          <div class="track-trim-panel__times-track">
+          <div
+            class="track-trim-panel__times-track"
+            :class="{ 'is-loading': peaksLoading }"
+          >
             <div
               class="track-trim-panel__stat track-trim-panel__stat--start"
               :style="startStyle"

@@ -4,6 +4,7 @@ import {
   YOTO_MYO_MAX_TRACKS,
   YOTO_MYO_MAX_TRACK_SECONDS,
   YOTO_MYO_SPLIT_TRACK_SECONDS,
+  projectedPlaylistTrackCount,
 } from './yotoMyoLimits.ts'
 import {
   applyProbedDurations,
@@ -319,6 +320,25 @@ describe('split completeness / insert / probe', () => {
     assert.equal(result.skipped, 0)
   })
 
+  it('overflows a 2 hour unsplit add when 98 shorts already fill projected slots', () => {
+    const existing = Array.from({ length: 98 }, (_, i) =>
+      track({ id: `t${i}`, youtubeId: `t${i}` }),
+    )
+    const incomingSource = track({
+      id: 'album',
+      youtubeId: 'album',
+      title: 'Album',
+      duration: 2 * 60 * 60,
+    })
+    const incoming = expandUnsplitTrack(incomingSource, 2 * 60 * 60)
+    assert.ok(incoming)
+    assert.equal(incoming.length, 3)
+    assert.equal(projectedPlaylistTrackCount([...existing, incomingSource]), 101)
+    const result = selectIncomingTracks(existing, incoming)
+    assert.equal(result.unique.length, 0)
+    assert.equal(result.overflow, 3)
+  })
+
   it('fails closed without a probe on an unsplit long or unknown-duration extract', () => {
     assert.equal(saveNeedsProbedDuration(track({ id: 'u', youtubeId: 'u' })), true)
     assert.equal(
@@ -404,6 +424,53 @@ describe('applySourceTrimAndSplit', () => {
     assert.equal(cleared[0]?.split?.startSeconds, 0)
     assert.equal(cleared[1]?.split?.startSeconds, full[1]?.split?.startSeconds)
     assert.equal(cleared.length, 2)
+  })
+
+  it('stays one unsplit row when keep is exactly 55 minutes', () => {
+    const rows = applySourceTrimAndSplit(
+      source,
+      { startSeconds: 0, endSeconds: YOTO_MYO_SPLIT_TRACK_SECONDS },
+      5400,
+    )
+    assert.equal(rows.length, 1)
+    assert.equal(rows[0]?.split, undefined)
+    assert.deepEqual(rows[0]?.trim, {
+      startSeconds: 0,
+      endSeconds: YOTO_MYO_SPLIT_TRACK_SECONDS,
+    })
+  })
+
+  it('splits when keep is one second over 55 minutes', () => {
+    const keepStart = 120
+    const keepEnd = keepStart + YOTO_MYO_SPLIT_TRACK_SECONDS + 1
+    const rows = applySourceTrimAndSplit(
+      source,
+      { startSeconds: keepStart, endSeconds: keepEnd },
+      5400,
+    )
+    assert.equal(rows.length, 2)
+    assert.equal(rows[0]?.split?.startSeconds, keepStart)
+    assert.equal(
+      (rows[0]?.duration ?? 0) + (rows[1]?.duration ?? 0),
+      YOTO_MYO_SPLIT_TRACK_SECONDS + 1,
+    )
+  })
+
+  it('keeps a 2 hour expand as one incoming block', () => {
+    const long = track({
+      id: 'bedtime',
+      youtubeId: 'bedtime',
+      title: 'Bedtime',
+      duration: 7200,
+    })
+    const parts = expandUnsplitTrack(long, 7200)
+    assert.ok(parts)
+    assert.equal(parts.length, 3)
+    assert.equal(parts[0]?.title, 'Bedtime (Part 1)')
+    assert.equal(parts[0]?.split?.groupId, 'bedtime')
+    const blocks = incomingTrackBlocks(parts)
+    assert.equal(blocks.length, 1)
+    assert.deepEqual(blocks[0]?.map(item => item.id), parts.map(item => item.id))
   })
 })
 

@@ -6,6 +6,7 @@ import {
   planPendingUpdates,
   type PendingUpdateSnapshot,
 } from './planPendingUpdates.ts'
+import { applySourceTrimAndSplit } from './splitTrack.ts'
 import { YOTO_MYO_MAX_TRACKS } from './yotoMyoLimits.ts'
 import type { PlaylistTrack } from './types.ts'
 
@@ -64,6 +65,66 @@ describe('pendingTargetFrom', () => {
     ))
     const target = pendingTargetFrom('full', snapshot(tracks, tracks), null)
     assert.equal(target.overCapacity, true)
+    assert.equal(target.extractsYoutube, false)
+  })
+
+  it('flags extract when a reused split group is trimmed', () => {
+    const parts = [0, 1].map(index => youtubeTrack({
+      id: `concert#p${index}`,
+      youtubeId: 'concert',
+      title: `Concert (Part ${index + 1})`,
+      duration: 5400,
+      yotoReuse: {
+        trackUrl: `yoto:#concert${index}`,
+        type: 'audio',
+        format: 'opus',
+        duration: 2700,
+        fileSize: 1,
+        channels: 'stereo',
+        display: { icon16x16: null },
+      },
+      split: {
+        groupId: 'concert',
+        index,
+        count: 2,
+        startSeconds: index * 2700,
+        durationSeconds: 2700,
+        sourceDurationSeconds: 5400,
+      },
+    }))
+    const trimmed = applySourceTrimAndSplit(
+      parts[0]!,
+      { startSeconds: 600, endSeconds: 4800 },
+      5400,
+    )
+    const target = pendingTargetFrom('a', snapshot(trimmed, parts), null)
+    assert.equal(target.extractsYoutube, true)
+  })
+
+  it('does not flag a reuse-only split group as extracting', () => {
+    const parts = [0, 1].map(index => youtubeTrack({
+      id: `concert#p${index}`,
+      youtubeId: 'concert',
+      title: `Concert (Part ${index + 1})`,
+      duration: 2700,
+      yotoReuse: {
+        trackUrl: `yoto:#concert${index}`,
+        type: 'audio',
+        format: 'opus',
+        duration: 2700,
+        fileSize: 1,
+        channels: 'stereo',
+        display: { icon16x16: null },
+      },
+      split: {
+        groupId: 'concert',
+        index,
+        count: 2,
+        startSeconds: index * 2700,
+        durationSeconds: 2700,
+      },
+    }))
+    const target = pendingTargetFrom('a', snapshot(parts, parts), null)
     assert.equal(target.extractsYoutube, false)
   })
 })
@@ -192,5 +253,14 @@ describe('planPendingUpdates', () => {
     ])
     assert.equal(plan.extractsYoutube, true)
     assert.equal(plan.overCapacity, true)
+  })
+
+  it('is extract-only when one target reuses and another is new YouTube', () => {
+    const existing = reusedTrack('a', 'abc')
+    const plan = planPendingUpdates([
+      pendingTargetFrom('reuse', snapshot([existing], [existing]), null),
+      pendingTargetFrom('new', snapshot([youtubeTrack()]), null),
+    ])
+    assert.deepEqual(plan, { overCapacity: false, extractsYoutube: true })
   })
 })

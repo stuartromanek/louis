@@ -96,7 +96,7 @@ Create a **public** client at [yoto.dev](https://yoto.dev/get-started/start-here
 | LAN / Portainer          | `http://<host-ip-or-name>:4000/api/yoto/auth/callback` — same origin you open Louis |
 | Local redirect           | `http://localhost:4000/api/yoto/auth/callback`                                     |
 | Desktop app redirect     | `http://127.0.0.1:4010/api/yoto/auth/callback` — see [DESKTOP.md](docs/DESKTOP.md) |
-| Scopes                   | `user:content:view user:content:manage user:icons:manage`                          |
+| Scopes                   | `offline_access user:content:view user:content:manage user:icons:manage`           |
 
 
 You only need `LOUIS_YOTO_CLIENT_ID`. Leave `LOUIS_YOTO_CLIENT_SECRET` empty for PKCE.
