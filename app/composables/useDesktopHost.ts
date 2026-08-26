@@ -1,9 +1,15 @@
 import { BUNDLED_YOTO_CLIENT_ID } from '#shared/bundledYotoClientId.mjs'
+import {
+  normalizeYoutubeSafeSearch,
+  YOUTUBE_SAFE_SEARCH_DEFAULT,
+  type YoutubeSafeSearch,
+} from '#shared/youtubeSafeSearch'
 
 export type LouisDesktopConfig = {
   yotoClientId: string
   yotoClientSecret: string
   youtubeApiKey: string
+  youtubeSafeSearch: YoutubeSafeSearch
   ytdlpCookiesFile: string
   /** Louis public PKCE client ID for “Use default client” (not persisted). */
   bundledYotoClientId: string
@@ -34,6 +40,7 @@ function emptyConfig(): LouisDesktopConfig {
     yotoClientId: '',
     yotoClientSecret: '',
     youtubeApiKey: '',
+    youtubeSafeSearch: YOUTUBE_SAFE_SEARCH_DEFAULT,
     ytdlpCookiesFile: '',
     bundledYotoClientId: BUNDLED_YOTO_CLIENT_ID,
   }
@@ -44,6 +51,7 @@ function normalizeConfig(raw: Partial<LouisDesktopConfig> | null | undefined): L
     yotoClientId: String(raw?.yotoClientId || '').trim(),
     yotoClientSecret: String(raw?.yotoClientSecret || '').trim(),
     youtubeApiKey: String(raw?.youtubeApiKey || '').trim(),
+    youtubeSafeSearch: normalizeYoutubeSafeSearch(raw?.youtubeSafeSearch),
     ytdlpCookiesFile: String(raw?.ytdlpCookiesFile || '').trim(),
     bundledYotoClientId:
       String(raw?.bundledYotoClientId || '').trim() || BUNDLED_YOTO_CLIENT_ID,
@@ -56,6 +64,7 @@ function mockPersistShape(config: LouisDesktopConfig) {
     yotoClientId: config.yotoClientId,
     yotoClientSecret: config.yotoClientSecret,
     youtubeApiKey: config.youtubeApiKey,
+    youtubeSafeSearch: config.youtubeSafeSearch,
     ytdlpCookiesFile: config.ytdlpCookiesFile,
   }
 }

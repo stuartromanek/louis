@@ -40,6 +40,7 @@ export function pickLouisEnv(louis, nuxt, env = process.env) {
 /** @type {LouisEnvBinding[]} */
 export const LOUIS_ENV_BINDINGS = [
   { path: 'youtubeApiKey', louis: 'LOUIS_YOUTUBE_API_KEY', nuxt: 'NUXT_YOUTUBE_API_KEY' },
+  { path: 'youtubeSafeSearch', louis: 'LOUIS_YOUTUBE_SAFE_SEARCH', nuxt: 'NUXT_YOUTUBE_SAFE_SEARCH' },
   { path: 'yotoClientId', louis: 'LOUIS_YOTO_CLIENT_ID', nuxt: 'NUXT_YOTO_CLIENT_ID' },
   { path: 'yotoClientSecret', louis: 'LOUIS_YOTO_CLIENT_SECRET', nuxt: 'NUXT_YOTO_CLIENT_SECRET' },
   { path: 'yotoRedirectUri', louis: 'LOUIS_YOTO_REDIRECT_URI', nuxt: 'NUXT_YOTO_REDIRECT_URI' },
@@ -151,6 +152,7 @@ export function louisRuntimeConfigDefaults() {
 
   return {
     youtubeApiKey: pickLouisEnv('LOUIS_YOUTUBE_API_KEY', 'NUXT_YOUTUBE_API_KEY'),
+    youtubeSafeSearch: pickLouisEnv('LOUIS_YOUTUBE_SAFE_SEARCH', 'NUXT_YOUTUBE_SAFE_SEARCH') || 'moderate',
     yotoClientId: pickLouisEnv('LOUIS_YOTO_CLIENT_ID', 'NUXT_YOTO_CLIENT_ID'),
     yotoClientSecret: pickLouisEnv('LOUIS_YOTO_CLIENT_SECRET', 'NUXT_YOTO_CLIENT_SECRET'),
     // Empty: production derives `${request.origin}/api/yoto/auth/callback` (LAN / Portainer).

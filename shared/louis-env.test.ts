@@ -12,6 +12,8 @@ import {
 const ENV_KEYS = [
   'LOUIS_YOUTUBE_API_KEY',
   'NUXT_YOUTUBE_API_KEY',
+  'LOUIS_YOUTUBE_SAFE_SEARCH',
+  'NUXT_YOUTUBE_SAFE_SEARCH',
   'LOUIS_YOTO_CLIENT_ID',
   'NUXT_YOTO_CLIENT_ID',
   'LOUIS_YOTO_CLIENT_SECRET',
@@ -171,14 +173,24 @@ describe('louisRuntimeConfigDefaults', () => {
   const savedEnv: Record<string, string | undefined> = {}
 
   beforeEach(() => {
-    for (const key of ['LOUIS_YOTO_REDIRECT_URI', 'NUXT_YOTO_REDIRECT_URI'] as const) {
+    for (const key of [
+      'LOUIS_YOTO_REDIRECT_URI',
+      'NUXT_YOTO_REDIRECT_URI',
+      'LOUIS_YOUTUBE_SAFE_SEARCH',
+      'NUXT_YOUTUBE_SAFE_SEARCH',
+    ] as const) {
       savedEnv[key] = process.env[key]
       delete process.env[key]
     }
   })
 
   afterEach(() => {
-    for (const key of ['LOUIS_YOTO_REDIRECT_URI', 'NUXT_YOTO_REDIRECT_URI'] as const) {
+    for (const key of [
+      'LOUIS_YOTO_REDIRECT_URI',
+      'NUXT_YOTO_REDIRECT_URI',
+      'LOUIS_YOUTUBE_SAFE_SEARCH',
+      'NUXT_YOUTUBE_SAFE_SEARCH',
+    ] as const) {
       const value = savedEnv[key]
       if (value === undefined) delete process.env[key]
       else process.env[key] = value
@@ -187,5 +199,15 @@ describe('louisRuntimeConfigDefaults', () => {
 
   it('leaves yotoRedirectUri empty when unset so production can derive from the request host', () => {
     assert.equal(louisRuntimeConfigDefaults().yotoRedirectUri, '')
+  })
+
+  it('defaults youtubeSafeSearch to moderate when unset', () => {
+    assert.equal(louisRuntimeConfigDefaults().youtubeSafeSearch, 'moderate')
+  })
+
+  it('reads youtubeSafeSearch from env when set', () => {
+    process.env.LOUIS_YOUTUBE_SAFE_SEARCH = 'strict'
+    assert.equal(louisRuntimeConfigDefaults().youtubeSafeSearch, 'strict')
+    delete process.env.LOUIS_YOUTUBE_SAFE_SEARCH
   })
 })

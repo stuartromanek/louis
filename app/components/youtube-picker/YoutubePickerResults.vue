@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { ResultsLayout, YoutubeVideoSummary } from './types'
 import YoutubeResultCard from './YoutubeResultCard.vue'
-import { videoResultKey } from '#shared/myo-editor/youtubePlaylistImport'
+import { listableYoutubeSearchResults, videoResultKey } from '#shared/myo-editor/youtubePlaylistImport'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   results: YoutubeVideoSummary[]
   focusedIndex: number
   layout?: ResultsLayout
@@ -18,6 +18,8 @@ withDefaults(defineProps<{
 const emit = defineEmits<{
   select: [id: string]
 }>()
+
+const listedResults = computed(() => listableYoutubeSearchResults(props.results))
 </script>
 
 <template>
@@ -35,7 +37,7 @@ const emit = defineEmits<{
       aria-label="Search results"
     >
       <li
-        v-for="(video, index) in results"
+        v-for="(video, index) in listedResults"
         :key="videoResultKey(video)"
         role="option"
         :aria-selected="index === focusedIndex"

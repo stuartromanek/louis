@@ -8,9 +8,6 @@ import { createOrUpdateContent } from './yoto-content'
 import { mergeContentMetadata } from './yoto-metadata'
 import { mediaUrlFromCoverResponse, type YotoCoverUploadResponse } from './yoto-cover-parse'
 
-export type { YotoCoverUploadResponse } from './yoto-cover-parse'
-export { mediaUrlFromCoverResponse } from './yoto-cover-parse'
-
 export interface YotoCoverUploadResult {
   mediaUrl: string
 }

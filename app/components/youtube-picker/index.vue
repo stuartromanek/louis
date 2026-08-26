@@ -1,9 +1,9 @@
 <!--
   YouTube Picker — self-contained search/browse/select component.
 
-  Requires:
-  - LOUIS_YOUTUBE_API_KEY in .env
-  - Server proxy routes at /api/youtube/search, /api/youtube/videos, /api/youtube/playlist, and /api/youtube/channel
+  Search uses bundled yt-dlp when LOUIS_YOUTUBE_API_KEY is unset.
+  A Data API key is recommended (faster search, moderate safeSearch on typed search).
+  Server proxy routes: /api/youtube/search, /api/youtube/videos, /api/youtube/playlist, /api/youtube/channel
 -->
 <script setup lang="ts">
 import { useYoutubePicker, YOUTUBE_PICKER_RESULTS_KEY } from './useYoutubePicker'

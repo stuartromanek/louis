@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import MaruTooltip from '~/components/ui/MaruTooltip.vue'
 import { useDesktopHost } from '~/composables/useDesktopHost'
+import {
+  YOUTUBE_SAFE_SEARCH_DEFAULT,
+  YOUTUBE_SAFE_SEARCH_OPTIONS,
+  type YoutubeSafeSearch,
+} from '#shared/youtubeSafeSearch'
 
 const YOTO_DEV_URL = 'https://yoto.dev/get-started/start-here/'
 const YOUTUBE_API_URL = 'https://console.cloud.google.com/apis/library/youtube.googleapis.com'
@@ -32,6 +37,9 @@ const props = withDefaults(defineProps<{
 
 const yotoClientId = defineModel<string>('yotoClientId', { default: '' })
 const youtubeApiKey = defineModel<string>('youtubeApiKey', { default: '' })
+const youtubeSafeSearch = defineModel<YoutubeSafeSearch>('youtubeSafeSearch', {
+  default: YOUTUBE_SAFE_SEARCH_DEFAULT,
+})
 const ytdlpCookiesFile = defineModel<string>('ytdlpCookiesFile', { default: '' })
 
 const { pickCookiesFile, getConfig } = useDesktopHost()
@@ -39,6 +47,8 @@ const { playEvent } = useUiSound()
 
 const prefersReducedMotion = ref(false)
 const entered = ref(false)
+const youtubeBenefitsRevealed = ref(false)
+const youtubeBenefitsEntered = ref(false)
 const redirectCopied = ref(false)
 const bundledYotoClientId = ref('')
 let redirectCopiedTimer: ReturnType<typeof setTimeout> | null = null
@@ -51,7 +61,10 @@ const redirectCopyEl = ref<HTMLButtonElement | null>(null)
 
 const yotoId = computed(() => `${props.idPrefix}-yoto-client-id`)
 const youtubeId = computed(() => `${props.idPrefix}-youtube-api-key`)
+const youtubeSafeSearchId = computed(() => `${props.idPrefix}-youtube-safe-search`)
 const cookiesId = computed(() => `${props.idPrefix}-ytdlp-cookies`)
+
+const hasYoutubeApiKey = computed(() => Boolean(youtubeApiKey.value.trim()))
 
 const redirectCopyLabel = computed(() => (redirectCopied.value ? 'Copied' : 'Copy'))
 
@@ -152,6 +165,20 @@ function onUseDefaultClient() {
   if (props.disabled || !bundledYotoClientId.value || usingBundledClient.value) return
   playEvent('select')
   yotoClientId.value = bundledYotoClientId.value
+}
+
+function revealYoutubeBenefits() {
+  if (props.disabled || youtubeBenefitsRevealed.value) return
+  playEvent('select')
+  youtubeBenefitsRevealed.value = true
+  if (prefersReducedMotion.value) {
+    youtubeBenefitsEntered.value = true
+    return
+  }
+  youtubeBenefitsEntered.value = false
+  requestAnimationFrame(() => {
+    youtubeBenefitsEntered.value = true
+  })
 }
 
 async function loadBundledClientId() {
@@ -289,7 +316,7 @@ watch(
           >YouTube Data API key</label>
           <MaruTooltip
             placement="bottom"
-            text="Server-side key for YouTube Data API v3 search. Restrict it by API in Google Cloud if you can."
+            text="Recommended for faster search and configurable mature-content filtering on typed search. Leave empty to search without a key."
           >
             <button
               type="button"
@@ -311,16 +338,117 @@ watch(
           :aria-label="only ? 'YouTube Data API key' : undefined"
           placeholder="Google Cloud Console key"
         >
+        <div
+          v-if="!only"
+          class="prefs-projector__field desktop-api-keys__safe-search"
+        >
+          <div class="prefs-projector__label-row">
+            <label
+              class="prefs-projector__label"
+              :for="youtubeSafeSearchId"
+            >Search content filtering</label>
+            <MaruTooltip
+              v-if="!hasYoutubeApiKey"
+              placement="bottom"
+              text="Requires a YouTube Data API key. Content filtering applies to typed search with the Data API only."
+            >
+              <button
+                type="button"
+                class="prefs-projector__warn"
+                aria-label="YouTube Data API key required for content filtering"
+                :disabled="disabled"
+              >
+                <svg
+                  class="prefs-projector__warn-icon"
+                  viewBox="0 0 20 18"
+                  aria-hidden="true"
+                >
+                  <path
+                    class="prefs-projector__warn-shadow"
+                    d="M10 2.5 16.5 14.5 3.5 14.5Z"
+                  />
+                  <path
+                    class="prefs-projector__warn-face"
+                    d="M10 2.5 16.5 14.5 3.5 14.5Z"
+                  />
+                </svg>
+                <span
+                  class="prefs-projector__warn-mark"
+                  aria-hidden="true"
+                >!</span>
+              </button>
+            </MaruTooltip>
+          </div>
+          <select
+            :id="youtubeSafeSearchId"
+            v-model="youtubeSafeSearch"
+            class="prefs-projector__select"
+            :disabled="disabled || !hasYoutubeApiKey"
+          >
+            <option
+              v-for="option in YOUTUBE_SAFE_SEARCH_OPTIONS"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ option.label }}
+            </option>
+          </select>
+          <p class="prefs-projector__hint">
+            Applies to typed search with a YouTube Data API key. No effect without a key.
+          </p>
+        </div>
+        <div class="desktop-api-keys__revealer">
+          <button
+            v-if="!youtubeBenefitsRevealed"
+            type="button"
+            class="desktop-api-keys__revealer-trigger prefs-projector__hint-link"
+            :disabled="disabled"
+            @click="revealYoutubeBenefits"
+          >
+            What are the benefits of the YouTube API?
+          </button>
+          <div
+            v-else
+            class="desktop-api-keys__revealer-panel"
+            :class="{
+              'desktop-api-keys__revealer-panel--animate': !prefersReducedMotion,
+              'desktop-api-keys__revealer-panel--in': youtubeBenefitsEntered || prefersReducedMotion,
+            }"
+          >
+            <div class="desktop-api-keys__revealer-panel-inner">
+              <div
+                class="desktop-api-keys__compare"
+                :class="{
+                  'desktop-api-keys__compare--animate': !prefersReducedMotion,
+                  'desktop-api-keys__compare--in': youtubeBenefitsEntered || prefersReducedMotion,
+                }"
+              >
+                <div class="desktop-api-keys__compare-item">
+                  <p class="prefs-projector__label">With a key (recommended)</p>
+                  <p class="prefs-projector__hint">
+                    Faster search, configurable mature-content filtering on typed search, official Google path.
+                  </p>
+                </div>
+                <div class="desktop-api-keys__compare-item">
+                  <p class="prefs-projector__label">Without a key</p>
+                  <p class="prefs-projector__hint">
+                    Slower search, no mature-content filter on typed search, and YouTube updates can break search even when adding tracks still works.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <p class="prefs-projector__hint">
-          <template v-if="only === 'youtube'">Required to search YouTube from Louis. </template>
-          Enable YouTube Data API v3 in
-          <a
-            class="prefs-projector__hint-link"
-            :href="YOUTUBE_API_URL"
-            target="_blank"
-            rel="noopener noreferrer"
-          >Google Cloud Console</a>,
-          create an API key, and paste it here.
+            Enable YouTube Data API v3 in
+            <a
+              class="prefs-projector__hint-link"
+              :href="YOUTUBE_API_URL"
+              target="_blank"
+              rel="noopener noreferrer"
+            >Google Cloud Console</a>,
+            create an API key, and paste it here.
+            <template v-if="only === 'youtube'"> Skip below to continue without a key.</template>
         </p>
       </div>
     </div>

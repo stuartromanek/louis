@@ -78,6 +78,8 @@ const canAdvance = computed(() => {
   return true
 })
 
+const showSkipYoutube = computed(() => step.value === 'youtube')
+
 const primaryLabel = computed(() => {
   if (saving.value) return 'Saving…'
   if (leaving.value) return 'Starting…'
@@ -105,11 +107,16 @@ const heading = computed(() => {
 const lede = computed(() => {
   switch (step.value) {
     case 'intro':
-      return 'A few keys so Louis can talk to Yoto and YouTube. Your YouTube key stays on this computer — use Louis’s bundled Yoto client or your own.'
+      return 'A Yoto client so Louis can connect, then you’ll choose how YouTube search works. Your credentials stay on this computer — use Louis’s bundled Yoto client or your own.'
     case 'ready':
+      if (!youtubeApiKey.value.trim()) {
+        return desktopPrefsDebug.value
+          ? 'Search uses bundled yt-dlp. Add a Data API key later in Settings for safer, faster search. Confirm to open Louis and connect to Yoto.'
+          : 'Search uses bundled yt-dlp. Add a Data API key later in Settings for safer, faster search. Confirm to save, restart the local server, and connect to Yoto.'
+      }
       return desktopPrefsDebug.value
-        ? 'Your YouTube key stays on this computer. Confirm to open Louis and connect to Yoto.'
-        : 'Your YouTube key stays on this computer. Confirm to save, restart the local server, and connect to Yoto.'
+        ? 'Confirm to open Louis and connect to Yoto.'
+        : 'Confirm to save, restart the local server, and connect to Yoto.'
     default:
       // Field steps fold this into DesktopApiKeysFields hints.
       return ''
@@ -225,6 +232,14 @@ function onUseDefaultClient() {
   yotoClientId.value = bundledYotoClientId.value
 }
 
+async function skipYoutube() {
+  if (!showSkipYoutube.value || saving.value || leaving.value) return
+  youtubeApiKey.value = ''
+  error.value = ''
+  playEvent('buttonClick')
+  await moveToStep(stepIndex.value + 1)
+}
+
 async function goNext() {
   if (!canAdvance.value) return
   error.value = ''
@@ -239,7 +254,7 @@ async function goNext() {
 async function onConfirm() {
   const yoto = yotoClientId.value.trim()
   const youtube = youtubeApiKey.value.trim()
-  if (!yoto || !youtube || saving.value || leaving.value) return
+  if (!yoto || saving.value || leaving.value) return
   saving.value = true
   error.value = ''
   playEvent('buttonPrimary')
@@ -363,15 +378,19 @@ onMounted(() => {
         style="--desktop-api-keys-stagger: 1"
       >
         <div class="desktop-setup__nav">
-          <button
+          <div
             v-if="!isFirst"
-            type="button"
-            class="desktop-setup__back"
-            :disabled="saving || leaving"
-            @click="goBack"
+            class="desktop-setup__nav-leading"
           >
-            ← Back
-          </button>
+            <button
+              type="button"
+              class="desktop-setup__back"
+              :disabled="saving || leaving"
+              @click="goBack"
+            >
+              ← Back
+            </button>
+          </div>
           <button
             v-if="showUseDefaultClient"
             type="button"
@@ -382,16 +401,27 @@ onMounted(() => {
           >
             <span class="maru-button__label">{{ usingBundledClient ? 'Using default client' : 'Use default client' }}</span>
           </button>
-          <button
-            ref="confirmEl"
-            type="button"
-            class="prefs-projector__done maru-button"
-            :class="isReadyStep ? 'bg-maru-green-light' : 'bg-maru-yellow'"
-            :disabled="!canAdvance"
-            @click="goNext"
-          >
-            <span class="maru-button__label">{{ primaryLabel }}</span>
-          </button>
+          <div class="desktop-setup__nav-trailing">
+            <button
+              v-if="showSkipYoutube"
+              type="button"
+              class="prefs-projector__done desktop-setup__skip maru-button bg-maru-blue-light"
+              :disabled="saving || leaving"
+              @click="skipYoutube"
+            >
+              <span class="maru-button__label">Skip</span>
+            </button>
+            <button
+              ref="confirmEl"
+              type="button"
+              class="prefs-projector__done maru-button"
+              :class="isReadyStep ? 'bg-maru-green-light' : 'bg-maru-yellow'"
+              :disabled="!canAdvance"
+              @click="goNext"
+            >
+              <span class="maru-button__label">{{ primaryLabel }}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

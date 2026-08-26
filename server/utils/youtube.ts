@@ -1,4 +1,5 @@
 import type { H3Event } from 'h3'
+import { normalizeYoutubeSafeSearch, type YoutubeSafeSearch } from '../../shared/youtubeSafeSearch.ts'
 
 const YOUTUBE_API_CACHE_TTL_MS = 60_000
 
@@ -8,10 +9,21 @@ type CacheEntry = {
 }
 
 const youtubeApiCache = new Map<string, CacheEntry>()
+const youtubeApiInflight = new Map<string, Promise<unknown>>()
+
+export function tryGetYoutubeApiKey(event: H3Event): string | undefined {
+  const config = useRuntimeConfig(event)
+  const key = String(config.youtubeApiKey || '').trim()
+  return key || undefined
+}
+
+export function tryGetYoutubeSafeSearch(event: H3Event): YoutubeSafeSearch {
+  const config = useRuntimeConfig(event)
+  return normalizeYoutubeSafeSearch(config.youtubeSafeSearch)
+}
 
 export function getYoutubeApiKey(event: H3Event): string {
-  const config = useRuntimeConfig(event)
-  const key = config.youtubeApiKey
+  const key = tryGetYoutubeApiKey(event)
   if (!key) {
     throw createError({
       statusCode: 503,
@@ -19,6 +31,34 @@ export function getYoutubeApiKey(event: H3Event): string {
     })
   }
   return key
+}
+
+/** Quota / transport failures that can fall back to yt-dlp discovery. */
+export function isRecoverableYoutubeApiError(err: unknown): boolean {
+  const statusCode = (err as { statusCode?: number }).statusCode
+  return statusCode === 403 || statusCode === 502 || statusCode === 503
+}
+
+export async function rememberYoutubeCache<T>(cacheKey: string, load: () => Promise<T>): Promise<T> {
+  const now = Date.now()
+  const cached = youtubeApiCache.get(cacheKey)
+  if (cached && cached.expiresAt > now) {
+    return cached.value as T
+  }
+  const pending = youtubeApiInflight.get(cacheKey)
+  if (pending) return pending as Promise<T>
+
+  const promise = load().then((value) => {
+    youtubeApiCache.set(cacheKey, {
+      expiresAt: Date.now() + YOUTUBE_API_CACHE_TTL_MS,
+      value,
+    })
+    return value
+  }).finally(() => {
+    youtubeApiInflight.delete(cacheKey)
+  })
+  youtubeApiInflight.set(cacheKey, promise)
+  return promise
 }
 
 export async function fetchYoutubeApi<T>(url: string): Promise<T> {
@@ -41,18 +81,7 @@ export async function fetchYoutubeApi<T>(url: string): Promise<T> {
 }
 
 export async function fetchYoutubeApiCached<T>(cacheKey: string, url: string): Promise<T> {
-  const now = Date.now()
-  const cached = youtubeApiCache.get(cacheKey)
-  if (cached && cached.expiresAt > now) {
-    return cached.value as T
-  }
-
-  const value = await fetchYoutubeApi<T>(url)
-  youtubeApiCache.set(cacheKey, {
-    expiresAt: now + YOUTUBE_API_CACHE_TTL_MS,
-    value,
-  })
-  return value
+  return rememberYoutubeCache(cacheKey, () => fetchYoutubeApi<T>(url))
 }
 
 export function decodeHtmlEntities(text: string): string {
@@ -94,13 +123,8 @@ export async function checkYoutubeVideoAvailability(
   event: H3Event,
   youtubeId: string,
 ): Promise<{ ok: true } | { ok: false, message: string } | null> {
-  let key: string
-  try {
-    key = getYoutubeApiKey(event)
-  }
-  catch {
-    return null
-  }
+  const key = tryGetYoutubeApiKey(event)
+  if (!key) return null
 
   try {
     const url = new URL('https://www.googleapis.com/youtube/v3/videos')

@@ -110,6 +110,34 @@ export function isImportableYoutubeResult(
   return true
 }
 
+const YOUTUBE_VIDEO_ID = /^[\w-]{11}$/
+const PLACEHOLDER_SEARCH_TITLES = new Set([
+  'na',
+  'youtube video',
+  'unavailable video',
+])
+
+export function isPlaceholderYoutubeTitle(title: string | undefined): boolean {
+  const normalized = title?.trim().toLowerCase() ?? ''
+  return !normalized || PLACEHOLDER_SEARCH_TITLES.has(normalized)
+}
+
+/** Search/channel rows we will actually list (real id, real title, known duration). */
+export function isListableYoutubeSearchResult(
+  video: { id?: string, title?: string, durationSeconds?: number },
+): boolean {
+  const id = video.id?.trim() ?? ''
+  if (!YOUTUBE_VIDEO_ID.test(id)) return false
+  if (isPlaceholderYoutubeTitle(video.title)) return false
+  return isImportableYoutubeResult(video)
+}
+
+export function listableYoutubeSearchResults<T extends { id?: string, title?: string, durationSeconds?: number }>(
+  videos: T[],
+): T[] {
+  return videos.filter(video => isListableYoutubeSearchResult(video))
+}
+
 export function playlistImportItemToResultVideo(
   item: YoutubePlaylistImportItem,
 ): YoutubePlaylistResultVideo {
@@ -146,8 +174,10 @@ export function mapPlaylistImportItems(
       skippedUnavailable += 1
       continue
     }
+    const missingDuration = !hasKnownDuration(item)
+    if (missingDuration) skippedMissingDuration += 1
+    if (missingDuration || isPlaceholderYoutubeTitle(item.title)) continue
     videos.push(playlistImportItemToResultVideo(item))
-    if (!hasKnownDuration(item)) skippedMissingDuration += 1
   }
   return { videos, skippedUnavailable, skippedMissingDuration }
 }

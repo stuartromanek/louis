@@ -2,6 +2,8 @@ import type { InjectionKey, Ref } from 'vue'
 import type { PickerStatus, YoutubeSearchResponse, YoutubeVideo, YoutubeVideoSummary } from './types'
 import {
   importableResultKeys,
+  isListableYoutubeSearchResult,
+  listableYoutubeSearchResults,
   mapPlaylistImportItems,
   videoResultKey,
   type YoutubePlaylistImportResponse,
@@ -213,7 +215,7 @@ export function useYoutubePicker(maxResults = 12) {
       if (generation !== searchGeneration) return
 
       const item = data.items[0]
-      if (!item) {
+      if (!item || !isListableYoutubeSearchResult(item)) {
         errorMessage.value = 'Video not found or not public'
         results.value = []
         resetPasteState()
@@ -290,11 +292,12 @@ export function useYoutubePicker(maxResults = 12) {
       })
       if (generation !== searchGeneration) return
 
+      const items = listableYoutubeSearchResults(data.items)
       channelSummary.value = data.channel
       activeChannelId.value = data.channel.id
-      results.value = data.items
+      results.value = items
       nextPageToken.value = data.nextPageToken
-      precheckImportable(data.items, true)
+      precheckImportable(items, true)
       await ensureMinLoadingTime(loadingStartedAt)
       if (generation !== searchGeneration) return
       status.value = 'idle'
@@ -318,10 +321,11 @@ export function useYoutubePicker(maxResults = 12) {
     loadingMore.value = true
     try {
       const data = await fetchChannelPage({ channelId, pageToken: token })
-      results.value = [...results.value, ...data.items]
+      const items = listableYoutubeSearchResults(data.items)
+      results.value = [...results.value, ...items]
       nextPageToken.value = data.nextPageToken
       if (data.channel) channelSummary.value = data.channel
-      precheckImportable(data.items, false)
+      precheckImportable(items, false)
       playEvent('loadMoreComplete')
     }
     catch (err: unknown) {
@@ -390,7 +394,7 @@ export function useYoutubePicker(maxResults = 12) {
 
         if (generation !== searchGeneration) return
 
-        results.value = data.items
+        results.value = listableYoutubeSearchResults(data.items)
         nextPageToken.value = data.nextPageToken
         await ensureMinLoadingTime(loadingStartedAt)
         if (generation !== searchGeneration) return
@@ -413,7 +417,7 @@ export function useYoutubePicker(maxResults = 12) {
       })
 
       if (pageToken) {
-        results.value = [...results.value, ...data.items]
+        results.value = [...results.value, ...listableYoutubeSearchResults(data.items)]
         playEvent('loadMoreComplete')
       }
 

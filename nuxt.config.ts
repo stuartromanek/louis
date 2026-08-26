@@ -143,6 +143,7 @@ export default defineNuxtConfig({
   // Production: nitro compiled hook aliases LOUIS_* → NUXT_* in nitro.mjs before freeze.
   runtimeConfig: {
     youtubeApiKey: louisEnv.youtubeApiKey,
+    youtubeSafeSearch: louisEnv.youtubeSafeSearch || 'moderate',
     yotoClientId: louisEnv.yotoClientId,
     yotoClientSecret: louisEnv.yotoClientSecret,
     yotoRedirectUri: louisEnv.yotoRedirectUri,

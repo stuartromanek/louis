@@ -15,7 +15,8 @@ Louis as a Supervisor add-on: same app as Docker/GHCR, configured via **Options*
 | Option | Purpose |
 | ------ | ------- |
 | **yoto_client_id** | Public Yoto PKCE client ID (defaults to Louis’s bundled public client) |
-| **youtube_api_key** | Google Cloud YouTube Data API v3 key (required for search) |
+| **youtube_api_key** | Recommended Google Cloud YouTube Data API v3 key (faster search). Leave empty to search without a key |
+| **youtube_safe_search** | Content filtering for typed search when **youtube_api_key** is set: `none`, `moderate` (default), or `strict` |
 | **yoto_redirect_uri** | Must match a redirect URI on [yoto.dev](https://yoto.dev/get-started/start-here/) |
 | **cookie_secure** | OAuth `Secure` cookies. Default **false** for typical LAN HTTP. Set **true** behind HTTPS / Nabu Casa / a TLS reverse proxy |
 | **ytdlp_cookies_file** | Optional path *inside the container* to a Netscape `cookies.txt` (only if you mount/copy one under `/data`) |

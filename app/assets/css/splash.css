@@ -237,13 +237,28 @@
   gap: 0.75rem;
 }
 
+.desktop-setup__nav-leading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-right: auto;
+}
+
+.desktop-setup__nav-trailing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
 .desktop-setup__use-default {
   margin-top: 0;
 }
 
 .desktop-setup__back {
   margin: 0;
-  margin-right: auto;
   padding: 0.35rem 0.15rem;
   border: 0;
   background: transparent;
@@ -278,6 +293,87 @@
   gap: 1.25rem;
 }
 
+.desktop-api-keys__safe-search {
+  margin-top: 0.75rem;
+}
+
+.desktop-api-keys__revealer-trigger {
+  display: inline-block;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: var(--text-maru-label);
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  text-align: left;
+}
+
+.desktop-api-keys__revealer-trigger:focus-visible {
+  outline: 3px solid var(--color-maru-blue);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.desktop-api-keys__revealer-trigger:disabled {
+  cursor: default;
+}
+
+.desktop-api-keys__revealer-panel {
+  display: grid;
+  grid-template-rows: 1fr;
+  margin-top: 0.75rem;
+}
+
+.desktop-api-keys__revealer-panel--animate {
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.42s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.desktop-api-keys__revealer-panel--animate.desktop-api-keys__revealer-panel--in {
+  grid-template-rows: 1fr;
+}
+
+.desktop-api-keys__revealer-panel-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.desktop-api-keys__compare {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.desktop-api-keys__compare--animate {
+  opacity: 0;
+  translate: 0 14px;
+  transition:
+    opacity 0.42s cubic-bezier(0.2, 0, 0, 1),
+    translate 0.42s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.desktop-api-keys__compare--animate.desktop-api-keys__compare--in {
+  opacity: 1;
+  translate: 0 0;
+}
+
+.desktop-api-keys__compare-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+
+.desktop-api-keys__compare .prefs-projector__label {
+  text-wrap: balance;
+}
+
+.desktop-api-keys__compare .prefs-projector__hint {
+  margin-top: 0;
+}
+
 .desktop-api-keys__fieldset {
   display: flex;
   flex-direction: column;
@@ -302,6 +398,17 @@
   .desktop-api-keys__fieldset--animate {
     opacity: 1;
     translate: none;
+    transition: none;
+  }
+
+  .desktop-api-keys__compare--animate {
+    opacity: 1;
+    translate: none;
+    transition: none;
+  }
+
+  .desktop-api-keys__revealer-panel--animate {
+    grid-template-rows: 1fr;
     transition: none;
   }
 

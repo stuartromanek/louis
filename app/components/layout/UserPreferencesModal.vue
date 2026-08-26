@@ -5,6 +5,10 @@ import { usePreferencesShell } from '~/composables/usePreferencesShell'
 import DesktopApiKeysFields from '~/components/desktop/DesktopApiKeysFields.vue'
 import ToolsUpdateSection from '~/components/layout/ToolsUpdateSection.vue'
 import AppFlyout from '~/components/layout/AppFlyout.vue'
+import {
+  YOUTUBE_SAFE_SEARCH_DEFAULT,
+  type YoutubeSafeSearch,
+} from '#shared/youtubeSafeSearch'
 
 type PrefsNav = 'general' | 'advanced'
 
@@ -28,11 +32,13 @@ const placeholdersDraft = ref('')
 
 const yotoClientIdDraft = ref('')
 const youtubeApiKeyDraft = ref('')
+const youtubeSafeSearchDraft = ref<YoutubeSafeSearch>(YOUTUBE_SAFE_SEARCH_DEFAULT)
 const ytdlpCookiesDraft = ref('')
 const redirectUri = ref('http://127.0.0.1:4010/api/yoto/auth/callback')
 const credentialsBaseline = ref({
   yotoClientId: '',
   youtubeApiKey: '',
+  youtubeSafeSearch: YOUTUBE_SAFE_SEARCH_DEFAULT as YoutubeSafeSearch,
   ytdlpCookiesFile: '',
 })
 const credentialsSaving = ref(false)
@@ -48,6 +54,7 @@ const credentialsDirty = computed(() => {
   return (
     yotoClientIdDraft.value.trim() !== credentialsBaseline.value.yotoClientId
     || youtubeApiKeyDraft.value.trim() !== credentialsBaseline.value.youtubeApiKey
+    || youtubeSafeSearchDraft.value !== credentialsBaseline.value.youtubeSafeSearch
     || ytdlpCookiesDraft.value.trim() !== credentialsBaseline.value.ytdlpCookiesFile
   )
 })
@@ -69,15 +76,17 @@ async function syncDesktopCredentials() {
     const [config, uri] = await Promise.all([getConfig(), getRedirectUri()])
     yotoClientIdDraft.value = config.yotoClientId
     youtubeApiKeyDraft.value = config.youtubeApiKey
+    youtubeSafeSearchDraft.value = config.youtubeSafeSearch
     ytdlpCookiesDraft.value = config.ytdlpCookiesFile
     credentialsBaseline.value = {
       yotoClientId: config.yotoClientId,
       youtubeApiKey: config.youtubeApiKey,
+      youtubeSafeSearch: config.youtubeSafeSearch,
       ytdlpCookiesFile: config.ytdlpCookiesFile,
     }
     redirectUri.value = uri
     // First-run / missing keys: land on Advanced where Desktop API keys live.
-    if (!config.yotoClientId.trim() || !config.youtubeApiKey.trim()) {
+    if (!config.yotoClientId.trim()) {
       prefsNav.value = 'advanced'
     }
   }
@@ -136,8 +145,8 @@ function onPlaceholdersInput(event: Event) {
 async function saveDesktopCredentials(): Promise<boolean> {
   const yoto = yotoClientIdDraft.value.trim()
   const youtube = youtubeApiKeyDraft.value.trim()
-  if (!yoto || !youtube) {
-    credentialsError.value = 'Yoto client ID and YouTube API key are required.'
+  if (!yoto) {
+    credentialsError.value = 'Yoto client ID is required.'
     prefsNav.value = 'advanced'
     return false
   }
@@ -149,11 +158,13 @@ async function saveDesktopCredentials(): Promise<boolean> {
     const saved = await setConfig({
       yotoClientId: yoto,
       youtubeApiKey: youtube,
+      youtubeSafeSearch: youtubeSafeSearchDraft.value,
       ytdlpCookiesFile: ytdlpCookiesDraft.value.trim(),
     })
     credentialsBaseline.value = {
       yotoClientId: saved.yotoClientId,
       youtubeApiKey: saved.youtubeApiKey,
+      youtubeSafeSearch: saved.youtubeSafeSearch,
       ytdlpCookiesFile: saved.ytdlpCookiesFile,
     }
     return true
@@ -325,6 +336,7 @@ watch(shellOpen, (isOpen) => {
                     <DesktopApiKeysFields
                       v-model:yoto-client-id="yotoClientIdDraft"
                       v-model:youtube-api-key="youtubeApiKeyDraft"
+                      v-model:youtube-safe-search="youtubeSafeSearchDraft"
                       v-model:ytdlp-cookies-file="ytdlpCookiesDraft"
                       :redirect-uri="redirectUri"
                       :disabled="!formInteractive"

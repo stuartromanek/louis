@@ -14,7 +14,7 @@ Self-hosted **Nuxt** server app. Yoto OAuth token exchange and YouTube audio dow
 
 ## Features
 
-- Search YouTube and preview audio (server-side via yt-dlp). Paste a video, Shorts, playlist, or channel URL in Search to load it; check rows to add them together
+- Search YouTube and preview audio — **YouTube Data API** when configured (faster typed search, optional content filtering), otherwise bundled **yt-dlp**. Paste a video, Shorts, playlist, or channel URL in Search to load it; check rows to add them together
 - Browse your Yoto playlists. **New** names a playlist and creates it on Yoto right away (empty, or with tracks already picked in Search)
 - Drag-and-drop playlist editing (desktop); phone Search / Library flow with Add to playlist
 - Rename, replace artwork, or delete a loaded playlist from the playlist menu
@@ -38,7 +38,7 @@ Installers ship as **Assets** on each GitHub Release (same `vX.Y.Z` as Docker):
 | Windows             | `Louis-Setup-<version>.exe` |
 
 
-After install, the setup wizard (or **Settings → Advanced**) asks for a Yoto client ID and YouTube Data API key. Prefer **Use default client** for Yoto, or bring your own from [yoto.dev](https://yoto.dev/get-started/start-here/) with redirect `http://127.0.0.1:4010/api/yoto/auth/callback`. Details: [docs/DESKTOP.md](docs/DESKTOP.md).
+After install, the setup wizard asks for a Yoto client ID, then a **recommended** YouTube Data API key (Skip uses bundled yt-dlp). Prefer **Use default client** for Yoto, or bring your own from [yoto.dev](https://yoto.dev/get-started/start-here/) with redirect `http://127.0.0.1:4010/api/yoto/auth/callback`. Change keys later in **Settings → Advanced**. Details: [docs/DESKTOP.md](docs/DESKTOP.md).
 
 Installers are currently **unsigned** (Gatekeeper / SmartScreen may warn). Signing notes: [docs/DESKTOP_SIGNING.md](docs/DESKTOP_SIGNING.md).
 
@@ -55,27 +55,27 @@ Images are multi-arch (`linux/amd64` + `linux/arm64`) on each `v*` release.
 
 Compose / env setup below. Cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
-**Portainer:** Stacks → Add stack → **Web editor** (not Git repository). Paste [`docker-compose.yml`](docker-compose.yml), set `LOUIS_YOTO_CLIENT_ID` and `LOUIS_YOUTUBE_API_KEY` in the stack environment UI, then deploy. Open Louis at the **NAS/host URL other devices use** (`http://192.168.x.x:4000` or a hostname) — never the host’s `localhost` from another device. Register that same origin’s `/api/yoto/auth/callback` on [yoto.dev](https://yoto.dev/get-started/start-here/). Image default is `LOUIS_COOKIE_SECURE=false` (LAN HTTP); set `true` only behind HTTPS.
+**Portainer:** Stacks → Add stack → **Web editor** (not Git repository). Paste [`docker-compose.yml`](docker-compose.yml), set `LOUIS_YOTO_CLIENT_ID` in the stack environment UI. `LOUIS_YOUTUBE_API_KEY` is recommended (faster search, `safeSearch=moderate`); leave unset to search with bundled yt-dlp. Then deploy. Open Louis at the **NAS/host URL other devices use** (`http://192.168.x.x:4000` or a hostname) — never the host’s `localhost` from another device. Register that same origin’s `/api/yoto/auth/callback` on [yoto.dev](https://yoto.dev/get-started/start-here/). Image default is `LOUIS_COOKIE_SECURE=false` (LAN HTTP); set `true` only behind HTTPS.
 
 ## Home Assistant
 
 Install Louis from Supervisor as a custom add-on (wraps the same GHCR image; options map to `LOUIS_*`; audio under `/data/audio`; UI on host port **4000**, not ingress).
 
 1. **Settings → Add-ons → Add-on store → ⋮ → Repositories** → add `https://github.com/stuartromanek/louis`
-2. Install **Louis**, set **youtube_api_key** and confirm **yoto_redirect_uri** matches [yoto.dev](https://yoto.dev/get-started/start-here/)
+2. Install **Louis**, confirm **yoto_redirect_uri** matches [yoto.dev](https://yoto.dev/get-started/start-here/). **youtube_api_key** is recommended (Data API search); leave empty to search with bundled yt-dlp. **youtube_safe_search** (`none` / `moderate` / `strict`) applies to typed search only when a key is set.
 3. Open `http://homeassistant.local:4000` (or your host:port)
 
 Full options, redirect URI, and `cookie_secure` notes: [homeassistant/louis/DOCS.md](homeassistant/louis/DOCS.md). Sources live under `homeassistant/`; root `repository.yaml` + `louis/` symlinks are for Supervisor discovery.
 
 ## Quick start (Docker)
 
-Docker includes Node, yt-dlp, and ffmpeg — you only need Docker and API credentials.
+Docker includes Node, yt-dlp, and ffmpeg — you only need Docker and a Yoto client ID.
 
 ```bash
 git clone https://github.com/stuartromanek/louis.git
 cd louis
 cp .env.example .env
-# Fill in LOUIS_YOTO_CLIENT_ID and LOUIS_YOUTUBE_API_KEY (see below)
+# Fill in LOUIS_YOTO_CLIENT_ID (recommended: LOUIS_YOUTUBE_API_KEY — see below)
 docker compose up -d --build
 ```
 
@@ -101,9 +101,11 @@ Create a **public** client at [yoto.dev](https://yoto.dev/get-started/start-here
 
 You only need `LOUIS_YOTO_CLIENT_ID`. Leave `LOUIS_YOTO_CLIENT_SECRET` empty for PKCE.
 
-### 2. YouTube API
+### 2. YouTube API (recommended)
 
-Enable **YouTube Data API v3** in Google Cloud Console and create an API key.
+A YouTube Data API v3 key is **recommended** for faster search and `safeSearch=moderate` on typed search. Enable the API in Google Cloud Console and create a key.
+
+Search still works without a key (bundled yt-dlp): slower, no safeSearch, and search can break on a different week than download. Leave `LOUIS_YOUTUBE_API_KEY` unset to use that path.
 
 ### 3. Environment
 
@@ -112,10 +114,9 @@ Copy `[.env.example](.env.example)`. Use `LOUIS_*` **names** so the same file wo
 #### Required
 
 
-| Variable                | Notes            |
-| ----------------------- | ---------------- |
-| `LOUIS_YOTO_CLIENT_ID`  | Public client ID |
-| `LOUIS_YOUTUBE_API_KEY` | Server-side only |
+| Variable               | Notes            |
+| ---------------------- | ---------------- |
+| `LOUIS_YOTO_CLIENT_ID` | Public client ID |
 
 
 
@@ -137,6 +138,8 @@ Copy `[.env.example](.env.example)`. Use `LOUIS_*` **names** so the same file wo
 
 | Variable                      | Notes                                                                                                                                                                                                     |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LOUIS_YOUTUBE_API_KEY`       | Recommended. YouTube Data API v3 (faster typed search). Unset: search without a key                                                                                                                     |
+| `LOUIS_YOUTUBE_SAFE_SEARCH`   | Typed-search content filtering when a Data API key is set: `none`, `moderate` (default), or `strict`. Desktop: **Settings → Advanced**; HA: **youtube_safe_search** option                                                                                               |
 | `LOUIS_AUDIO_WORK_DIR`         | Default `/data/audio` in Docker                                                                                                                                                                           |
 | `LOUIS_AUDIO_JOB_MAX_AGE_MS`   | Stale `jobs/` cleanup (default 1h)                                                                                                                                                                        |
 | `LOUIS_AUDIO_CACHE_MAX_AGE_MS` | Cache file TTL (default 14d)                                                                                                                                                                              |
@@ -174,9 +177,11 @@ docker run -p 4000:4000 --env-file .env louis:local
 For local Node (without Docker), install these first:
 
 - Node.js 22+ (also used as yt-dlp’s JS runtime for YouTube signing)
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) — keep it current; YouTube breaks outdated extractors
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) — required for search (without a Data API key) and for save; keep it current
 - [ffmpeg](https://ffmpeg.org/) — required for save
-- Optional: `LOUIS_YTDLP_COOKIES_FILE` as above
+- Optional: `LOUIS_YOUTUBE_API_KEY` (faster search + `LOUIS_YOUTUBE_SAFE_SEARCH`); `LOUIS_YTDLP_COOKIES_FILE` as above
+
+Self-host web UI has no YouTube key field — set `LOUIS_YOUTUBE_API_KEY` and `LOUIS_YOUTUBE_SAFE_SEARCH` in `.env` (desktop app: **Settings → Advanced**).
 
 ```bash
 npm install

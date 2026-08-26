@@ -11,7 +11,7 @@ import {
 } from '#shared/myo-editor/youtubePlaylistImport'
 import {
   formatDurationSeconds,
-  formatYoutubeDurationIso,
+  parseYoutubeDurationIso,
 } from '#shared/myo-editor/youtubeDuration'
 import { formatSplitIntoChip, planTrackSplit } from '#shared/myo-editor/splitTrack'
 
@@ -55,10 +55,11 @@ const groupVideos = computed(() => videosForGroupDrag(
 const groupCount = computed(() => groupVideos.value.length)
 
 const durationLabel = computed(() => {
-  if (typeof props.video.durationSeconds === 'number') {
-    return formatDurationSeconds(props.video.durationSeconds)
-  }
-  return formatYoutubeDurationIso(props.video.duration)
+  const seconds = typeof props.video.durationSeconds === 'number'
+    ? props.video.durationSeconds
+    : parseYoutubeDurationIso(props.video.duration ?? '')
+  if (typeof seconds !== 'number' || seconds <= 0) return ''
+  return formatDurationSeconds(seconds)
 })
 
 const { isDragging } = useDraggable({
@@ -203,7 +204,10 @@ const addLabel = computed(() => {
 
       <div class="yt-result-card__actions">
         <div class="yt-result-card__audio">
-          <YoutubePickerAudioControls :video-id="video.id" />
+          <YoutubePickerAudioControls
+            :video-id="video.id"
+            :duration-seconds="video.durationSeconds"
+          />
         </div>
         <button
           type="button"
@@ -298,7 +302,10 @@ const addLabel = computed(() => {
           <p class="yt-result-card__meta type-meta text-maru-black/75 mt-1.5">{{ video.channelTitle }}</p>
         </button>
         <div class="pt-2">
-          <YoutubePickerAudioControls :video-id="video.id" />
+          <YoutubePickerAudioControls
+            :video-id="video.id"
+            :duration-seconds="video.durationSeconds"
+          />
         </div>
       </div>
     </div>

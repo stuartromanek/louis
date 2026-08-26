@@ -259,7 +259,6 @@ async function refreshDesktopSetupNeeded() {
     const forceQuery = route.query.desktopSetup === '1' && desktopPrefsDebug.value
     needsDesktopSetup.value = forceQuery
       || !config.yotoClientId.trim()
-      || !config.youtubeApiKey.trim()
   }
   catch {
     needsDesktopSetup.value = true

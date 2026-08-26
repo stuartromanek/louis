@@ -138,7 +138,7 @@ For tag `v1.2.0`, open `…/releases/tag/v1.2.0`:
 - [x] Always set `LOUIS_YOTO_REDIRECT_URI=http://127.0.0.1:4010/api/yoto/auth/callback` when spawning Nitro
 - [x] Document Yoto portal registration for that redirect in DESKTOP.md / README
 
-**Acceptance:** OAuth connect + YouTube search succeed with only in-app config (no checkout `.env`). ✅ (2026-08-06 — `userData/config.json` → configured auth + YouTube search 200; redirect forced to `127.0.0.1:4010`; `LOUIS_PUBLIC_DESKTOP=1`. Full OAuth browser round-trip: register that URI in the Yoto portal and Connect in-app.)
+**Acceptance:** OAuth connect + YouTube search succeed with only in-app config (no checkout `.env`). Search works with **Skip** (no YouTube API key) on a machine with **no Homebrew yt-dlp** (bundled binary only). ✅ (2026-08-06 — `userData/config.json` → configured auth + YouTube search 200; redirect forced to `127.0.0.1:4010`; `LOUIS_PUBLIC_DESKTOP=1`. Full OAuth browser round-trip: register that URI in the Yoto portal and Connect in-app.)
 
 **Exit →** Phase 4
 

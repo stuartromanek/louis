@@ -21,6 +21,7 @@ watchdog: http://[HOST]:[PORT:4000]/api/health
 options:
   yoto_client_id: PK00MDKCVwWvOG8o3px3qSl57FhfUZxm
   youtube_api_key: ""
+  youtube_safe_search: moderate
   yoto_redirect_uri: http://homeassistant.local:4000/api/yoto/auth/callback
   cookie_secure: false
   ytdlp_cookies_file: ""
@@ -29,6 +30,15 @@ options:
 schema:
   yoto_client_id: str
   youtube_api_key: password
+  youtube_safe_search:
+    name: YouTube search content filtering
+    description: Applies to typed search when youtube_api_key is set (none, moderate, strict).
+    optional: true
+    default: moderate
+    select:
+      none: None
+      moderate: Moderate
+      strict: Strict
   yoto_redirect_uri: str
   cookie_secure: bool
   ytdlp_cookies_file: str?

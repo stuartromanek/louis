@@ -1,4 +1,5 @@
 import { parseYoutubeDurationIso } from '#shared/myo-editor/youtubeDuration'
+import type { YoutubeSafeSearch } from '../../shared/youtubeSafeSearch.ts'
 import { decodeHtmlEntities, fetchYoutubeApiCached, pickThumbnail } from './youtube'
 
 interface YoutubeSearchItem {
@@ -44,6 +45,7 @@ export async function searchYoutubeVideos(options: {
   channelId?: string
   pageToken?: string
   maxResults: number
+  safeSearch: YoutubeSafeSearch
 }): Promise<{
   items: YoutubeSearchVideoItem[]
   nextPageToken?: string
@@ -52,7 +54,7 @@ export async function searchYoutubeVideos(options: {
   const params = new URLSearchParams({
     part: 'snippet',
     type: 'video',
-    safeSearch: 'moderate',
+    safeSearch: options.safeSearch,
     maxResults: String(options.maxResults),
     key: options.apiKey,
   })
@@ -64,7 +66,7 @@ export async function searchYoutubeVideos(options: {
   if (options.q) params.set('q', options.q)
   if (options.pageToken) params.set('pageToken', options.pageToken)
 
-  const cacheKey = `search:${options.q ?? ''}:${options.channelId ?? ''}:${options.maxResults}:${options.pageToken ?? ''}`
+  const cacheKey = `search:${options.q ?? ''}:${options.channelId ?? ''}:${options.maxResults}:${options.pageToken ?? ''}:${options.safeSearch}`
   const data = await fetchYoutubeApiCached<YoutubeSearchListResponse>(
     cacheKey,
     `https://www.googleapis.com/youtube/v3/search?${params}`,
@@ -92,7 +94,7 @@ export async function searchYoutubeVideos(options: {
       const iso = item.contentDetails?.duration
       if (!iso) continue
       const durationSeconds = parseYoutubeDurationIso(iso)
-      if (durationSeconds === null) continue
+      if (durationSeconds === null || durationSeconds <= 0) continue
       durationById.set(item.id, { duration: iso, durationSeconds })
     }
   }

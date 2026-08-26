@@ -37,9 +37,9 @@ To bring your own instead:
 
 3. Paste the **client ID** into the setup form (or Settings). Leave the client secret empty (public PKCE).
 
-### 2. YouTube Data API
+### 2. YouTube API key (recommended, skippable)
 
-Enable **YouTube Data API v3** in Google Cloud Console, create an API key, and paste it into the setup form.
+Paste a YouTube Data API v3 key for faster search and moderate safeSearch on typed search (Google Cloud Console). **Skip** continues without a key — bundled yt-dlp still searches (slower, no safeSearch). You can add a key later under **Settings → Advanced**.
 
 ### 3. Ready
 
@@ -51,13 +51,15 @@ You can change keys later under **Settings → Advanced** (including switching b
 
 Not part of first-run setup. If YouTube blocks anonymous downloads (bot check / age gate), open **Settings → Advanced** and set a Netscape `cookies.txt` path (throwaway Google account preferred; never share or commit that file).
 
-Louis may ship its **public** Yoto PKCE client ID inside the app. Your **YouTube API key**, OAuth tokens, and cookies stay only in your user data folder (see below) — never baked into the installer as secrets.
+Louis may ship its **public** Yoto PKCE client ID inside the app. A **YouTube API key** (if you set one), OAuth tokens, and cookies stay only in your user data folder (see below) — never baked into the installer as secrets.
+
+A YouTube Data API key is **recommended** (faster search, moderate safeSearch on typed search). Skip or leave empty to search with bundled yt-dlp. Add or change the key later under **Settings → Advanced**.
 
 ## Using the app
 
 - Louis listens on **`http://127.0.0.1:4010`** (not the Docker/dev port 4000).
 - Search YouTube, build a playlist, and save to Yoto as usual.
-- Open **Settings → Advanced** anytime to update API keys or the optional cookies path.
+- Open **Settings → Advanced** anytime to update API keys, **Search content filtering** (none / moderate / strict; requires a YouTube API key), or the optional cookies path.
 
 ## Where settings are stored
 
@@ -79,6 +81,7 @@ You normally do not need to edit `config.json` by hand. Shape if you inspect it:
   "yotoClientId": "",
   "yotoClientSecret": "",
   "youtubeApiKey": "",
+  "youtubeSafeSearch": "moderate",
   "ytdlpCookiesFile": ""
 }
 ```
@@ -100,7 +103,7 @@ Sign-in uses browser cookies for `127.0.0.1:4010`. Clearing Settings does not cl
 Confirm the Yoto portal redirect URI is exactly `http://127.0.0.1:4010/api/yoto/auth/callback` (loopback `127.0.0.1`, port **4010**). Desktop Connect uses your system browser; after success, close that tab and return to Louis (the app polls until signed in).
 
 **Search or download failures**  
-Check the YouTube API key, quota, and (if needed) cookies path. Keep Louis updated — releases refresh the bundled download tools.
+Search does not need a YouTube API key (yt-dlp). If you set one, check quota. For downloads, try cookies path if YouTube blocks anonymous extract. Keep Louis updated — releases refresh the bundled download tools.
 
 ## More
 

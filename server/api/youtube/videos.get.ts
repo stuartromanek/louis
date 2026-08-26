@@ -1,23 +1,4 @@
-import { decodeHtmlEntities, fetchYoutubeApiCached, getYoutubeApiKey, pickThumbnail } from '../../utils/youtube'
-import { parseYoutubeDurationIso } from '#shared/myo-editor/youtubeDuration'
-
-interface YoutubeVideoItem {
-  id: string
-  snippet: {
-    title: string
-    channelTitle: string
-    publishedAt: string
-    description: string
-    thumbnails: Record<string, { url: string } | undefined>
-  }
-  contentDetails: {
-    duration: string
-  }
-}
-
-interface YoutubeVideosResponse {
-  items?: YoutubeVideoItem[]
-}
+import { discoverYoutubeVideos } from '../../utils/youtube-discovery'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
@@ -32,36 +13,5 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Provide 1–50 comma-separated video IDs' })
   }
 
-  const normalizedIds = [...idList].sort().join(',')
-
-  const apiKey = getYoutubeApiKey(event)
-
-  const params = new URLSearchParams({
-    part: 'snippet,contentDetails',
-    id: idList.join(','),
-    key: apiKey,
-  })
-
-  const cacheKey = `videos:${normalizedIds}`
-  const data = await fetchYoutubeApiCached<YoutubeVideosResponse>(
-    cacheKey,
-    `https://www.googleapis.com/youtube/v3/videos?${params}`,
-  )
-
-  return {
-    items: (data.items ?? []).map((item) => {
-      const iso = item.contentDetails.duration
-      const durationSeconds = parseYoutubeDurationIso(iso) ?? undefined
-      return {
-        id: item.id,
-        title: decodeHtmlEntities(item.snippet.title),
-        channelTitle: decodeHtmlEntities(item.snippet.channelTitle),
-        thumbnailUrl: pickThumbnail(item.snippet.thumbnails),
-        publishedAt: item.snippet.publishedAt,
-        description: decodeHtmlEntities(item.snippet.description),
-        duration: iso,
-        durationSeconds,
-      }
-    }),
-  }
+  return await discoverYoutubeVideos(event, idList)
 })

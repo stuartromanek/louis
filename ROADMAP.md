@@ -56,7 +56,7 @@ Optional per-result toggle to expand YouTube chapters into separate playlist tra
 
 ### Experiment with yt-dlp search backend
 
-Spike replacing YouTube Data API v3 search/metadata with bundled/`PATH` yt-dlp (`ytsearch` + `--flat-playlist`) so desktop users need no Google Cloud API key. Keep the existing `/api/youtube/search` response shape; optional Data API fallback for self-host. Goal: fewer setup steps for the Electron app.
+~~Spike replacing YouTube Data API v3 search/metadata with bundled/`PATH` yt-dlp (`ytsearch` + `--flat-playlist`) so desktop users need no Google Cloud API key. Keep the existing `/api/youtube/search` response shape; optional Data API fallback for self-host.~~ — **done**: `/api/youtube/*` uses bundled yt-dlp when `LOUIS_YOUTUBE_API_KEY` is unset; Data API remains an optional fallback. Desktop first-run no longer requires a YouTube key.
 
 ### Audio trim
 

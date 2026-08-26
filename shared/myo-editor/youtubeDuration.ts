@@ -37,3 +37,17 @@ export function formatYoutubeDurationIso(iso?: string | null): string {
   if (seconds === null) return iso
   return formatDurationSeconds(seconds)
 }
+
+/** Build a YouTube `contentDetails.duration` string from seconds. */
+export function secondsToYoutubeDurationIso(totalSeconds: number): string {
+  if (!Number.isFinite(totalSeconds) || totalSeconds < 0) return 'PT0S'
+  const whole = Math.floor(totalSeconds)
+  const hours = Math.floor(whole / 3600)
+  const minutes = Math.floor((whole % 3600) / 60)
+  const seconds = whole % 60
+  let iso = 'PT'
+  if (hours) iso += `${hours}H`
+  if (minutes) iso += `${minutes}M`
+  if (seconds || (!hours && !minutes)) iso += `${seconds}S`
+  return iso
+}

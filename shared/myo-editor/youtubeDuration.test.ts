@@ -4,6 +4,7 @@ import {
   formatDurationSeconds,
   formatYoutubeDurationIso,
   parseYoutubeDurationIso,
+  secondsToYoutubeDurationIso,
 } from './youtubeDuration.ts'
 
 describe('parseYoutubeDurationIso', () => {
@@ -42,5 +43,20 @@ describe('formatDurationSeconds / formatYoutubeDurationIso', () => {
 
   it('formats ISO via parse', () => {
     assert.equal(formatYoutubeDurationIso('PT1H5M'), '1:05:00')
+  })
+})
+
+describe('secondsToYoutubeDurationIso', () => {
+  it('round-trips common durations', () => {
+    assert.equal(secondsToYoutubeDurationIso(15), 'PT15S')
+    assert.equal(secondsToYoutubeDurationIso(222), 'PT3M42S')
+    assert.equal(secondsToYoutubeDurationIso(3600), 'PT1H')
+    assert.equal(secondsToYoutubeDurationIso(3723), 'PT1H2M3S')
+  })
+
+  it('emits PT0S for zero and invalid input', () => {
+    assert.equal(secondsToYoutubeDurationIso(0), 'PT0S')
+    assert.equal(secondsToYoutubeDurationIso(-1), 'PT0S')
+    assert.equal(secondsToYoutubeDurationIso(Number.NaN), 'PT0S')
   })
 })

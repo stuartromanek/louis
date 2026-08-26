@@ -7,6 +7,7 @@ const { contextBridge, ipcRenderer } = require('electron')
  * @property {string} [yotoClientId]
  * @property {string} [yotoClientSecret]
  * @property {string} [youtubeApiKey]
+ * @property {string} [youtubeSafeSearch]
  * @property {string} [ytdlpCookiesFile]
  */
 

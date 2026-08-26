@@ -1,5 +1,4 @@
-import { getYoutubeApiKey } from '../../utils/youtube'
-import { searchYoutubeVideos } from '../../utils/youtube-search'
+import { discoverYoutubeSearch } from '../../utils/youtube-discovery'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
@@ -12,10 +11,8 @@ export default defineEventHandler(async (event) => {
 
   const pageToken = query.pageToken ? String(query.pageToken) : undefined
   const maxResults = Math.min(Number(query.maxResults) || 12, 50)
-  const apiKey = getYoutubeApiKey(event)
 
-  return await searchYoutubeVideos({
-    apiKey,
+  return await discoverYoutubeSearch(event, {
     q: q || undefined,
     channelId: channelId || undefined,
     pageToken,

@@ -29,6 +29,7 @@ export function pickLouisEnv(
 
 export const LOUIS_ENV_BINDINGS = [
   { path: 'youtubeApiKey', louis: 'LOUIS_YOUTUBE_API_KEY', nuxt: 'NUXT_YOUTUBE_API_KEY' },
+  { path: 'youtubeSafeSearch', louis: 'LOUIS_YOUTUBE_SAFE_SEARCH', nuxt: 'NUXT_YOUTUBE_SAFE_SEARCH' },
   { path: 'yotoClientId', louis: 'LOUIS_YOTO_CLIENT_ID', nuxt: 'NUXT_YOTO_CLIENT_ID' },
   { path: 'yotoClientSecret', louis: 'LOUIS_YOTO_CLIENT_SECRET', nuxt: 'NUXT_YOTO_CLIENT_SECRET' },
   { path: 'yotoRedirectUri', louis: 'LOUIS_YOTO_REDIRECT_URI', nuxt: 'NUXT_YOTO_REDIRECT_URI' },

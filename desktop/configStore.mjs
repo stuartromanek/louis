@@ -1,4 +1,5 @@
 import { pickLouisEnv, setLouisAndNuxtEnv } from '../shared/louis-env.mjs'
+import { normalizeYoutubeSafeSearch } from '../shared/youtubeSafeSearch.mjs'
 
 /**
  * Desktop credentials stored under Electron userData (not the git checkout .env).
@@ -6,6 +7,7 @@ import { pickLouisEnv, setLouisAndNuxtEnv } from '../shared/louis-env.mjs'
  * @property {string} [yotoClientId]
  * @property {string} [yotoClientSecret]
  * @property {string} [youtubeApiKey]
+ * @property {string} [youtubeSafeSearch]
  * @property {string} [ytdlpCookiesFile]
  */
 
@@ -22,6 +24,9 @@ export function normalizeDesktopConfig(raw) {
     yotoClientId: typeof src.yotoClientId === 'string' ? src.yotoClientId.trim() : '',
     yotoClientSecret: typeof src.yotoClientSecret === 'string' ? src.yotoClientSecret.trim() : '',
     youtubeApiKey: typeof src.youtubeApiKey === 'string' ? src.youtubeApiKey.trim() : '',
+    youtubeSafeSearch: typeof src.youtubeSafeSearch === 'string' && src.youtubeSafeSearch.trim() !== ''
+      ? normalizeYoutubeSafeSearch(src.youtubeSafeSearch)
+      : '',
     ytdlpCookiesFile: typeof src.ytdlpCookiesFile === 'string' ? src.ytdlpCookiesFile.trim() : '',
   }
 }
@@ -47,6 +52,9 @@ export function effectiveDesktopConfig(stored, env = process.env) {
     yotoClientId: base.yotoClientId || pickLouisEnv('LOUIS_YOTO_CLIENT_ID', 'NUXT_YOTO_CLIENT_ID', env),
     yotoClientSecret: base.yotoClientSecret || pickLouisEnv('LOUIS_YOTO_CLIENT_SECRET', 'NUXT_YOTO_CLIENT_SECRET', env),
     youtubeApiKey: base.youtubeApiKey || pickLouisEnv('LOUIS_YOUTUBE_API_KEY', 'NUXT_YOUTUBE_API_KEY', env),
+    youtubeSafeSearch: normalizeYoutubeSafeSearch(
+      base.youtubeSafeSearch || pickLouisEnv('LOUIS_YOUTUBE_SAFE_SEARCH', 'NUXT_YOUTUBE_SAFE_SEARCH', env),
+    ),
     ytdlpCookiesFile: base.ytdlpCookiesFile || pickLouisEnv('LOUIS_YTDLP_COOKIES_FILE', 'NUXT_YTDLP_COOKIES_FILE', env),
   })
 }
@@ -56,7 +64,7 @@ export function effectiveDesktopConfig(stored, env = process.env) {
  */
 export function desktopConfigNeedsSetup(config) {
   const normalized = normalizeDesktopConfig(config)
-  return !normalized.yotoClientId || !normalized.youtubeApiKey
+  return !normalized.yotoClientId
 }
 
 /**
@@ -113,6 +121,12 @@ export function applyDesktopConfigToEnv(env, config) {
   if (config.youtubeApiKey) {
     setLouisAndNuxtEnv(env, 'LOUIS_YOUTUBE_API_KEY', 'NUXT_YOUTUBE_API_KEY', config.youtubeApiKey)
   }
+  setLouisAndNuxtEnv(
+    env,
+    'LOUIS_YOUTUBE_SAFE_SEARCH',
+    'NUXT_YOUTUBE_SAFE_SEARCH',
+    normalizeYoutubeSafeSearch(config.youtubeSafeSearch),
+  )
   if (config.ytdlpCookiesFile) {
     setLouisAndNuxtEnv(env, 'LOUIS_YTDLP_COOKIES_FILE', 'NUXT_YTDLP_COOKIES_FILE', config.ytdlpCookiesFile)
   }

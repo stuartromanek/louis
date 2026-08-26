@@ -6,6 +6,7 @@ import {
 
 const props = defineProps<{
   videoId: string
+  durationSeconds?: number
 }>()
 
 const player = inject<YoutubeAudioPlayerApi>(YOUTUBE_AUDIO_PLAYER_KEY)
@@ -29,7 +30,12 @@ const scrubValue = ref(0)
 
 const knownDuration = computed(() => {
   if (isActive.value && player.duration.value > 0) return player.duration.value
-  return player.durationById[props.videoId] ?? 0
+  const cached = player.durationById[props.videoId]
+  if (typeof cached === 'number' && cached > 0) return cached
+  if (typeof props.durationSeconds === 'number' && props.durationSeconds > 0) {
+    return props.durationSeconds
+  }
+  return 0
 })
 
 const progressPercent = computed(() => {
@@ -46,7 +52,10 @@ const displayTime = computed(() => {
   return player.currentTime.value
 })
 
-const formattedDuration = computed(() => formatTime(knownDuration.value))
+const formattedDuration = computed(() => {
+  if (!knownDuration.value) return isActive.value ? formatTime(0) : ''
+  return formatTime(knownDuration.value)
+})
 
 function formatTime(totalSeconds: number): string {
   if (!totalSeconds || !Number.isFinite(totalSeconds)) return '0:00'
@@ -141,7 +150,10 @@ function onScrubCommit(event: Event) {
         @input="onScrubInput"
         @change="onScrubCommit"
       >
-      <span class="yt-audio-duration font-maru-mono tabular-nums">{{ formattedDuration }}</span>
+      <span
+        v-if="formattedDuration"
+        class="yt-audio-duration font-maru-mono tabular-nums"
+      >{{ formattedDuration }}</span>
     </div>
   </div>
 </template>

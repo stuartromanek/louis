@@ -10,6 +10,7 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 ## [Unreleased]
 
 ### Added
+- **YouTube search content filtering** — Settings → Advanced (desktop) or `LOUIS_YOUTUBE_SAFE_SEARCH` / HA **youtube_safe_search**: `none`, `moderate` (default), or `strict` on typed search when a Data API key is set.
 - **Playlist artwork** — new playlists get a generated [DiceBear](https://www.dicebear.com/how-to-use/http-api/) cover on create. Playlist menu → **Artwork** opens a generate / upload / crop flyout (5×7 cover, session history; Yoto `metadata.cover.imageL`).
 - **Track trim** — scissors on a YouTube track (or a split group) edits the **full** source. Trim keeps that region and re-splits if the keep is still over 55 minutes (or collapses to one slat if it is not). Waveform + preview in a flyout (desktop) or tray (phone).
 - **Auto-split long tracks** — YouTube sources over 55 minutes expand into connected Part 1 / Part 2 / … playlist slats on add (move and delete as a group). Save downloads the audio once, then ffmpeg-splits into legal MYO chapters. Replaces the old “Enable long tracks?” confirm gate.
@@ -31,6 +32,8 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - **New playlist** in the idle playlist empty state is a link that starts the New playlist flow.
 
 ### Changed
+- **`/api/youtube/*` hybrid discovery** — search, video details, playlist import, and channel browse use bundled/`PATH` yt-dlp when `LOUIS_YOUTUBE_API_KEY` is unset; Data API when a key is set. Quota or upstream failures (403/502/503) fall back to yt-dlp. Self-host, Docker, HA, and desktop share the same routes.
+- **`LOUIS_YOUTUBE_API_KEY` is optional** — only `LOUIS_YOTO_CLIENT_ID` is required for self-host. Desktop first-run includes a skippable YouTube step (**Next** with a key, **Skip** for bundled yt-dlp). Search and import still work without a key; a Data API key is recommended (faster search, `safeSearch=moderate` on typed search) and can be added later in Settings → Advanced (desktop) or env / HA options.
 - Artwork, Trim, Track Art, How To, and Settings share one **AppFlyout** (dismiss ×, compact footer commit).
 - Confirming a new playlist name creates the playlist on Yoto immediately. Checked Search results (desktop New) or Add → New playlist (phone) upload with that create; otherwise the playlist starts empty and you add tracks, then Update.
 - Update can save an empty playlist (clears chapters on Yoto). The create footer no longer says the playlist is not on Yoto yet.
@@ -58,7 +61,7 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - Multi-track (split) Yoto uploads finish across retries: long chapters wait up to 20 minutes, completed parts keep their transcoded hashes so Update skips them, ffmpeg AAC-encodes cuts instead of GOP-unaligned copies, and a stall or Yoto failure re-PUTs once (a moving timeout does not). Extra-poll after a coalesced stall uses the chapter’s full wait budget.
 - Split checkpoints key off the scaled cut and whether loudnorm actually ran; a changed source hash misses cache. Incomplete split drafts sanitize on restore.
 - Desktop Yoto session: expired access without refresh forces reconnect; save/reuse-test read scope from cookie or `yoto-session.json`.
-- Stale MYO metadata notes after delete/reorder no longer map old YouTube sources onto the wrong remaining tracks.
+- Search, channel, and playlist listings omit untitled / “YouTube video” stubs and rows with no duration (the 0:00 cards).
 
 ## [1.1.2] - 2026-08-08
 
@@ -94,7 +97,7 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - Renamed product UI copy from Preferences to **Settings**.
 - Env contract is now **`LOUIS_*`** (e.g. `LOUIS_YOTO_CLIENT_ID`, `LOUIS_YOUTUBE_API_KEY`, `LOUIS_PUBLIC_DESKTOP`); legacy **`NUXT_*` / `NUXT_PUBLIC_*`** still accepted as a deprecated fallback (`LOUIS_*` wins when both are set). Nitro boot plugin applies custom names at container runtime.
 - UI typeface is self-hosted **LT Saeada** (Regular / Medium / Bold) instead of Dongle.
-- Desktop Settings: General / Advanced nav; Done saves dirty API keys (Save & restart in Electron); required Yoto client ID + YouTube API key match the wizard.
+- Desktop Settings: General / Advanced nav; Done saves dirty API keys (Save & restart in Electron); required Yoto client ID matches the wizard; YouTube API key is optional (Skip / empty uses bundled yt-dlp).
 - Desktop config merge preserves omitted fields (e.g. client secret); `get-config` / setup gating use the same effective config (stored `config.json` with env filling blanks for spike/dev).
 - After credential save, desktop reload opens setup again if required keys are still missing.
 - Phone chrome polish for narrow viewports (densify ≤360px / ≤310px): tab icons, result art, howto mocks, tray open animation.

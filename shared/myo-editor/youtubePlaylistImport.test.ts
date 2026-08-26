@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   importableResultKeys,
+  isListableYoutubeSearchResult,
   mapPlaylistImportItems,
   parseYoutubePlaylistUrl,
   videoResultKey,
@@ -74,18 +75,19 @@ describe('playlist import results', () => {
     )
   })
 
-  it('counts missing-duration rows that stay in the list', () => {
+  it('omits missing-duration and placeholder-title rows from the list', () => {
     const mapped = mapPlaylistImportItems([
       item('one'),
       item('unknown', { durationSeconds: undefined }),
+      item('stub', { title: 'YouTube video', durationSeconds: undefined }),
       item('gone', { available: false }),
     ])
 
     assert.equal(mapped.skippedUnavailable, 1)
-    assert.equal(mapped.skippedMissingDuration, 1)
+    assert.equal(mapped.skippedMissingDuration, 2)
     assert.deepEqual(
       mapped.videos.map(video => video.id),
-      ['one', 'unknown'],
+      ['one'],
     )
   })
 
@@ -105,6 +107,33 @@ describe('playlist import results', () => {
       undefined,
     )
     assert.equal(youtubePlaylistItemBlockReason(item('ok')), undefined)
+  })
+
+  it('does not list placeholder titles or rows without duration', () => {
+    assert.equal(
+      isListableYoutubeSearchResult({
+        id: 'abcdefghijk',
+        title: 'YouTube video',
+        durationSeconds: undefined,
+      }),
+      false,
+    )
+    assert.equal(
+      isListableYoutubeSearchResult({
+        id: 'abcdefghijk',
+        title: 'A real clip',
+        durationSeconds: 0,
+      }),
+      false,
+    )
+    assert.equal(
+      isListableYoutubeSearchResult({
+        id: 'abcdefghijk',
+        title: 'A real clip',
+        durationSeconds: 90,
+      }),
+      true,
+    )
   })
 
   it('pre-checks importable rows including long tracks', () => {

@@ -22,6 +22,7 @@ function shellExport(key, value) {
 
 shellExport('LOUIS_YOTO_CLIENT_ID', o.yoto_client_id)
 shellExport('LOUIS_YOUTUBE_API_KEY', o.youtube_api_key)
+shellExport('LOUIS_YOUTUBE_SAFE_SEARCH', o.youtube_safe_search)
 shellExport('LOUIS_YOTO_REDIRECT_URI', o.yoto_redirect_uri)
 shellExport('LOUIS_YTDLP_COOKIES_FILE', o.ytdlp_cookies_file)
 shellExport('LOUIS_AUDIO_CACHE_MAX_AGE_MS', o.audio_cache_max_age_ms)

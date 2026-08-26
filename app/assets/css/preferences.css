@@ -76,8 +76,11 @@
 }
 
 .prefs-projector__nav-item:disabled {
-  opacity: 0.7;
-  cursor: default;
+  cursor: not-allowed;
+  color: color-mix(in srgb, var(--color-maru-black) 40%, var(--color-maru-gray));
+  background: var(--color-maru-gray-light);
+  box-shadow: none;
+  opacity: 1;
 }
 
 .prefs-projector__pane {
@@ -152,6 +155,17 @@
   color: var(--color-maru-black);
 }
 
+.prefs-projector__field:has(.prefs-projector__select:disabled) > .prefs-projector__label-row .prefs-projector__label,
+.prefs-projector__field:has(.prefs-projector__select:disabled) > .prefs-projector__label,
+.prefs-projector__field:has(.prefs-projector__input:disabled:not([readonly])) > .prefs-projector__label-row .prefs-projector__label,
+.prefs-projector__field:has(.prefs-projector__input:disabled:not([readonly])) > .prefs-projector__label,
+.prefs-projector__field:has(.maru-legal-pad__sheet:disabled) > .prefs-projector__label-row .prefs-projector__label,
+.prefs-projector__field:has(.maru-legal-pad__sheet:disabled) > .prefs-projector__label,
+.prefs-projector__field--switch:has(.maru-switch:disabled) .prefs-projector__label,
+.prefs-projector__field:has(.maru-checkbox__input:disabled) .prefs-projector__label {
+  color: color-mix(in srgb, var(--color-maru-black) 48%, var(--color-maru-gray));
+}
+
 .prefs-projector__label-row {
   display: flex;
   align-items: center;
@@ -196,8 +210,86 @@
 }
 
 .prefs-projector__help:disabled {
-  opacity: 0.7;
-  cursor: default;
+  cursor: not-allowed;
+  opacity: 0.45;
+  filter: grayscale(0.35);
+}
+
+.prefs-projector__warn {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 1.3rem;
+  height: 1.5rem;
+  margin: 0;
+  padding: 0;
+  padding-top: 0.12rem;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-maru);
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-maru-black);
+  cursor: help;
+  transition: translate 0.15s ease-out;
+}
+
+.prefs-projector__warn-icon {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.prefs-projector__warn-shadow {
+  fill: var(--color-maru-black);
+  stroke: var(--color-maru-black);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  transform: translate(1.5px, 1.5px);
+  transition: transform 0.15s ease-out;
+}
+
+.prefs-projector__warn-face {
+  fill: var(--color-maru-yellow);
+  stroke: var(--color-maru-black);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  transition: fill 0.15s ease-out;
+}
+
+.prefs-projector__warn-mark {
+  position: relative;
+  z-index: 1;
+  display: block;
+  line-height: 1;
+}
+
+.prefs-projector__warn:hover:not(:disabled) {
+  translate: -1px -1px;
+}
+
+.prefs-projector__warn:hover:not(:disabled) .prefs-projector__warn-shadow {
+  transform: translate(2.5px, 2.5px);
+}
+
+.prefs-projector__warn:hover:not(:disabled) .prefs-projector__warn-face {
+  fill: var(--color-maru-yellow-light);
+}
+
+.prefs-projector__warn:focus-visible {
+  outline: 3px solid var(--color-maru-blue);
+  outline-offset: 2px;
+}
+
+.prefs-projector__warn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  filter: grayscale(0.35);
 }
 
 @media (max-width: 599px) {
@@ -248,8 +340,29 @@
 }
 
 .maru-switch:disabled {
-  opacity: 0.7;
-  cursor: default;
+  cursor: not-allowed;
+  background: var(--color-maru-gray-light);
+  border-color: color-mix(in srgb, var(--color-maru-black) 28%, transparent);
+  box-shadow: none;
+  opacity: 1;
+}
+
+.maru-switch--on:disabled {
+  background: color-mix(in srgb, var(--color-maru-green-light) 35%, var(--color-maru-gray-light));
+}
+
+.maru-switch:disabled .maru-switch__label {
+  color: color-mix(in srgb, var(--color-maru-black) 40%, var(--color-maru-gray));
+}
+
+.maru-switch:disabled .maru-switch__thumb {
+  background: color-mix(in srgb, var(--color-maru-white) 65%, var(--color-maru-gray-light));
+  border-color: color-mix(in srgb, var(--color-maru-black) 28%, transparent);
+  box-shadow: none;
+}
+
+.maru-switch--on:disabled .maru-switch__thumb {
+  background: color-mix(in srgb, var(--color-maru-yellow) 42%, var(--color-maru-gray-light));
 }
 
 .maru-switch__track {
@@ -339,7 +452,26 @@
 }
 
 .maru-checkbox__input:disabled {
-  cursor: default;
+  cursor: not-allowed;
+}
+
+.maru-checkbox__input:disabled + .maru-checkbox__box {
+  cursor: not-allowed;
+  background: var(--color-maru-gray-light);
+  border-color: color-mix(in srgb, var(--color-maru-black) 28%, transparent);
+  box-shadow: none;
+  opacity: 1;
+}
+
+.maru-checkbox__input:disabled:checked + .maru-checkbox__box {
+  background: color-mix(in srgb, var(--color-maru-yellow) 42%, var(--color-maru-gray-light));
+}
+
+.maru-checkbox__input:disabled + .maru-checkbox__box .maru-checkbox__mark {
+  border-color: color-mix(in srgb, var(--color-maru-black) 32%, transparent);
+  opacity: 0.35;
+  scale: 1;
+  filter: blur(0);
 }
 
 .maru-checkbox__box {
@@ -416,10 +548,6 @@
   outline-offset: 2px;
 }
 
-.maru-checkbox__input:disabled + .maru-checkbox__box {
-  opacity: 0.7;
-}
-
 .maru-legal-pad {
   position: relative;
   width: 100%;
@@ -482,9 +610,37 @@
   color: color-mix(in srgb, var(--color-maru-black) 35%, transparent);
 }
 
+.maru-legal-pad:has(.maru-legal-pad__sheet:disabled) {
+  background: var(--color-maru-gray-light);
+  border-color: color-mix(in srgb, var(--color-maru-black) 28%, transparent);
+  box-shadow: none;
+}
+
+.maru-legal-pad:has(.maru-legal-pad__sheet:disabled) .maru-legal-pad__head {
+  opacity: 0.55;
+  filter: grayscale(0.25);
+}
+
 .maru-legal-pad__sheet:disabled {
-  cursor: default;
-  opacity: 0.7;
+  cursor: not-allowed;
+  color: color-mix(in srgb, var(--color-maru-black) 40%, var(--color-maru-gray));
+  background-color: transparent;
+  background-image:
+    linear-gradient(
+      to right,
+      transparent 1.35rem,
+      color-mix(in srgb, var(--color-maru-black) 16%, transparent) 1.35rem,
+      color-mix(in srgb, var(--color-maru-black) 16%, transparent) calc(1.35rem + 2px),
+      transparent calc(1.35rem + 2px)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(1.7rem - 1px),
+      color-mix(in srgb, var(--color-maru-black) 10%, transparent) calc(1.7rem - 1px),
+      color-mix(in srgb, var(--color-maru-black) 10%, transparent) 1.7rem
+    );
+  opacity: 1;
 }
 
 .maru-legal-pad__sheet:focus-visible {
@@ -493,9 +649,12 @@
 
 .prefs-projector__done:disabled,
 .prefs-projector__browse:disabled {
-  opacity: 0.45;
   cursor: not-allowed;
-  box-shadow: 2px 2px 0 color-mix(in srgb, var(--color-maru-black) 28%, transparent);
+  color: color-mix(in srgb, var(--color-maru-black) 40%, var(--color-maru-gray));
+  background: var(--color-maru-gray-light) !important;
+  border-color: color-mix(in srgb, var(--color-maru-black) 28%, transparent);
+  box-shadow: none;
+  opacity: 1;
   translate: none;
   scale: 1;
 }
@@ -605,8 +764,12 @@
 }
 
 .prefs-projector__input:disabled {
-  opacity: 0.7;
-  cursor: default;
+  cursor: not-allowed;
+  color: color-mix(in srgb, var(--color-maru-black) 40%, var(--color-maru-gray));
+  background: var(--color-maru-gray-light);
+  border-color: color-mix(in srgb, var(--color-maru-black) 28%, transparent);
+  box-shadow: none;
+  opacity: 1;
 }
 
 .prefs-projector__file-row {
@@ -661,8 +824,23 @@
 }
 
 .prefs-projector__select:disabled {
-  opacity: 0.7;
-  cursor: default;
+  cursor: not-allowed;
+  color: color-mix(in srgb, var(--color-maru-black) 40%, var(--color-maru-gray));
+  background-color: var(--color-maru-gray-light);
+  background-image:
+    linear-gradient(
+      45deg,
+      transparent 50%,
+      color-mix(in srgb, var(--color-maru-black) 32%, transparent) 50%
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-maru-black) 32%, transparent) 50%,
+      transparent 50%
+    );
+  border-color: color-mix(in srgb, var(--color-maru-black) 28%, transparent);
+  box-shadow: none;
+  opacity: 1;
 }
 
 .prefs-projector__browse {

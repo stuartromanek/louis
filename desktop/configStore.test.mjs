@@ -17,8 +17,17 @@ const fullConfig = {
   yotoClientId: 'client-a',
   yotoClientSecret: 'KEEP_ME',
   youtubeApiKey: 'yt-key',
+  youtubeSafeSearch: 'moderate',
   ytdlpCookiesFile: '/tmp/cookies.txt',
 }
+
+describe('normalizeDesktopConfig', () => {
+  it('defaults youtubeSafeSearch to empty until effective merge', () => {
+    assert.equal(normalizeDesktopConfig({}).youtubeSafeSearch, '')
+    assert.equal(normalizeDesktopConfig({ youtubeSafeSearch: 'STRICT' }).youtubeSafeSearch, 'strict')
+    assert.equal(normalizeDesktopConfig({ youtubeSafeSearch: 'nope' }).youtubeSafeSearch, 'moderate')
+  })
+})
 
 describe('mergeDesktopConfig', () => {
   it('keeps yotoClientSecret when prefs-style patch omits it', () => {
@@ -64,29 +73,30 @@ describe('mergeDesktopConfig', () => {
 })
 
 describe('desktopConfigNeedsSetup', () => {
-  it('returns false when both required fields are present', () => {
+  it('returns false when yotoClientId is present', () => {
     assert.equal(
       desktopConfigNeedsSetup({ yotoClientId: 'id', youtubeApiKey: 'yt' }),
       false,
     )
+    assert.equal(desktopConfigNeedsSetup({ yotoClientId: 'id' }), false)
   })
 
   it('returns true when yotoClientId is missing', () => {
     assert.equal(desktopConfigNeedsSetup({ youtubeApiKey: 'yt' }), true)
   })
 
-  it('returns true when youtubeApiKey is missing', () => {
-    assert.equal(desktopConfigNeedsSetup({ yotoClientId: 'id' }), true)
+  it('does not require youtubeApiKey', () => {
+    assert.equal(desktopConfigNeedsSetup({ yotoClientId: 'id' }), false)
   })
 
-  it('treats whitespace-only as missing', () => {
+  it('treats whitespace-only yotoClientId as missing', () => {
     assert.equal(
       desktopConfigNeedsSetup({ yotoClientId: '   ', youtubeApiKey: 'yt' }),
       true,
     )
     assert.equal(
       desktopConfigNeedsSetup({ yotoClientId: 'id', youtubeApiKey: '  ' }),
-      true,
+      false,
     )
   })
 })
@@ -109,12 +119,14 @@ describe('effectiveDesktopConfig', () => {
       {
         LOUIS_YOTO_CLIENT_ID: 'louis-id',
         LOUIS_YOUTUBE_API_KEY: 'louis-yt',
+        LOUIS_YOUTUBE_SAFE_SEARCH: 'strict',
         LOUIS_YOTO_CLIENT_SECRET: 'louis-secret',
         LOUIS_YTDLP_COOKIES_FILE: '/louis/cookies.txt',
       },
     )
     assert.equal(effective.yotoClientId, 'louis-id')
     assert.equal(effective.youtubeApiKey, 'louis-yt')
+    assert.equal(effective.youtubeSafeSearch, 'strict')
     assert.equal(effective.yotoClientSecret, 'louis-secret')
     assert.equal(effective.ytdlpCookiesFile, '/louis/cookies.txt')
   })
@@ -167,8 +179,17 @@ describe('applyDesktopConfigToEnv', () => {
     assert.equal(env.NUXT_YOTO_CLIENT_SECRET, 'KEEP_ME')
     assert.equal(env.LOUIS_YOUTUBE_API_KEY, 'yt-key')
     assert.equal(env.NUXT_YOUTUBE_API_KEY, 'yt-key')
+    assert.equal(env.LOUIS_YOUTUBE_SAFE_SEARCH, 'moderate')
+    assert.equal(env.NUXT_YOUTUBE_SAFE_SEARCH, 'moderate')
     assert.equal(env.LOUIS_YTDLP_COOKIES_FILE, '/tmp/cookies.txt')
     assert.equal(env.NUXT_YTDLP_COOKIES_FILE, '/tmp/cookies.txt')
+  })
+
+  it('always sets youtubeSafeSearch including default moderate', () => {
+    const env = {}
+    applyDesktopConfigToEnv(env, {})
+    assert.equal(env.LOUIS_YOUTUBE_SAFE_SEARCH, 'moderate')
+    assert.equal(env.NUXT_YOUTUBE_SAFE_SEARCH, 'moderate')
   })
 
   it('omits empty optional credential fields', () => {
