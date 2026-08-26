@@ -20,7 +20,7 @@ Thanks for your interest in contributing to **Louis**!
 
 ## Releases
 
-Maintainers: see [docs/RELEASE.md](docs/RELEASE.md). Short version: keep notes in `[Unreleased]`, then on `main` run `npm run release` (patch / minor / major). That bumps the version, updates the changelog, tags `vX.Y.Z`, and publishes the GHCR image via CI.
+Maintainers: see [docs/RELEASE.md](docs/RELEASE.md). Short version: keep notes in `[Unreleased]`, then on `main` run `npm run release` (patch / minor / major). That bumps the version, updates the changelog, tags `vX.Y.Z`, and publishes Docker Hub + GHCR images via CI.
 
 ## Reporting issues
 

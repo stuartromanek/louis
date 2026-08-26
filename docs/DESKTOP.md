@@ -4,7 +4,7 @@ Louis for macOS and Windows — the same Make Your Own (MYO) experience as self-
 
 **Personal use only.** You are responsible for complying with [YouTube’s Terms of Service](https://www.youtube.com/t/terms) and applicable law when downloading audio.
 
-Prefer containers? Use [Docker / GHCR](../README.md#docker-same-version) for the same release version.
+Prefer containers? Use [Docker Hub / GHCR](../README.md#docker-same-version) for the same release version (`stuartromanek/louis` or `ghcr.io/stuartromanek/louis`).
 
 ## Download
 

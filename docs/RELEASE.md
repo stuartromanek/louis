@@ -6,7 +6,7 @@ The app version shown in Settings (`Louis v…`) comes from `package.json` via `
 
 Pushing a tag matching `v*` runs [`.github/workflows/release.yml`](../.github/workflows/release.yml), which:
 
-1. Publishes a **multi-arch** Docker image to GHCR (`:latest` and `:{tag}` for `linux/amd64` + `linux/arm64`)
+1. Publishes a **multi-arch** Docker image to **Docker Hub** (`stuartromanek/louis`) and **GHCR** (`ghcr.io/stuartromanek/louis`) — `:latest` and `:{tag}` for `linux/amd64` + `linux/arm64`
 2. Builds macOS DMGs (arm64 + x64) and Windows NSIS Setup
 3. Uploads those installers as **Assets** on the same GitHub Release created by `release-it`
 
@@ -61,7 +61,7 @@ What `npm run release` does:
 4. Creates git tag `vX.Y.Z`
 5. Pushes commit + tag to `origin`
 6. Creates a GitHub Release for that tag
-7. Tag push triggers [`.github/workflows/release.yml`](../.github/workflows/release.yml): GHCR **and** desktop installer Assets
+7. Tag push triggers [`.github/workflows/release.yml`](../.github/workflows/release.yml): Docker Hub + GHCR **and** desktop installer Assets
 
 Dry run (no commit / tag / push):
 
@@ -79,12 +79,50 @@ npm run release -- --dry-run
 
 Example: splash + welcome modal + auth gate redesign → **minor** (e.g. `0.1.0` → `0.2.0`).
 
+## Docker Hub setup (one-time)
+
+Required before the Release workflow can push to Docker Hub:
+
+1. Create a **public** repository [hub.docker.com/r/stuartromanek/louis](https://hub.docker.com/r/stuartromanek/louis) (description + link to GitHub).
+2. Create a Docker Hub **access token** (Account Settings → Security → Read & Write).
+3. Add GitHub repository secrets (`Settings → Secrets and variables → Actions`):
+   - `DOCKERHUB_USERNAME` = `stuartromanek`
+   - `DOCKERHUB_TOKEN` = the token above
+
+GHCR continues to use `GITHUB_TOKEN` automatically; no extra GHCR secrets.
+
+### Backfill without a new release
+
+The Release workflow supports **workflow_dispatch** to publish Docker tags from an existing git tag:
+
+1. GitHub → **Actions** → **Release** → **Run workflow**
+2. **tag:** e.g. `v1.1.2`
+3. **also_latest:** check to push `:latest` as well
+
+Desktop installer jobs are skipped on manual dispatch (tag push only).
+
+Local alternative:
+
+```bash
+docker buildx build --platform linux/amd64,linux/arm64 \
+  --tag stuartromanek/louis:v1.1.2 \
+  --tag stuartromanek/louis:latest \
+  --push .
+```
+
+Verify multi-arch manifest:
+
+```bash
+docker buildx imagetools inspect stuartromanek/louis:latest
+```
+
 ## After release
 
 Checklist for tag `vX.Y.Z`:
 
 - [ ] GitHub Action **Release** workflow succeeded (all jobs green)
-- [ ] GHCR image exists: `ghcr.io/<org>/louis:vX.Y.Z` and `:latest` (**amd64 + arm64** manifest)
+- [ ] Docker Hub image exists: `stuartromanek/louis:vX.Y.Z` and `:latest` (**amd64 + arm64** manifest)
+- [ ] GHCR image exists: `ghcr.io/stuartromanek/louis:vX.Y.Z` and `:latest` (**amd64 + arm64** manifest)
 - [ ] Release page `…/releases/tag/vX.Y.Z` lists under **Assets**:
   - `Louis-X.Y.Z-arm64.dmg`
   - `Louis-X.Y.Z-x64.dmg`

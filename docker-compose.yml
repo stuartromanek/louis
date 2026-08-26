@@ -1,6 +1,7 @@
 services:
   louis:
-    image: ghcr.io/stuartromanek/louis:latest
+    image: stuartromanek/louis:latest
+    # Equivalent: ghcr.io/stuartromanek/louis:latest
     build:
       context: .
       args:

@@ -44,14 +44,16 @@ Installers are currently **unsigned** (Gatekeeper / SmartScreen may warn). Signi
 
 ## Docker (same version)
 
-Self-host the **same** release via GHCR:
+Self-host the **same** release via Docker Hub or GHCR:
 
 ```bash
-docker pull ghcr.io/stuartromanek/louis:latest
-# or pin: ghcr.io/stuartromanek/louis:vX.Y.Z
+docker pull stuartromanek/louis:latest
+# or pin: stuartromanek/louis:vX.Y.Z
 ```
 
-Images are multi-arch (`linux/amd64` + `linux/arm64`) on each `v*` release.
+Equivalent on GHCR: `ghcr.io/stuartromanek/louis:latest` (and `:vX.Y.Z`). Images are multi-arch (`linux/amd64` + `linux/arm64`) on each `v*` release.
+
+> Docker Hub anonymous pull rate limits can apply on busy hosts; GHCR is an equivalent fallback with the same tags.
 
 Compose / env setup below. Cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 

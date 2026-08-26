@@ -32,6 +32,7 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - **New playlist** in the idle playlist empty state is a link that starts the New playlist flow.
 
 ### Changed
+- **Dual-registry Docker publish** — each `v*` release pushes the same multi-arch image to Docker Hub (`stuartromanek/louis`) and GHCR (`ghcr.io/stuartromanek/louis`). [`docker-compose.yml`](docker-compose.yml) defaults to Docker Hub.
 - **`/api/youtube/*` hybrid discovery** — search, video details, playlist import, and channel browse use bundled/`PATH` yt-dlp when `LOUIS_YOUTUBE_API_KEY` is unset; Data API when a key is set. Quota or upstream failures (403/502/503) fall back to yt-dlp. Self-host, Docker, HA, and desktop share the same routes.
 - **`LOUIS_YOUTUBE_API_KEY` is optional** — only `LOUIS_YOTO_CLIENT_ID` is required for self-host. Desktop first-run includes a skippable YouTube step (**Next** with a key, **Skip** for bundled yt-dlp). Search and import still work without a key; a Data API key is recommended (faster search, `safeSearch=moderate` on typed search) and can be added later in Settings → Advanced (desktop) or env / HA options.
 - Artwork, Trim, Track Art, How To, and Settings share one **AppFlyout** (dismiss ×, compact footer commit).
@@ -48,7 +49,7 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - Toasts default to bottom-end (top on iOS so they don't cover Safari's Share control).
 - Yoto OAuth scopes now include `user:icons:manage` (reconnect if icon upload/patch is denied).
 - Yoto Connect requests `offline_access` and reuses the access token until it expires (Yoto refresh tokens rotate; parallel refreshes are coalesced). Reconnect once so Louis can store a refresh token.
-- Docker / GHCR: OAuth callback no longer defaults to `localhost` — unset `LOUIS_YOTO_REDIRECT_URI` uses the Host the browser actually opened (LAN / Portainer). Image and compose default `LOUIS_COOKIE_SECURE=false` for plain HTTP; set `true` behind TLS. Compose pulls `ghcr.io/stuartromanek/louis:latest`, uses named volume `louis-audio`, and no longer requires a Git-tracked `env_file`.
+- Docker / GHCR: OAuth callback no longer defaults to `localhost` — unset `LOUIS_YOTO_REDIRECT_URI` uses the Host the browser actually opened (LAN / Portainer). Image and compose default `LOUIS_COOKIE_SECURE=false` for plain HTTP; set `true` behind TLS. Compose uses named volume `louis-audio`, and no longer requires a Git-tracked `env_file`.
 - Yoto transcode waits scale with chapter size and duration (6-minute floor, 20-minute cap; ~30s wait per minute of audio so long split chapters actually reach the cap). Timeout copy names the part and last percent; the overlay keeps polling while the save job is still moving.
 - Pixel editor draw sounds use `scribble-*` / `erase` / `clear` instead of the old `mdn-*` ticks.
 - Auto-split shore-up: the overlay no longer fails a living save at 90 minutes (still-working hint only); lost-job copy asks you to check Yoto; ffmpeg split/loudnorm timeouts scale with duration; a partial re-extract cuts that chapter instead of uploading the full file; save re-plans when a probe would stretch a part past 60 minutes.

@@ -24,7 +24,7 @@ Louis edits **playlists**. Linking a playlist to a physical Make Your Own card s
 
 ### Docker Hub (and image registries)
 
-Publish official images beyond GHCR — e.g. Docker Hub — so `docker pull` / compose examples work from the registries people already use. Confirm whether GHCR alone is enough or multi-registry release is worth the maintenance.
+~~Publish official images beyond GHCR — e.g. Docker Hub — so `docker pull` / compose examples work from the registries people already use. Confirm whether GHCR alone is enough or multi-registry release is worth the maintenance.~~ — **done**: each `v*` release pushes the same multi-arch image to **Docker Hub** (`stuartromanek/louis`) and **GHCR** (`ghcr.io/stuartromanek/louis`). Home Assistant add-on still pins GHCR.
 
 ### Other hosting / “one-click” images
 
