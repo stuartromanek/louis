@@ -1,0 +1,38 @@
+[
+  {
+    "type": 3,
+    "title": "Louis",
+    "description": "Yoto MYO client — YouTube search and playlist editor",
+    "note": "Register your Yoto redirect URI on yoto.dev before connecting. Open Louis at your host IP or hostname (not localhost from other devices). Single instance only.",
+    "categories": ["Media"],
+    "platform": "linux",
+    "logo": "https://raw.githubusercontent.com/stuartromanek/louis/main/public/favicons/android-chrome-192x192.png",
+    "repository": {
+      "url": "https://github.com/stuartromanek/louis",
+      "stackfile": "deploy/portainer/docker-compose.yml"
+    },
+    "env": [
+      {
+        "name": "LOUIS_YOTO_CLIENT_ID",
+        "label": "Yoto client ID",
+        "description": "Required — public PKCE client ID from yoto.dev"
+      },
+      {
+        "name": "LOUIS_YOUTUBE_API_KEY",
+        "label": "YouTube API key (optional)",
+        "description": "Recommended for faster search and content filtering"
+      },
+      {
+        "name": "LOUIS_COOKIE_SECURE",
+        "label": "Secure OAuth cookies",
+        "description": "Set true only behind HTTPS; leave false for LAN HTTP",
+        "default": "false"
+      },
+      {
+        "name": "LOUIS_YOTO_REDIRECT_URI",
+        "label": "OAuth redirect URI (optional)",
+        "description": "Leave empty to use the Host you open Louis with"
+      }
+    ]
+  }
+]

@@ -55,9 +55,11 @@ Equivalent on GHCR: `ghcr.io/stuartromanek/louis:latest` (and `:vX.Y.Z`). Images
 
 > Docker Hub anonymous pull rate limits can apply on busy hosts; GHCR is an equivalent fallback with the same tags.
 
-Compose / env setup below. Cut releases: [docs/RELEASE.md](docs/RELEASE.md).
+Compose / env setup below. **One-click homelab:** Portainer template, CasaOS store, Coolify, Umbrel — [docs/HOSTING.md](docs/HOSTING.md). Cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
-**Portainer:** Stacks → Add stack → **Web editor** (not Git repository). Paste [`docker-compose.yml`](docker-compose.yml), set `LOUIS_YOTO_CLIENT_ID` in the stack environment UI. `LOUIS_YOUTUBE_API_KEY` is recommended (faster search, `safeSearch=moderate`); leave unset to search with bundled yt-dlp. Then deploy. Open Louis at the **NAS/host URL other devices use** (`http://192.168.x.x:4000` or a hostname) — never the host’s `localhost` from another device. Register that same origin’s `/api/yoto/auth/callback` on [yoto.dev](https://yoto.dev/get-started/start-here/). Image default is `LOUIS_COOKIE_SECURE=false` (LAN HTTP); set `true` only behind HTTPS.
+**Portainer (one-click):** App Templates → add URL `https://raw.githubusercontent.com/stuartromanek/louis/main/deploy/portainer/templates.json` → deploy **Louis**. Details: [docs/HOSTING.md](docs/HOSTING.md#portainer-one-click-template).
+
+**Portainer (manual stack):** Stacks → Add stack → **Web editor** (not Git repository). Paste [`docker-compose.yml`](docker-compose.yml), set `LOUIS_YOTO_CLIENT_ID` in the stack environment UI. `LOUIS_YOUTUBE_API_KEY` is recommended (faster search, `safeSearch=moderate`); leave unset to search with bundled yt-dlp. Then deploy. Open Louis at the **NAS/host URL other devices use** (`http://192.168.x.x:4000` or a hostname) — never the host’s `localhost` from another device. Register that same origin’s `/api/yoto/auth/callback` on [yoto.dev](https://yoto.dev/get-started/start-here/). Image default is `LOUIS_COOKIE_SECURE=false` (LAN HTTP); set `true` only behind HTTPS.
 
 ## Home Assistant
 

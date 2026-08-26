@@ -128,6 +128,8 @@ Checklist for tag `vX.Y.Z`:
   - `Louis-X.Y.Z-x64.dmg`
   - `Louis-Setup-X.Y.Z.exe`
 - [ ] If the Home Assistant add-on pin changed: bump `homeassistant/louis/config.yaml` `version` and `Dockerfile` `FROM …:vX.Y.Z` to match
+- [ ] Hosting one-click artifacts: bump `version` in `deploy/casaos/Apps/Louis/docker-compose.yml` (`x-casaos`) when the store should show the new release; smoke-test [`deploy/portainer/docker-compose.yml`](../deploy/portainer/docker-compose.yml) deploy
+- [ ] CasaOS store: confirm [CasaOS Store workflow](../.github/workflows/casaos-store.yml) succeeded and `https://cdn.jsdelivr.net/gh/stuartromanek/louis@gh-pages/store.json` loads (jsDelivr may lag a few minutes after `gh-pages` push)
 - [ ] Deploy that tag on Railway (or your host) when you want a pinned Docker version; `:latest` tracks the newest tagged release
 - [ ] Start the next cycle by writing new bullets under `[Unreleased]` again
 

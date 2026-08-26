@@ -1,0 +1,22 @@
+version: "3.7"
+
+services:
+  app_proxy:
+    environment:
+      APP_HOST: louis-louis_server_1
+      APP_PORT: 4000
+
+  server:
+    image: stuartromanek/louis:latest
+    restart: on-failure
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 4000
+      LOUIS_AUDIO_WORK_DIR: /data/audio
+      LOUIS_COOKIE_SECURE: ${LOUIS_COOKIE_SECURE:-false}
+      LOUIS_YOTO_CLIENT_ID: ${LOUIS_YOTO_CLIENT_ID:-}
+      LOUIS_YOUTUBE_API_KEY: ${LOUIS_YOUTUBE_API_KEY:-}
+      LOUIS_YOTO_REDIRECT_URI: ${LOUIS_YOTO_REDIRECT_URI:-}
+    volumes:
+      - ${APP_DATA_DIR}/audio:/data/audio

@@ -1,0 +1,35 @@
+name: CasaOS Store
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - deploy/casaos/**
+      - .github/workflows/casaos-store.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build v2 dist
+        uses: IceWhaleTech/build-appstore-action@v1
+        with:
+          source: deploy/casaos
+          output: dist
+          base-url: https://cdn.jsdelivr.net/gh/${{ github.repository }}@gh-pages
+          cache-file: .cache/build_appstore/image-size-cache.json
+          digest-cache-file: .cache/build_appstore/image-digest-cache.json
+
+      - name: Deploy dist to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./dist
+          force_orphan: true

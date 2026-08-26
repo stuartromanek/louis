@@ -1,0 +1,78 @@
+name: louis
+services:
+  louis:
+    image: stuartromanek/louis:latest
+    container_name: louis
+    restart: unless-stopped
+    ports:
+      - target: 4000
+        published: "4000"
+        protocol: tcp
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "4000"
+      LOUIS_AUDIO_WORK_DIR: /data/audio
+      LOUIS_COOKIE_SECURE: "false"
+      LOUIS_YOTO_CLIENT_ID: ""
+      LOUIS_YOUTUBE_API_KEY: ""
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/audio
+        target: /data/audio
+    x-casaos:
+      envs:
+        - container: LOUIS_YOTO_CLIENT_ID
+          description:
+            en_US: Yoto public PKCE client ID (required) — from yoto.dev
+        - container: LOUIS_YOUTUBE_API_KEY
+          description:
+            en_US: YouTube Data API key (optional; recommended for faster search)
+        - container: LOUIS_COOKIE_SECURE
+          description:
+            en_US: Set true only behind HTTPS; leave false for LAN HTTP
+      ports:
+        - container: "4000"
+          description:
+            en_US: Louis web UI and Yoto OAuth callback port
+      volumes:
+        - container: /data/audio
+          description:
+            en_US: Audio cache and optional managed yt-dlp updates
+x-casaos:
+  id: com.stuartromanek.louis
+  architectures:
+    - amd64
+    - arm64
+  main: louis
+  author: Louis contributors
+  category: Media
+  scheme: http
+  index: /
+  port_map: "4000"
+  icon: https://raw.githubusercontent.com/stuartromanek/louis/main/deploy/casaos/Apps/Louis/icon.png
+  title:
+    en_US: Louis
+  tagline:
+    en_US: Yoto MYO playlists from YouTube
+  description:
+    en_US: |
+      Louis is a Make Your Own (MYO) client for Yoto: search YouTube, arrange playlists, and save them to your Yoto account.
+
+      Before connecting Yoto, register this redirect URI on [yoto.dev](https://yoto.dev/get-started/start-here/):
+
+      `http://<your-casaos-host>:4000/api/yoto/auth/callback`
+
+      Open Louis at your NAS hostname or LAN IP — not `localhost` from other devices. YouTube API key is optional (yt-dlp search works without one).
+  tips:
+    en_US: |
+      1. Set **LOUIS_YOTO_CLIENT_ID** in app settings after install.
+      2. Register the redirect URI above on yoto.dev (use your real host/IP).
+      3. Optional **LOUIS_YOUTUBE_API_KEY** for faster search.
+      4. Health check: `http://<host>:4000/api/health`
+  developer: Louis contributors
+  version: "1.1.2"
+  website: https://github.com/stuartromanek/louis
+  repo: https://github.com/stuartromanek/louis
+  support: https://github.com/stuartromanek/louis/issues
+  docs: https://github.com/stuartromanek/louis/blob/main/docs/HOSTING.md

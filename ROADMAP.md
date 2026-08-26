@@ -28,7 +28,7 @@ Louis edits **playlists**. Linking a playlist to a physical Make Your Own card s
 
 ### Other hosting / “one-click” images
 
-Explore pre-canned deploy targets that consume container images (Railway templates, Coolify, CasaOS / Umbrel-style app stores, etc.) so self-hosters can spin Louis up without hand-rolling compose.
+~~Explore pre-canned deploy targets that consume container images (Railway templates, Coolify, CasaOS / Umbrel-style app stores, etc.) so self-hosters can spin Louis up without hand-rolling compose.~~ — **done**: homelab one-click via [docs/HOSTING.md](docs/HOSTING.md) — Portainer template ([`deploy/portainer/`](../deploy/portainer/)), CasaOS third-party store ([`deploy/casaos/`](../deploy/casaos/) + `gh-pages` CI), Coolify docs, Umbrel community bundle ([`deploy/umbrel/`](../deploy/umbrel/)). Cloud PaaS documented as poor fit; not templated.
 
 ### Horizontal Playlists scrolling
 

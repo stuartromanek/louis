@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "store_id": "stuartromanek-louis",
+  "name": {
+    "en_US": "Louis"
+  },
+  "description": {
+    "en_US": "One-click Louis (Yoto MYO client) for CasaOS and ZimaOS."
+  },
+  "maintainer": "stuartromanek",
+  "url": "https://github.com/stuartromanek/louis",
+  "icon": "https://raw.githubusercontent.com/stuartromanek/louis/main/homeassistant/louis/icon.png"
+}

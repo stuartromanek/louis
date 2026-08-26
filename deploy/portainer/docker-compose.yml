@@ -1,0 +1,27 @@
+services:
+  louis:
+    image: stuartromanek/louis:latest
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 4000
+      LOUIS_AUDIO_WORK_DIR: /data/audio
+      LOUIS_COOKIE_SECURE: ${LOUIS_COOKIE_SECURE:-false}
+      LOUIS_YOTO_CLIENT_ID: ${LOUIS_YOTO_CLIENT_ID:-}
+      LOUIS_YOUTUBE_API_KEY: ${LOUIS_YOUTUBE_API_KEY:-}
+      LOUIS_YOTO_REDIRECT_URI: ${LOUIS_YOTO_REDIRECT_URI:-}
+      LOUIS_YOTO_CLIENT_SECRET: ${LOUIS_YOTO_CLIENT_SECRET:-}
+    volumes:
+      - louis-audio:/data/audio
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  louis-audio:
