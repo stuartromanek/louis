@@ -110,6 +110,8 @@ Artifacts: [`deploy/umbrel/`](../deploy/umbrel/)
 
 Umbrel apps install from a **community app store** Git repo (not the official Umbrel catalog unless submitted separately).
 
+**Published store:** https://github.com/stuartromanek/umbrel-community-app-store — add this URL under **Community app stores** in Umbrel.
+
 ### Maintainer: publish a store
 
 See [`deploy/umbrel/README.md`](../deploy/umbrel/README.md):

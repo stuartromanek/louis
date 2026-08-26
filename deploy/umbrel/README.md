@@ -4,6 +4,10 @@ Ready-to-copy files for an [Umbrel Community App Store](https://github.com/getum
 
 ## Publish (maintainer)
 
+**Published store:** https://github.com/stuartromanek/umbrel-community-app-store — users add this repo URL under **App Store → Community app stores → Add**.
+
+To maintain your own fork instead:
+
 1. Fork [getumbrel/umbrel-community-app-store](https://github.com/getumbrel/umbrel-community-app-store) (Use this template).
 2. Copy into the fork root:
    - `umbrel-app-store.yml` → set your store `id` / `name` if not using `louis`.
