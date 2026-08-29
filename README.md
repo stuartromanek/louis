@@ -55,7 +55,7 @@ Equivalent on GHCR: `ghcr.io/stuartromanek/louis:latest` (and `:vX.Y.Z`). Images
 
 > Docker Hub anonymous pull rate limits can apply on busy hosts; GHCR is an equivalent fallback with the same tags.
 
-Compose / env setup below. **One-click homelab:** Portainer template, CasaOS store, Coolify, Umbrel — [docs/HOSTING.md](docs/HOSTING.md). Cut releases: [docs/RELEASE.md](docs/RELEASE.md).
+Compose / env setup below. **One-click homelab:** Portainer template — [docs/HOSTING.md](docs/HOSTING.md). Cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 **Portainer (one-click):** App Templates → add URL `https://raw.githubusercontent.com/stuartromanek/louis/main/deploy/portainer/templates.json` → deploy **Louis**. Details: [docs/HOSTING.md](docs/HOSTING.md#portainer-one-click-template).
 

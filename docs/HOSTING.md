@@ -10,8 +10,7 @@ One-click and guided installs for Docker on NAS, homelab, and LAN. Louis also sh
 | --------- | --- |
 | Mac / Windows app, no Docker | [Desktop installers](DESKTOP.md) |
 | Home Assistant on your LAN | [HA add-on](../homeassistant/louis/DOCS.md) |
-| Docker on NAS / homelab | **Portainer**, **CasaOS**, or **Coolify** below |
-| Umbrel OS | [Umbrel community store bundle](../deploy/umbrel/README.md) |
+| Docker on NAS / homelab | **Portainer** (recommended) or **Coolify** below |
 | Hand-rolled Docker | Root [`docker-compose.yml`](../docker-compose.yml) |
 
 ## Shared checklist (every Docker host)
@@ -38,7 +37,7 @@ One-click and guided installs for Docker on NAS, homelab, and LAN. Louis also sh
 
 - **Track latest:** keep `image: stuartromanek/louis:latest` (or re-pull in your UI).
 - **Pin a release:** `stuartromanek/louis:vX.Y.Z` — same tag as [GitHub Releases](https://github.com/stuartromanek/louis/releases).
-- Portainer / CasaOS / Umbrel bundles pull from Docker Hub; no Louis rebuild on your NAS when we ship a new version.
+- Portainer and other compose-based installs pull from Docker Hub; no Louis rebuild on your NAS when we ship a new version.
 
 ---
 
@@ -67,30 +66,6 @@ Stack file used: [`deploy/portainer/docker-compose.yml`](../deploy/portainer/doc
 
 ---
 
-## CasaOS / ZimaOS (app store)
-
-Artifacts: [`deploy/casaos/`](../deploy/casaos/)
-
-### Add the store (one-time)
-
-After the maintainer publishes the built store to `gh-pages` (see [CasaOS publish](#casaos-store-publish-maintainer)):
-
-1. CasaOS → **Settings** → **App Store** → **Add source**
-2. Store URL (jsDelivr CDN):
-
-   `https://cdn.jsdelivr.net/gh/stuartromanek/louis@gh-pages/store.json`
-
-   Or GitHub Pages (if enabled): `https://stuartromanek.github.io/louis/store.json`
-
-### Install Louis
-
-1. App Store → **Louis** → Install
-2. Set **LOUIS_YOTO_CLIENT_ID** in app settings
-3. Open Louis from CasaOS; register redirect URI on yoto.dev
-4. Optional YouTube API key in environment
-
----
-
 ## Coolify
 
 Uses the repo root [`docker-compose.yml`](../docker-compose.yml) — no separate bundle.
@@ -104,43 +79,15 @@ Uses the repo root [`docker-compose.yml`](../docker-compose.yml) — no separate
 
 ---
 
-## Umbrel (community app store)
+## CasaOS / ZimaOS (best-effort)
 
-Artifacts: [`deploy/umbrel/`](../deploy/umbrel/)
+A third-party store bundle lives in [`deploy/casaos/`](../deploy/casaos/) and CI may publish to `gh-pages`, but **Louis does not actively maintain or test CasaOS installs**. Prefer Portainer or plain Docker.
 
-Umbrel apps install from a **community app store** Git repo (not the official Umbrel catalog unless submitted separately).
+If you still want to try it:
 
-**Published store:** https://github.com/stuartromanek/umbrel-community-app-store — add this URL under **Community app stores** in Umbrel.
-
-### Maintainer: publish a store
-
-See [`deploy/umbrel/README.md`](../deploy/umbrel/README.md):
-
-1. Fork [umbrel-community-app-store](https://github.com/getumbrel/umbrel-community-app-store)
-2. Copy `deploy/umbrel/umbrel-app-store.yml` and `deploy/umbrel/louis-louis/` into the fork
-3. Push; users add your fork URL under **Community app stores**
-
-### User: install
-
-1. Add the community store URL (from maintainer)
-2. Install **Louis**; set **LOUIS_YOTO_CLIENT_ID**
-3. Register redirect URI on yoto.dev for your Umbrel hostname
-
----
-
-## CasaOS store publish (maintainer)
-
-CI workflow [`.github/workflows/casaos-store.yml`](../.github/workflows/casaos-store.yml) builds `deploy/casaos/` and publishes `dist/` to the **`gh-pages`** branch on push to `main` (and manual dispatch).
-
-After a successful run:
-
-1. Confirm `https://cdn.jsdelivr.net/gh/stuartromanek/louis@gh-pages/store.json` loads
-2. Optional: PR to [Awesome Third-party Stores](https://awesome.casaos.io/content/3rd-party-app-stores/list.html) with:
-   - Name: Louis
-   - URL: `https://cdn.jsdelivr.net/gh/stuartromanek/louis@gh-pages/store.json`
-   - Description: Yoto MYO client for CasaOS
-
-Bump `version` in [`deploy/casaos/Apps/Louis/docker-compose.yml`](../deploy/casaos/Apps/Louis/docker-compose.yml) `x-casaos` when displaying a new Louis release in the store.
+1. CasaOS → **Settings** → **App Store** → **Add source**
+2. Store URL: `https://cdn.jsdelivr.net/gh/stuartromanek/louis@gh-pages/store.json`
+3. Install **Louis**; set **LOUIS_YOTO_CLIENT_ID**; register redirect URI on yoto.dev
 
 ---
 

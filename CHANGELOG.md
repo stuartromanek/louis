@@ -10,7 +10,10 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 ## [Unreleased]
 
 ### Added
-- **Homelab one-click hosting** — [docs/HOSTING.md](docs/HOSTING.md): Portainer app template ([`deploy/portainer/`](deploy/portainer/)), CasaOS third-party store ([`deploy/casaos/`](deploy/casaos/) + CI publish to `gh-pages`), Coolify steps, Umbrel community bundle ([`deploy/umbrel/`](deploy/umbrel/)).
+- **Homelab one-click hosting** — [docs/HOSTING.md](docs/HOSTING.md): Portainer app template ([`deploy/portainer/`](deploy/portainer/)); Coolify steps; best-effort CasaOS bundle ([`deploy/casaos/`](deploy/casaos/)).
+
+### Removed
+- **Umbrel community store bundle** — removed [`deploy/umbrel/`](deploy/umbrel/) and all Umbrel hosting docs; use Portainer or plain Docker instead.
 - **Playlist artwork** — new playlists get a generated [DiceBear](https://www.dicebear.com/how-to-use/http-api/) cover on create. Playlist menu → **Artwork** opens a generate / upload / crop flyout (5×7 cover, session history; Yoto `metadata.cover.imageL`).
 - **Track trim** — scissors on a YouTube track (or a split group) edits the **full** source. Trim keeps that region and re-splits if the keep is still over 55 minutes (or collapses to one slat if it is not). Waveform + preview in a flyout (desktop) or tray (phone).
 - **Auto-split long tracks** — YouTube sources over 55 minutes expand into connected Part 1 / Part 2 / … playlist slats on add (move and delete as a group). Save downloads the audio once, then ffmpeg-splits into legal MYO chapters. Replaces the old “Enable long tracks?” confirm gate.
