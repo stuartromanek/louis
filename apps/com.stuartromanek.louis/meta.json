@@ -1,0 +1,30 @@
+{
+  "architectures": [
+    "amd64",
+    "arm64"
+  ],
+  "author": "Louis contributors",
+  "category": "Media",
+  "tagline": "Yoto MYO playlists from YouTube",
+  "description": "Louis is a Make Your Own (MYO) client for Yoto: search YouTube, arrange playlists, and save them to your Yoto account.\n\nBefore connecting Yoto, register this redirect URI on [yoto.dev](https://yoto.dev/get-started/start-here/):\n\n`http://<your-casaos-host>:4000/api/yoto/auth/callback`\n\nOpen Louis at your NAS hostname or LAN IP — not `localhost` from other devices. YouTube API key is optional (yt-dlp search works without one).\n",
+  "tips": {
+    "en_US": "1. Set **LOUIS_YOTO_CLIENT_ID** in app settings after install.\n2. Register the redirect URI above on yoto.dev (use your real host/IP).\n3. Optional **LOUIS_YOUTUBE_API_KEY** for faster search.\n4. Health check: `http://<host>:4000/api/health`\n"
+  },
+  "developer": "Louis contributors",
+  "website": "https://github.com/stuartromanek/louis",
+  "repo": "https://github.com/stuartromanek/louis",
+  "support": "https://github.com/stuartromanek/louis/issues",
+  "docs": "https://github.com/stuartromanek/louis/blob/main/docs/HOSTING.md",
+  "title": "Louis",
+  "base_url": "https://cdn.jsdelivr.net/gh/stuartromanek/louis@gh-pages",
+  "id": "com.stuartromanek.louis",
+  "version": "1.1.2",
+  "categories": [
+    "media"
+  ],
+  "min_memory": 0,
+  "min_image_size": {
+    "amd64": 292001081,
+    "arm64": 275719537
+  }
+}

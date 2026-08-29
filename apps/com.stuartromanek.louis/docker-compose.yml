@@ -1,0 +1,32 @@
+name: louis
+services:
+  louis:
+    image: stuartromanek/louis:latest
+    container_name: louis
+    restart: unless-stopped
+    ports:
+      - target: 4000
+        published: "4000"
+        protocol: tcp
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "4000"
+      LOUIS_AUDIO_WORK_DIR: /data/audio
+      LOUIS_COOKIE_SECURE: "false"
+      LOUIS_YOTO_CLIENT_ID: ""
+      LOUIS_YOUTUBE_API_KEY: ""
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/audio
+        target: /data/audio
+x-casaos:
+  id: com.stuartromanek.louis
+  main: louis
+  scheme: http
+  index: /
+  port_map: "4000"
+  icon: https://cdn.jsdelivr.net/gh/stuartromanek/louis@gh-pages/apps/com.stuartromanek.louis/assets/icon.png
+  title:
+    en_US: Louis
+  version: "1.1.2"

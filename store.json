@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "store_id": "stuartromanek-louis",
+  "name": "Louis",
+  "description": "One-click Louis (Yoto MYO client) for CasaOS and ZimaOS.",
+  "maintainer": "stuartromanek",
+  "url": "https://github.com/stuartromanek/louis"
+}

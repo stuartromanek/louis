@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "updated_at": "2026-08-29T11:58:04Z",
+  "app_count": 1,
+  "base_url": "https://cdn.jsdelivr.net/gh/stuartromanek/louis@gh-pages",
+  "apps": [
+    {
+      "id": "com.stuartromanek.louis",
+      "title": "Louis",
+      "tagline": "Yoto MYO playlists from YouTube",
+      "category": "Media",
+      "categories": [
+        "media"
+      ],
+      "author": "Louis contributors",
+      "developer": "Louis contributors",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "icon": "/apps/com.stuartromanek.louis/assets/icon.png",
+      "thumbnail": "",
+      "compose_url": "/apps/com.stuartromanek.louis/docker-compose.yml",
+      "meta_url": "/apps/com.stuartromanek.louis/meta.json",
+      "content_hash": "64217f45",
+      "version": "1.1.2"
+    }
+  ]
+}
