@@ -1,5 +1,7 @@
 const SPLASH_SEEN_KEY = 'louis.splash.seen'
 const SPLASH_PENDING_CLASS = 'app-splash-pending'
+/** TEMP: replay splash on every refresh while iterating on it. */
+const FORCE_SPLASH_EVERY_REFRESH = true
 
 function readSeen(): boolean {
   if (typeof sessionStorage === 'undefined') return true
@@ -36,7 +38,10 @@ export function useAppSplash() {
   onMounted(() => {
     splashDebug.value = readSplashDebug()
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    shouldShowSplash.value = splashDebug.value || (!reduced && !readSeen())
+    shouldShowSplash.value =
+      FORCE_SPLASH_EVERY_REFRESH
+      || splashDebug.value
+      || (!reduced && !readSeen())
     splashBootstrapped.value = true
     setSplashPendingClass(splashHoldsGate.value)
   })

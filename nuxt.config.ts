@@ -115,12 +115,14 @@ export default defineNuxtConfig({
         {
           key: 'app-splash-pending',
           // Runs before body parse; mirrors useAppSplash session/debug rules.
+          // TEMP: `force=true` matches FORCE_SPLASH_EVERY_REFRESH in useAppSplash.
           textContent:
             '(function(){try{var d=document.documentElement;'
+            + 'var force=true;'
             + 'var debug=new URLSearchParams(location.search).get("splash")==="debug";'
             + 'var seen=sessionStorage.getItem("louis.splash.seen")==="1";'
             + 'var reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;'
-            + 'if(debug||(!seen&&!reduced))d.classList.add("app-splash-pending");'
+            + 'if(force||debug||(!seen&&!reduced))d.classList.add("app-splash-pending");'
             + '}catch(e){document.documentElement.classList.add("app-splash-pending")}})();',
         },
       ],
