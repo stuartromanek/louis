@@ -8,14 +8,6 @@ import { flattenCardTracks } from '#shared/myo-editor/trackLookup'
 import { toYotoTrackReuseSnapshot } from '#shared/myo-editor/yotoTrackPayload'
 import { sanitizeSplitGrouping } from '#shared/myo-editor/splitTrack'
 
-interface YoutubeVideoApiItem {
-  id: string
-  title: string
-  channelTitle: string
-  thumbnailUrl: string
-  publishedAt: string
-}
-
 const SOURCE_LABELS: Record<TrackSource, string> = {
   'app-youtube': 'YouTube',
   'youtube-url': 'YouTube URL',
@@ -96,36 +88,8 @@ function buildSubtitle(
   return parts.join(' · ')
 }
 
-async function hydrateAppYoutubeTracks(
-  tracks: ClassifiedTrack[],
-): Promise<Map<string, YoutubeVideoApiItem>> {
-  const ids = [...new Set(
-    tracks
-      .filter(track => track.source === 'app-youtube' && track.youtubeId)
-      .map(track => track.youtubeId!),
-  )]
-
-  const map = new Map<string, YoutubeVideoApiItem>()
-  if (ids.length === 0) return map
-
-  const batchSize = 50
-  for (let i = 0; i < ids.length; i += batchSize) {
-    const batch = ids.slice(i, i + batchSize)
-    const data = await $fetch<{ items: YoutubeVideoApiItem[] }>(
-      '/api/youtube/videos',
-      { query: { ids: batch.join(',') } },
-    )
-    for (const item of data.items ?? []) {
-      map.set(item.id, item)
-    }
-  }
-
-  return map
-}
-
 function classifiedTrackToPlaylistTrack(
   track: ClassifiedTrack,
-  hydratedById: Map<string, YoutubeVideoApiItem>,
   iconPreviewByMediaId: Map<string, string>,
 ): PlaylistTrack {
   const base = {
@@ -153,7 +117,6 @@ function classifiedTrackToPlaylistTrack(
   }
 
   if (track.source === 'app-youtube' && track.youtubeId) {
-    const hydrated = hydratedById.get(track.youtubeId)
     const rowId = playlistRowId({
       chapterKey: track.chapterKey,
       trackKey: track.trackKey,
@@ -162,9 +125,8 @@ function classifiedTrackToPlaylistTrack(
     return withPreview({
       ...base,
       id: rowId,
-      title: track.split ? track.title : (hydrated?.title || track.title),
-      subtitle: buildSubtitle(track.source, track.duration, hydrated?.channelTitle),
-      thumbnailUrl: hydrated?.thumbnailUrl ?? '',
+      title: track.title,
+      subtitle: buildSubtitle(track.source, track.duration),
     })
   }
 
@@ -179,7 +141,14 @@ function classifiedTrackToPlaylistTrack(
   })
 }
 
+let iconPreviewCache: { map: Map<string, string>; at: number } | null = null
+const ICON_CACHE_MS = 5 * 60 * 1000
+
 async function fetchIconPreviewMap(): Promise<Map<string, string>> {
+  if (iconPreviewCache && Date.now() - iconPreviewCache.at < ICON_CACHE_MS) {
+    return iconPreviewCache.map
+  }
+
   const map = new Map<string, string>()
 
   const merge = (icons: Array<{ mediaId: string; url: string | null }> | undefined) => {
@@ -198,6 +167,7 @@ async function fetchIconPreviewMap(): Promise<Map<string, string>> {
   if (publicResult.status === 'fulfilled') merge(publicResult.value.icons)
   if (userResult.status === 'fulfilled') merge(userResult.value.icons)
 
+  iconPreviewCache = { map, at: Date.now() }
   return map
 }
 
@@ -214,15 +184,12 @@ export async function cardToPlaylist(detail: YotoCardDetail): Promise<CardToPlay
   const classified = flat.map(track =>
     classifyTrack(track, manifestLookup),
   )
-  const [hydrated, iconPreviewByMediaId] = await Promise.all([
-    hydrateAppYoutubeTracks(classified),
-    fetchIconPreviewMap(),
-  ])
+  const iconPreviewByMediaId = await fetchIconPreviewMap()
 
   return {
     tracks: sanitizeSplitGrouping(
       classified.map(track =>
-        classifiedTrackToPlaylistTrack(track, hydrated, iconPreviewByMediaId),
+        classifiedTrackToPlaylistTrack(track, iconPreviewByMediaId),
       ),
     ),
     isPodcast,
