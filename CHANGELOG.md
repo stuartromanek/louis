@@ -9,6 +9,8 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-09-02
+
 ### Fixed
 - Desktop app packs `shared/youtubeSafeSearch.mjs` into `extraResources` so the arm64/x64 Mac (and Windows) app can start (`configStore` import was missing from the installer).
 
@@ -140,7 +142,8 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - Marketing page (`/marketing`) and `public/marketing/` assets (Louis/Yoto art lives under `public/images/`).
 - Experimental muted `<video>` splash cue path (`louis.mp4`); splash audio uses the shared UI sound player only.
 
-[Unreleased]: https://github.com/stuartromanek/louis/compare/v1.2.0...main
+[Unreleased]: https://github.com/stuartromanek/louis/compare/v1.2.1...main
+[1.2.1]: https://github.com/stuartromanek/louis/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/stuartromanek/louis/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/stuartromanek/louis/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/stuartromanek/louis/compare/v1.1.0...v1.1.1
