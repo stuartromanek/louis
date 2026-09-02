@@ -64,6 +64,7 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - `public.demoMode` / Settings demo-instance banner. yt-dlp Check and Update are no longer gated on a demo flag.
 
 ### Fixed
+- Desktop Windows release fetch: refresh yt-dlp/FFmpeg-Builds pin (`autobuild-2026-09-02-17-51`) after the previous autobuild assets 404’d.
 - Client save polling no longer treats a quiet 10 minutes as failure while the job is still running (false “Save stalled” after Yoto already accepted the upload). Overlay stays up; a still-working hint appears if progress has not moved. Jobs heartbeat during download / ffmpeg / PUT.
 - Multi-track (split) Yoto uploads finish across retries: long chapters wait up to 20 minutes, completed parts keep their transcoded hashes so Update skips them, ffmpeg AAC-encodes cuts instead of GOP-unaligned copies, and a stall or Yoto failure re-PUTs once (a moving timeout does not). Extra-poll after a coalesced stall uses the chapter’s full wait budget.
 - Split checkpoints key off the scaled cut and whether loudnorm actually ran; a changed source hash misses cache. Incomplete split drafts sanitize on restore.

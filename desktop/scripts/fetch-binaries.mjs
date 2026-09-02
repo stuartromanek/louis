@@ -40,9 +40,9 @@ const YTDLP_TAG = '2026.07.04'
  * Pin yt-dlp/FFmpeg-Builds autobuild (win/linux). Prefer `autobuild-…` over `latest`.
  * @see https://github.com/yt-dlp/FFmpeg-Builds/releases
  */
-const FFMPEG_BUILDS_TAG = 'autobuild-2026-08-05-17-38'
+const FFMPEG_BUILDS_TAG = 'autobuild-2026-09-02-17-51'
 /** Artifact stem inside that release (filename prefix before platform suffix). */
-const FFMPEG_BUILDS_REV = 'N-125972-ge13b2e00e8'
+const FFMPEG_BUILDS_REV = 'N-126390-g9fc8c785e2'
 
 /**
  * @typedef {'darwin-arm64' | 'darwin-x64' | 'linux-x64' | 'linux-arm64' | 'win32-x64'} PlatformId
@@ -100,7 +100,7 @@ const PLATFORMS = {
     ffmpeg: {
       kind: 'tar-xz-bin',
       url: ffmpegBuildsUrl(`ffmpeg-${FFMPEG_BUILDS_REV}-linux64-gpl.tar.xz`),
-      sha256: 'bab09c046ffd5e41f89a6d9943283ee26d08676f9b4857ca74a3c758c6a7b3b6',
+      sha256: 'd7a4a156fc565e21bc51c65ae87b88a43731ca71d547e8ae37d92682d8f48c88',
       member: 'ffmpeg',
     },
   },
@@ -115,7 +115,7 @@ const PLATFORMS = {
     ffmpeg: {
       kind: 'tar-xz-bin',
       url: ffmpegBuildsUrl(`ffmpeg-${FFMPEG_BUILDS_REV}-linuxarm64-gpl.tar.xz`),
-      sha256: '48c11ced939305242b7807baaf0636efcbc441ef0f93f4ff1b8664072853ea9c',
+      sha256: '54afa491cd03e9f4b7b595ee75574164c4dc06e2c30fb7a0386826d4ed7f614d',
       member: 'ffmpeg',
     },
   },
@@ -130,7 +130,7 @@ const PLATFORMS = {
     ffmpeg: {
       kind: 'zip-bin',
       url: ffmpegBuildsUrl(`ffmpeg-${FFMPEG_BUILDS_REV}-win64-gpl.zip`),
-      sha256: 'aab7e1850062f3958cd0a405d25f7aedc0ea0fa89e4a02e6594e134976568222',
+      sha256: 'ee698ac088ce89b3e18ecdef48e71748af5dc8e69d93bcbdcb58e9931ac4d3f3',
       member: 'ffmpeg.exe',
     },
   },
