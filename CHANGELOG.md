@@ -9,6 +9,8 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-09-02
+
 ### Fixed
 - Splash **Louis!** wordmark uses `filter: drop-shadow` instead of `text-shadow` so Safari renders a solid offset shadow with `-webkit-text-stroke` (was hollow outline-only).
 - Splash tagline chips are absolutely positioned under the Lottie stage box (explicit stage-sized visual + `top: calc(83% + 10px)`) so they track the player without a fragile negative-margin calc or sitting in a row beside it.
@@ -149,7 +151,8 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - Marketing page (`/marketing`) and `public/marketing/` assets (Louis/Yoto art lives under `public/images/`).
 - Experimental muted `<video>` splash cue path (`louis.mp4`); splash audio uses the shared UI sound player only.
 
-[Unreleased]: https://github.com/stuartromanek/louis/compare/v1.2.1...main
+[Unreleased]: https://github.com/stuartromanek/louis/compare/v1.2.2...main
+[1.2.2]: https://github.com/stuartromanek/louis/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/stuartromanek/louis/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/stuartromanek/louis/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/stuartromanek/louis/compare/v1.1.1...v1.1.2
