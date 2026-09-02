@@ -34,6 +34,10 @@
     {
       "from": "shared/bundledYotoClientId.mjs",
       "to": "shared/bundledYotoClientId.mjs"
+    },
+    {
+      "from": "shared/youtubeSafeSearch.mjs",
+      "to": "shared/youtubeSafeSearch.mjs"
     }
   ],
   "asar": true,

@@ -9,6 +9,9 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [Unreleased]
 
+### Fixed
+- Desktop app packs `shared/youtubeSafeSearch.mjs` into `extraResources` so the arm64/x64 Mac (and Windows) app can start (`configStore` import was missing from the installer).
+
 ## [1.2.0] - 2026-09-02
 
 ### Added
