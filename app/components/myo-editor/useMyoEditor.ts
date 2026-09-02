@@ -49,7 +49,11 @@ import {
 } from '#shared/myo-editor/standalonePlaylist'
 import {
   SAVE_JOB_LOST_MESSAGE,
+  attachSaveJobId,
+  createLocalPlanningSave,
+  saveCompleteDisplayWaitMs,
   savePollHitCeiling,
+  savePollIntervalMs,
   savePollIsSlowWait,
   saveProgressStamp,
   shouldAbandonClientPoll,
@@ -67,6 +71,8 @@ export interface SaveProgress {
   operationProgress: number
   error?: string
   tracks: SaveJobState['tracks']
+  /** Present after POST; unset while the local planning overlay is waiting on the job. */
+  jobId?: string
   /** True when progress has not moved for a while; overlay stays up. */
   slowWait?: boolean
 }
@@ -80,7 +86,7 @@ export interface CardSaveSnapshot {
 export interface CardSaveState {
   saveKey: string
   cardId?: string
-  jobId: string
+  jobId?: string
   status: SaveJobPhase
   progress: number
   operationProgress: number
@@ -227,6 +233,7 @@ function jobToSaveProgress(state: CardSaveState): SaveProgress {
     operationProgress: state.operationProgress,
     error: state.error,
     tracks: state.tracks,
+    jobId: state.jobId,
     slowWait: state.slowWait,
   }
 }
@@ -250,9 +257,6 @@ function saveStateFromJob(
     startedAt,
   }
 }
-
-const POLL_INTERVAL_MS = 1000
-const MIN_COMPLETE_DISPLAY_MS = 450
 
 const pollingJobIds = new Set<string>()
 const maxOverallProgressByCard = new Map<string, number>()
@@ -537,8 +541,10 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     previousPlaylist?: PlaylistTrack[],
   ) {
     const detail = await $fetch<YotoCardDetail>(`/api/yoto/content/${cardId}`)
-    originalCardDetail.value = detail
     const result = await cardToPlaylist(detail)
+    if (selectedCardId.value !== cardId) return
+
+    originalCardDetail.value = detail
     isPodcast.value = result.isPodcast
     rememberPodcastStatus(cardId, result.isPodcast)
 
@@ -565,6 +571,24 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     cardTitle.value = titleFallback || detail.title
   }
 
+  function reloadSavedCardInBackground(
+    cardId: string,
+    titleFallback: string | undefined,
+    previousPlaylist: PlaylistTrack[],
+  ) {
+    void (async () => {
+      try {
+        await reloadCardFromApi(cardId, titleFallback, previousPlaylist)
+        if (selectedCardId.value === cardId) errorMessage.value = ''
+      }
+      catch (err: unknown) {
+        if (selectedCardId.value !== cardId) return
+        const e = err as { statusMessage?: string; message?: string }
+        errorMessage.value = e.statusMessage ?? e.message ?? 'Failed to reload card after save'
+      }
+    })()
+  }
+
   async function finalizeSaveSuccess(saveKey: string, titleFallback?: string) {
     const existing = getSaveState(saveKey)
     const createdCardId = existing?.cardId?.trim()
@@ -575,7 +599,7 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     const isSelected = selectedSaveKey.value === saveKey
       || (isCreate && isNewPlaylist.value)
       || selectedCardId.value === cardId
-    const displayStartedAt = Date.now()
+    const jobStartedAt = existing?.startedAt ?? Date.now()
 
     if (isCreate) {
       isNewPlaylist.value = false
@@ -613,49 +637,33 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
           })),
         })
       }
-      await nextTick()
-    }
-
-    if (isSelected) {
-      try {
-        const previousPlaylist = clonePlaylist(playlist.value)
-        await reloadCardFromApi(cardId, titleFallback, previousPlaylist)
-        errorMessage.value = ''
-        await nextTick()
-      }
-      catch (err: unknown) {
-        const e = err as { statusMessage?: string; message?: string }
-        errorMessage.value = e.statusMessage ?? e.message ?? 'Failed to reload card after save'
-      }
-    }
-
-    if (isSelected) {
-      const remaining = MIN_COMPLETE_DISPLAY_MS - (Date.now() - displayStartedAt)
+      const remaining = saveCompleteDisplayWaitMs(jobStartedAt)
       if (remaining > 0) {
         await new Promise(resolve => setTimeout(resolve, remaining))
       }
-    }
-
-    if (isSelected) {
       playEvent('saveComplete')
     }
 
-    const savedPlaylist = isSelected
-      ? playlist.value
-      : (existing?.snapshot.playlist ?? [])
-    const savedTitle = isSelected
-      ? cardTitle.value
-      : (existing?.snapshot.cardTitle ?? titleFallback ?? '')
+    const savedPlaylist = existing?.snapshot.playlist
+      ?? (isSelected ? playlist.value : [])
+    const savedTitle = existing?.snapshot.cardTitle
+      ?? (isSelected ? cardTitle.value : (titleFallback ?? ''))
+    const previousPlaylist = isSelected ? clonePlaylist(playlist.value) : []
     const capacity = getPlaylistCapacitySnapshot(savedPlaylist)
+
+    deleteSaveState(cardId)
+    removePersistedSave(cardId)
+    clearPendingDraft(cardId)
+
     options.onPlaylistSaved?.(cardId, {
       duration: capacity.knownDurationSeconds,
       trackCount: capacity.trackCount,
       title: savedTitle,
     })
 
-    deleteSaveState(cardId)
-    removePersistedSave(cardId)
-    clearPendingDraft(cardId)
+    if (isSelected) {
+      reloadSavedCardInBackground(cardId, titleFallback, previousPlaylist)
+    }
   }
 
   function handleSaveFailed(saveKey: string, message: string, outcomeUncertain = false) {
@@ -721,7 +729,10 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
       noteJobActivity(job)
 
       while (!isTerminalStatus(job.status)) {
-        await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS))
+        await new Promise(resolve => setTimeout(
+          resolve,
+          savePollIntervalMs(job.status, job.tracks),
+        ))
         job = await $fetch<SaveJobState>(`/api/yoto/jobs/${jobId}`)
         updateSaveStateFromJob(saveKey, job)
         noteJobActivity(job)
@@ -764,36 +775,42 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     options?: { acknowledgeCapacityRisk?: boolean, normalizeVolume?: boolean },
   ) {
     const identity = resolveClientSaveTarget(target)
-    const { jobId } = await $fetch<{ jobId: string }>(
-      identity.endpoint,
-      {
-        method: 'POST',
-        body: {
-          playlist: snapshot.playlist,
-          baselinePlaylist: snapshot.baseline,
-          cardTitle: snapshot.cardTitle,
-          acknowledgeCapacityRisk: options?.acknowledgeCapacityRisk === true,
-          normalizeVolume: options?.normalizeVolume === true,
-        },
-      },
-    )
-
-    const startedAt = Date.now()
-    const initialState: CardSaveState = {
+    const pending = createLocalPlanningSave({
       saveKey: identity.saveKey,
       cardId: identity.operation === 'update' ? identity.cardId : undefined,
-      jobId,
-      status: 'planning',
-      progress: 0,
-      operationProgress: 0,
-      tracks: [],
       snapshot: cloneSnapshot(snapshot),
-      startedAt,
-    }
+      startedAt: Date.now(),
+    })
     maxOverallProgressByCard.set(identity.saveKey, 0)
-    setSaveState(identity.saveKey, initialState)
-    addPersistedSave(identity.saveKey, jobId)
+    setSaveState(identity.saveKey, pending)
 
+    let jobId: string
+    try {
+      const result = await $fetch<{ jobId: string }>(
+        identity.endpoint,
+        {
+          method: 'POST',
+          body: {
+            playlist: snapshot.playlist,
+            baselinePlaylist: snapshot.baseline,
+            cardTitle: snapshot.cardTitle,
+            acknowledgeCapacityRisk: options?.acknowledgeCapacityRisk === true,
+            normalizeVolume: options?.normalizeVolume === true,
+          },
+        },
+      )
+      jobId = result.jobId
+    }
+    catch (err) {
+      deleteSaveState(identity.saveKey)
+      throw err
+    }
+
+    const existing = getSaveState(identity.saveKey)
+    if (existing) {
+      setSaveState(identity.saveKey, attachSaveJobId(existing, jobId))
+    }
+    addPersistedSave(identity.saveKey, jobId)
     void pollSaveJob(identity.saveKey, jobId, snapshot.cardTitle)
   }
 

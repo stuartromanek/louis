@@ -21,6 +21,17 @@ const ACTIVE_TRACK_STATUSES: SaveTrackStatus[] = [
   'transcoding',
 ]
 
+export function saveDisplayedTrack(
+  tracks: SaveJobTrackProgress[],
+): SaveJobTrackProgress | undefined {
+  return tracks.find(track => ACTIVE_TRACK_STATUSES.includes(track.status))
+}
+
+export function saveOperationIsIndeterminate(tracks: SaveJobTrackProgress[]): boolean {
+  const active = saveDisplayedTrack(tracks)
+  return active?.status === 'extracting' || active?.status === 'leveling'
+}
+
 export function saveSlowWaitHint(): string {
   return 'Still working. Long videos can take a while on Yoto.'
 }
@@ -33,7 +44,7 @@ export function saveOperationLabel(
   phase: SaveJobPhase,
   tracks: SaveJobTrackProgress[],
 ): string | null {
-  const active = tracks.find(track => ACTIVE_TRACK_STATUSES.includes(track.status))
+  const active = saveDisplayedTrack(tracks)
   if (active) {
     const title = splitGroupSourceTitle(active.title)
     if (active.status === 'extracting') {
@@ -46,6 +57,21 @@ export function saveOperationLabel(
       return `Uploading “${title}”`
     }
     if (active.status === 'transcoding') {
+      const activeIndex = tracks.indexOf(active)
+      const later = tracks.some((track, index) => (
+        index > activeIndex
+        && (track.status === 'extracting'
+          || track.status === 'leveling'
+          || track.status === 'uploading')
+      ))
+      if (later) {
+        const uploadingNext = tracks.some((track, index) => (
+          index > activeIndex && track.status === 'uploading'
+        ))
+        return uploadingNext
+          ? `Processing “${title}” · uploading next`
+          : `Processing “${title}” · preparing next`
+      }
       return `Processing “${title}”`
     }
   }

@@ -14,6 +14,7 @@ import {
   isCompleteSplitGroup,
   saveNeedsProbedDuration,
 } from '#shared/myo-editor/splitTrack'
+import { playlistRowId } from '#shared/myo-editor/playlistRowId'
 import { buildProvenance } from '#shared/myo-editor/parseProvenance'
 import { EMPTY_CARD_DETAIL, buildSavePlan } from '#shared/myo-editor/buildSavePlan'
 import { playlistToYotoContent } from '#shared/myo-editor/playlistToYotoContent'
@@ -26,7 +27,7 @@ import {
   withMappedYotoLimitError,
 } from '#shared/myo-editor/yotoMyoLimits'
 import { downloadYoutubeAudio } from './youtube-download'
-import { hashFileSha256, uploadAudioFile } from './yoto-media'
+import { hashFileSha256, pollPutAudioTranscode, putAudioForTranscode } from './yoto-media'
 import { loudnormAudioFile } from './ffmpeg-loudnorm'
 import { probeAudioDurationSeconds, splitAudioFile } from './ffmpeg-split'
 import { trimAudioFile } from './ffmpeg-trim'
@@ -51,7 +52,7 @@ import { mergeContentMetadata } from './yoto-metadata'
 import { tryGeneratePlaylistCover } from './yoto-cover'
 import { fetchYotoCardDetail } from './yoto-card-detail'
 import { getYotoAccessToken } from './yoto'
-import { resolveAudioWorkDirConfig } from './audio-work-dir'
+import { createExtractPipeline } from './extract-pipeline'
 
 /** Process-local only — cleared on every container restart/redeploy. */
 const jobs = new Map<string, SaveJobState>()
@@ -264,6 +265,8 @@ async function runSaveJob(
 
     const downloadedByYoutubeId = new Map<string, Awaited<ReturnType<typeof downloadYoutubeAudio>>>()
     const durationByYoutubeId = new Map<string, number>()
+    const leveledByYoutubeId = new Map<string, { path: string, name: string }>()
+    const transcodePercentByIndex = new Map<number, number>()
     const uniqueYoutubeIds = [...new Set(extractActions.map(action => action.youtubeId))]
     const audioWorkDir = resolveAudioWorkDirConfig(event).audioWorkDir
     const skipDownloadYoutubeIds = new Set<string>()
@@ -291,61 +294,28 @@ async function runSaveJob(
       if (extractPlan.skipDownload) skipDownloadYoutubeIds.add(youtubeId)
     }
 
-    let pauseBeforeNextExtract = false
-    for (let downloadIndex = 0; downloadIndex < uniqueYoutubeIds.length; downloadIndex++) {
-      const youtubeId = uniqueYoutubeIds[downloadIndex]!
-      const group = extractActions.filter(action => action.youtubeId === youtubeId)
-      const firstIndex = group[0]?.playlistIndex ?? 0
-      if (skipDownloadYoutubeIds.has(youtubeId)) {
-        setJobProgress({
-          status: 'downloading',
-          progress: OVERALL_START + (downloadIndex / Math.max(1, uniqueYoutubeIds.length)) * 20,
-          operationProgress: 8,
+    const finishExtractedPart = (
+      playlistIndex: number,
+      transcoded: TranscodedAudioResult,
+    ) => {
+      uploadedByIndex.set(playlistIndex, transcoded)
+      if (!acknowledgeCapacityRisk) {
+        const mediaError = getTrackMediaLimitError({
+          title: workingPlaylist[playlistIndex]?.title ?? `Track ${playlistIndex + 1}`,
+          duration: transcoded.transcodedInfo.duration,
+          fileSize: transcoded.transcodedInfo.fileSize,
         })
-        continue
+        if (mediaError) {
+          throw createError({
+            statusCode: 413,
+            message: mediaError,
+          })
+        }
       }
-      if (pauseBeforeNextExtract) {
-        await new Promise(resolve => setTimeout(resolve, 5_000))
-        pauseBeforeNextExtract = false
-      }
-
-      updateTrack(job, firstIndex, 'extracting')
-      setJobProgress({
-        status: 'downloading',
-        progress: OVERALL_START + (downloadIndex / Math.max(1, uniqueYoutubeIds.length)) * 20,
-        operationProgress: 8,
-      })
-
-      const downloaded = await downloadYoutubeAudio(youtubeId, event, {
-        enforceMyoSizeLimit: false,
-      })
-      pauseBeforeNextExtract = Boolean(downloaded.recoveredFromRetryableFailure)
-      downloadedByYoutubeId.set(youtubeId, downloaded)
-
-      const probed = await probeAudioDurationSeconds(downloaded.filePath)
-      if (probed) durationByYoutubeId.set(youtubeId, probed)
+      updateTrack(job, playlistIndex, 'ready')
     }
 
-    const replannedPlaylist = applyProbedDurations(workingPlaylist, durationByYoutubeId)
-    const didReplan = replannedPlaylist.length !== workingPlaylist.length
-      || replannedPlaylist.some((track, index) => {
-        const prev = workingPlaylist[index]
-        return prev?.id !== track.id
-          || prev.split?.startSeconds !== track.split?.startSeconds
-          || prev.split?.durationSeconds !== track.split?.durationSeconds
-          || prev.split?.count !== track.split?.count
-      })
-
-    if (didReplan) {
-      workingPlaylist = replannedPlaylist
-      workingPlan = buildSavePlan(baselinePlaylist, workingPlaylist, detail)
-      if (workingPlan.errors.length > 0) {
-        throw createError({
-          statusCode: 400,
-          message: workingPlan.errors[0],
-        })
-      }
-      job.tracks = createTrackProgress(workingPlaylist)
+    function refreshExtractActions() {
       extractActions = workingPlan.tracks.filter(
         (action): action is Extract<SaveTrackAction, { kind: 'extract-youtube' }> =>
           action.kind === 'extract-youtube',
@@ -353,6 +323,45 @@ async function runSaveJob(
       reuseActions = workingPlan.tracks.filter(
         action => action.kind === 'reuse-yoto' || action.kind === 'passthrough-stream',
       )
+    }
+
+    function replanFromProbedDurations() {
+      const previous = workingPlaylist
+      const replanned = applyProbedDurations(workingPlaylist, durationByYoutubeId)
+      const didReplan = replanned.length !== previous.length
+        || replanned.some((track, index) => {
+          const prev = previous[index]
+          return prev?.id !== track.id
+            || prev.split?.startSeconds !== track.split?.startSeconds
+            || prev.split?.durationSeconds !== track.split?.durationSeconds
+            || prev.split?.count !== track.split?.count
+        })
+      if (!didReplan) return
+
+      workingPlaylist = replanned
+      workingPlan = buildSavePlan(baselinePlaylist, workingPlaylist, detail)
+      if (workingPlan.errors.length > 0) {
+        throw createError({
+          statusCode: 400,
+          message: workingPlan.errors[0],
+        })
+      }
+
+      const prevById = new Map<string, SaveJobTrackProgress>()
+      for (const row of job.tracks) {
+        const track = previous[row.playlistIndex]
+        if (track) prevById.set(playlistRowId(track), row)
+      }
+      job.tracks = workingPlaylist.map((track, index) => {
+        const prev = prevById.get(playlistRowId(track))
+        return {
+          playlistIndex: index,
+          title: track.title,
+          status: prev?.status ?? 'pending',
+          error: prev?.error,
+        }
+      })
+      refreshExtractActions()
       if (!acknowledgeCapacityRisk) {
         const trackCountError = getTrackCountLimitError(workingPlaylist.length)
         if (trackCountError) {
@@ -364,127 +373,204 @@ async function runSaveJob(
       }
     }
 
-    for (const action of extractActions) {
-      if (skipDownloadYoutubeIds.has(action.youtubeId)) continue
-      const probed = durationByYoutubeId.get(action.youtubeId)
-      if (probed) continue
-      const track = workingPlaylist[action.playlistIndex]
-      if (!track || !saveNeedsProbedDuration(track)) continue
-      throw createError({
-        statusCode: 500,
-        message: `Could not measure duration for "${track.title}". Check the source and try again.`,
+    function reportExtractProgress() {
+      const extractTotal = Math.max(1, extractActions.length)
+      const extractReady = extractActions.filter(
+        action => job.tracks[action.playlistIndex]?.status === 'ready',
+      ).length
+      const displayed = job.tracks.find(track => (
+        track.status === 'extracting'
+        || track.status === 'leveling'
+        || track.status === 'uploading'
+        || track.status === 'transcoding'
+      ))
+      let operationProgress = 8
+      if (displayed?.status === 'leveling') operationProgress = 20
+      else if (displayed?.status === 'uploading') operationProgress = 32
+      else if (displayed?.status === 'transcoding') {
+        const percent = transcodePercentByIndex.get(displayed.playlistIndex) ?? 50
+        operationProgress = Math.min(98, Math.round(35 + percent * 0.63))
+      }
+      const downloading = displayed?.status === 'extracting' || displayed?.status === 'leveling'
+      setJobProgress({
+        status: downloading ? 'downloading' : 'uploading',
+        progress: OVERALL_START + (extractReady / extractTotal) * (OVERALL_TRACKS_END - OVERALL_START),
+        operationProgress,
       })
     }
 
-    const extractCount = extractActions.length
-    const trackSpan = extractCount > 0
-      ? (OVERALL_TRACKS_END - OVERALL_START) / extractCount
-      : 0
+    type ExtractPartWork = {
+      playlistIndex: number
+      youtubeId: string
+      title: string
+      partLabel?: string
+      durationSeconds?: number
+      range: { startSeconds: number, durationSeconds: number } | null
+      shouldCut: boolean
+      loudnormPart: boolean
+      loudnormFullFile: boolean
+      shareLeveled: boolean
+      cacheKey: ReturnType<typeof extractCutCacheKey>
+      sourceSha256?: string
+    }
 
-    const processedYoutubeIds = new Set<string>()
-    let extractOrdinal = 0
-
-    for (const action of extractActions) {
-      if (processedYoutubeIds.has(action.youtubeId)) continue
-      processedYoutubeIds.add(action.youtubeId)
-
-      const group = extractActions.filter(item => item.youtubeId === action.youtubeId)
-      const firstIndex = group[0]!.playlistIndex
-      const trackBase = OVERALL_START + extractOrdinal * trackSpan * group.length
-      const actualDuration = durationByYoutubeId.get(action.youtubeId)
-      const orderedGroup = [...group].sort((a, b) => {
+    function orderedExtractGroup(youtubeId: string) {
+      const group = extractActions.filter(action => action.youtubeId === youtubeId)
+      return [...group].sort((a, b) => {
         const aIndex = workingPlaylist[a.playlistIndex]?.split?.index ?? a.playlistIndex
         const bIndex = workingPlaylist[b.playlistIndex]?.split?.index ?? b.playlistIndex
         return aIndex - bIndex
       })
-      const groupTracks = orderedGroup
-        .map(item => workingPlaylist[item.playlistIndex])
-        .filter((track): track is PlaylistTrack => Boolean(track))
-      let extractPlan = planYoutubeGroupExtract({
-        youtubeId: action.youtubeId,
-        tracks: groupTracks,
-        normalizeVolume,
-        actualDuration,
-      })
-      const shouldCut = extractPlan.shouldCut
+    }
 
-      const finishExtractedPart = (
-        playlistIndex: number,
-        transcoded: TranscodedAudioResult,
-      ) => {
-        uploadedByIndex.set(playlistIndex, transcoded)
-        if (!acknowledgeCapacityRisk) {
-          const mediaError = getTrackMediaLimitError({
-            title: workingPlaylist[playlistIndex]?.title ?? `Track ${playlistIndex + 1}`,
-            duration: transcoded.transcodedInfo.duration,
-            fileSize: transcoded.transcodedInfo.fileSize,
-          })
-          if (mediaError) {
-            throw createError({
-              statusCode: 413,
-              message: mediaError,
-            })
-          }
-        }
-        updateTrack(job, playlistIndex, 'ready')
-        extractOrdinal += 1
-      }
+    async function cacheHitsForGroup(
+      youtubeId: string,
+      ordered: typeof extractActions,
+      actualDuration?: number,
+      sourceSha256?: string,
+    ) {
+      return Promise.all(ordered.map(async (part) => {
+        const track = workingPlaylist[part.playlistIndex]
+        if (!track) return null
+        const key = extractCutCacheKey(youtubeId, track, normalizeVolume, actualDuration)
+        if (!key) return null
+        const record = await readSplitPartTranscodeCache(audioWorkDir, key, sourceSha256)
+        return transcodedFromSplitCache(record)
+      }))
+    }
 
-      if (shouldCut) {
-        const ordered = [...group].sort((a, b) => {
-          const aIndex = workingPlaylist[a.playlistIndex]?.split?.index ?? a.playlistIndex
-          const bIndex = workingPlaylist[b.playlistIndex]?.split?.index ?? b.playlistIndex
-          return aIndex - bIndex
-        })
-        const cachedHits = await Promise.all(ordered.map(async (part) => {
-          const track = workingPlaylist[part.playlistIndex]
-          if (!track) return null
-          const key = extractCutCacheKey(action.youtubeId, track, normalizeVolume, actualDuration)
-          if (!key) return null
-          const record = await readSplitPartTranscodeCache(audioWorkDir, key)
-          return transcodedFromSplitCache(record)
-        }))
-        extractPlan = planYoutubeGroupExtract({
-          youtubeId: action.youtubeId,
+    let pauseBeforeNextExtract = false
+
+    async function snapshotGroup(youtubeId: string): Promise<ExtractPartWork[]> {
+      let ordered = orderedExtractGroup(youtubeId)
+      if (ordered.length === 0) return []
+      const firstIndex = ordered[0]!.playlistIndex
+
+      if (skipDownloadYoutubeIds.has(youtubeId) && !downloadedByYoutubeId.has(youtubeId)) {
+        const groupTracks = ordered
+          .map(item => workingPlaylist[item.playlistIndex])
+          .filter((track): track is PlaylistTrack => Boolean(track))
+        const cachedHits = await cacheHitsForGroup(youtubeId, ordered)
+        const extractPlan = planYoutubeGroupExtract({
+          youtubeId,
           tracks: groupTracks,
           normalizeVolume,
-          actualDuration,
           cacheHits: cachedHits,
         })
         if (extractPlan.skipDownload) {
           for (let partIndex = 0; partIndex < ordered.length; partIndex++) {
             const hit = cachedHits[partIndex]
-            if (!hit) continue
-            finishExtractedPart(ordered[partIndex]!.playlistIndex, hit)
+            if (hit) finishExtractedPart(ordered[partIndex]!.playlistIndex, hit)
           }
-          setJobProgress({
-            status: 'uploading',
-            progress: Math.min(OVERALL_TRACKS_END, trackBase + trackSpan * group.length),
-            operationProgress: 100,
-          })
-          continue
+          reportExtractProgress()
+          return []
         }
       }
 
-      const downloaded = downloadedByYoutubeId.get(action.youtubeId)
+      if (!downloadedByYoutubeId.has(youtubeId)) {
+        if (pauseBeforeNextExtract) {
+          await new Promise(resolve => setTimeout(resolve, 5_000))
+          pauseBeforeNextExtract = false
+        }
+        updateTrack(job, firstIndex, 'extracting')
+        reportExtractProgress()
+        const downloaded = await downloadYoutubeAudio(youtubeId, event, {
+          enforceMyoSizeLimit: false,
+        })
+        pauseBeforeNextExtract = Boolean(downloaded.recoveredFromRetryableFailure)
+        downloadedByYoutubeId.set(youtubeId, downloaded)
+        const probed = await probeAudioDurationSeconds(downloaded.filePath)
+        if (probed) durationByYoutubeId.set(youtubeId, probed)
+        replanFromProbedDurations()
+        ordered = orderedExtractGroup(youtubeId)
+      }
+
+      const actualDuration = durationByYoutubeId.get(youtubeId)
+      for (const action of ordered) {
+        if (skipDownloadYoutubeIds.has(youtubeId)) continue
+        if (actualDuration) continue
+        const track = workingPlaylist[action.playlistIndex]
+        if (!track || !saveNeedsProbedDuration(track)) continue
+        throw createError({
+          statusCode: 500,
+          message: `Could not measure duration for "${track.title}". Check the source and try again.`,
+        })
+      }
+
+      const groupTracks = ordered
+        .map(item => workingPlaylist[item.playlistIndex])
+        .filter((track): track is PlaylistTrack => Boolean(track))
+      const downloaded = downloadedByYoutubeId.get(youtubeId)
+      const sourceSha256 = downloaded
+        ? await hashFileSha256(downloaded.filePath)
+        : undefined
+      const cachedHits = await cacheHitsForGroup(youtubeId, ordered, actualDuration, sourceSha256)
+      const extractPlan = planYoutubeGroupExtract({
+        youtubeId,
+        tracks: groupTracks,
+        normalizeVolume,
+        actualDuration,
+        cacheHits: cachedHits,
+      })
+
+      const work: ExtractPartWork[] = []
+      for (let partIndex = 0; partIndex < ordered.length; partIndex++) {
+        const action = ordered[partIndex]!
+        const track = workingPlaylist[action.playlistIndex]
+        const hit = cachedHits[partIndex]
+        if (hit) {
+          finishExtractedPart(action.playlistIndex, hit)
+          continue
+        }
+        if (!track) continue
+        const range = extractPlan.shouldCut
+          ? effectiveCutRange(track, actualDuration)
+          : null
+        if (extractPlan.shouldCut && !range) {
+          throw createError({
+            statusCode: 500,
+            message: `Could not cut "${track.title}".`,
+          })
+        }
+        const planned = extractPlan.parts[partIndex]
+        work.push({
+          playlistIndex: action.playlistIndex,
+          youtubeId,
+          title: track.title,
+          partLabel: track.split
+            ? `${track.split.index + 1}/${track.split.count}`
+            : (ordered.length > 1 ? `${partIndex + 1}/${ordered.length}` : undefined),
+          durationSeconds: range?.durationSeconds ?? actualDuration ?? track.duration,
+          range,
+          shouldCut: extractPlan.shouldCut,
+          loudnormPart: Boolean(planned?.loudnormPart),
+          loudnormFullFile: extractPlan.loudnormFullFile && work.length === 0,
+          shareLeveled: extractPlan.loudnormFullFile,
+          cacheKey: extractCutCacheKey(youtubeId, track, normalizeVolume, actualDuration),
+          sourceSha256,
+        })
+      }
+      reportExtractProgress()
+      return work
+    }
+
+    async function preparePart(part: ExtractPartWork) {
+      const downloaded = downloadedByYoutubeId.get(part.youtubeId)
       if (!downloaded) {
         throw createError({
           statusCode: 500,
-          message: `Missing download for YouTube video ${action.youtubeId}`,
+          message: `Missing download for YouTube video ${part.youtubeId}`,
         })
       }
 
       let uploadSourcePath = downloaded.filePath
       let uploadSourceName = downloaded.filename
-      let didNormalize = false
-      if (extractPlan.loudnormFullFile) {
-        for (const part of group) updateTrack(job, part.playlistIndex, 'leveling')
-        setJobProgress({
-          status: 'downloading',
-          progress: trackBase + trackSpan * 0.14,
-          operationProgress: 20,
-        })
-        const levelDir = path.join(audioWorkDir, 'jobs', jobId, action.youtubeId)
+      const actualDuration = durationByYoutubeId.get(part.youtubeId)
+
+      if (part.loudnormFullFile) {
+        updateTrack(job, part.playlistIndex, 'leveling')
+        reportExtractProgress()
+        const levelDir = path.join(audioWorkDir, 'jobs', jobId, part.youtubeId)
         await mkdir(levelDir, { recursive: true })
         const ext = path.extname(downloaded.filePath) || '.m4a'
         const leveledPath = path.join(levelDir, `leveled${ext}`)
@@ -496,174 +582,176 @@ async function runSaveJob(
         if (leveled) {
           uploadSourcePath = leveled
           uploadSourceName = path.basename(leveled)
-          didNormalize = true
+          leveledByYoutubeId.set(part.youtubeId, {
+            path: leveled,
+            name: uploadSourceName,
+          })
+        }
+      }
+      else if (part.shareLeveled) {
+        const shared = leveledByYoutubeId.get(part.youtubeId)
+        if (shared) {
+          uploadSourcePath = shared.path
+          uploadSourceName = shared.name
         }
       }
 
-      if (shouldCut) {
-        const ordered = [...group].sort((a, b) => {
-          const aIndex = workingPlaylist[a.playlistIndex]?.split?.index ?? a.playlistIndex
-          const bIndex = workingPlaylist[b.playlistIndex]?.split?.index ?? b.playlistIndex
-          return aIndex - bIndex
-        })
-
-        const splitDir = path.join(audioWorkDir, 'jobs', jobId, action.youtubeId, 'parts')
+      if (part.shouldCut) {
+        const track = workingPlaylist[part.playlistIndex]
+        const range = part.range
+        if (!track || !range) {
+          throw createError({
+            statusCode: 500,
+            message: `Could not cut "${part.title}".`,
+          })
+        }
+        const splitDir = path.join(audioWorkDir, 'jobs', jobId, part.youtubeId, 'parts')
         await mkdir(splitDir, { recursive: true })
-        const sourceSha256 = await hashFileSha256(uploadSourcePath)
-
-        for (let partIndex = 0; partIndex < ordered.length; partIndex++) {
-          const part = ordered[partIndex]!
-          const track = workingPlaylist[part.playlistIndex]!
-          const range = effectiveCutRange(track, actualDuration)
-          if (!range) {
-            throw createError({
-              statusCode: 500,
-              message: `Could not cut "${track.title}".`,
-            })
-          }
-          const cacheKey = extractCutCacheKey(
-            action.youtubeId,
-            track,
-            normalizeVolume,
-            actualDuration,
-          )
-          if (cacheKey) {
-            const cached = transcodedFromSplitCache(
-              await readSplitPartTranscodeCache(audioWorkDir, cacheKey, sourceSha256),
-            )
-            if (cached) {
-              finishExtractedPart(part.playlistIndex, cached)
-              continue
-            }
-          }
-
-          const destPath = path.join(splitDir, `part${track.split?.index ?? partIndex}.m4a`)
-          const cut = isTrimmed(track)
-            ? await trimAudioFile({
-                sourcePath: downloaded.filePath,
-                destPath,
-                startSeconds: range.startSeconds,
-                endSeconds: range.startSeconds + range.durationSeconds,
-                sourceDurationSeconds: actualDuration,
-              })
-            : await splitAudioFile({
-                sourcePath: downloaded.filePath,
-                destPath,
-                startSeconds: range.startSeconds,
-                durationSeconds: range.durationSeconds,
-                codec: 'aac',
-              })
-          if (!cut) {
-            throw createError({
-              statusCode: 500,
-              message: `Could not trim "${track.title}".`,
-            })
-          }
-
-          let uploadPath = destPath
-          if (normalizeVolume) {
-            updateTrack(job, part.playlistIndex, 'leveling')
-            const leveledPath = path.join(splitDir, `part${track.split?.index ?? partIndex}-leveled.m4a`)
-            const leveled = await loudnormAudioFile(
+        const destPath = path.join(splitDir, `part${track.split?.index ?? part.playlistIndex}.m4a`)
+        const cut = isTrimmed(track)
+          ? await trimAudioFile({
+              sourcePath: downloaded.filePath,
               destPath,
-              leveledPath,
-              range.durationSeconds,
-            )
-            if (leveled) uploadPath = leveled
-          }
-
-          updateTrack(job, part.playlistIndex, 'uploading')
-          const transcoded = await uploadAudioFile(
-            accessToken,
-            uploadPath,
-            path.basename(uploadPath),
-            {
-              meta: {
-                jobId,
-                youtubeId: action.youtubeId,
-                title: track.title,
-                durationSeconds: range.durationSeconds,
-                partLabel: track.split
-                  ? `${track.split.index + 1}/${track.split.count}`
-                  : undefined,
-              },
-              onTranscodePoll: ({ percent }) => {
-                updateTrack(job, part.playlistIndex, 'transcoding')
-                const transcodePercent = percent ?? 50
-                setJobProgress({
-                  status: 'uploading',
-                  progress: trackBase + trackSpan * (partIndex + 0.22 + (transcodePercent / 100) * 0.78),
-                  operationProgress: Math.min(98, Math.round(35 + transcodePercent * 0.63)),
-                })
-              },
-            },
-          )
-          if (cacheKey) {
-            await writeSplitPartTranscodeCache(audioWorkDir, cacheKey, transcoded, sourceSha256)
-          }
-          finishExtractedPart(part.playlistIndex, transcoded)
-        }
-      }
-      else {
-        if (!acknowledgeCapacityRisk) {
-          const fileStat = await stat(uploadSourcePath)
-          const mediaError = getTrackMediaLimitError({
-            title: workingPlaylist[firstIndex]?.title ?? `Track ${firstIndex + 1}`,
-            duration: actualDuration,
-            fileSize: fileStat.size,
-          })
-          if (mediaError) {
-            throw createError({
-              statusCode: 413,
-              message: mediaError,
+              startSeconds: range.startSeconds,
+              endSeconds: range.startSeconds + range.durationSeconds,
+              sourceDurationSeconds: actualDuration,
             })
-          }
-        }
-
-        for (const part of group) {
-          updateTrack(job, part.playlistIndex, 'uploading')
-          setJobProgress({
-            status: 'uploading',
-            progress: trackBase + trackSpan * 0.22,
-            operationProgress: 32,
+          : await splitAudioFile({
+              sourcePath: downloaded.filePath,
+              destPath,
+              startSeconds: range.startSeconds,
+              durationSeconds: range.durationSeconds,
+              codec: 'aac',
+            })
+        if (!cut) {
+          throw createError({
+            statusCode: 500,
+            message: `Could not trim "${part.title}".`,
           })
-
-          const transcoded = await uploadAudioFile(
-            accessToken,
-            uploadSourcePath,
-            uploadSourceName,
-            {
-              meta: {
-                jobId,
-                youtubeId: action.youtubeId,
-                title: workingPlaylist[part.playlistIndex]?.title,
-                durationSeconds: actualDuration ?? workingPlaylist[part.playlistIndex]?.duration,
-                partLabel: group.length > 1
-                  ? `${group.indexOf(part) + 1}/${group.length}`
-                  : undefined,
-              },
-              onTranscodePoll: ({ percent }) => {
-                updateTrack(job, part.playlistIndex, 'transcoding')
-                const transcodePercent = percent ?? 50
-                const withinTrack = 0.22 + (transcodePercent / 100) * 0.78
-                setJobProgress({
-                  status: 'uploading',
-                  progress: trackBase + trackSpan * withinTrack,
-                  operationProgress: Math.min(98, Math.round(35 + transcodePercent * 0.63)),
-                })
-              },
-            },
+        }
+        let uploadPath = destPath
+        if (part.loudnormPart) {
+          updateTrack(job, part.playlistIndex, 'leveling')
+          reportExtractProgress()
+          const leveledPath = path.join(
+            splitDir,
+            `part${track.split?.index ?? part.playlistIndex}-leveled.m4a`,
           )
-          finishExtractedPart(part.playlistIndex, transcoded)
+          const leveled = await loudnormAudioFile(
+            destPath,
+            leveledPath,
+            range.durationSeconds,
+          )
+          if (leveled) uploadPath = leveled
+        }
+        return {
+          filePath: uploadPath,
+          filename: path.basename(uploadPath),
+          durationSeconds: range.durationSeconds,
         }
       }
 
-      setJobProgress({
-        status: 'uploading',
-        progress: Math.min(OVERALL_TRACKS_END, trackBase + trackSpan * group.length),
-        operationProgress: 100,
-      })
+      if (!acknowledgeCapacityRisk) {
+        const fileStat = await stat(uploadSourcePath)
+        const mediaError = getTrackMediaLimitError({
+          title: part.title,
+          duration: actualDuration,
+          fileSize: fileStat.size,
+        })
+        if (mediaError) {
+          throw createError({
+            statusCode: 413,
+            message: mediaError,
+          })
+        }
+      }
+
+      return {
+        filePath: uploadSourcePath,
+        filename: uploadSourceName,
+        durationSeconds: part.durationSeconds,
+      }
     }
+
+    const pipeline = createExtractPipeline()
+    let extractFatal: unknown
+    let snapshotChain = Promise.resolve()
+    const groupRuns: Promise<void>[] = []
+
+    for (const youtubeId of uniqueYoutubeIds) {
+      const snapshot = snapshotChain.then(async () => {
+        if (extractFatal) throw extractFatal
+        return snapshotGroup(youtubeId)
+      })
+      snapshotChain = snapshot.then(() => undefined, (err) => {
+        extractFatal = extractFatal ?? err
+      })
+      groupRuns.push((async () => {
+        try {
+          const parts = await snapshot
+          if (parts.length === 0) return
+          await pipeline.run(parts.length, {
+            prepare: index => preparePart(parts[index]!),
+            put: async (index, prepared) => {
+              if (extractFatal) throw extractFatal
+              const part = parts[index]!
+              updateTrack(job, part.playlistIndex, 'uploading')
+              reportExtractProgress()
+              return putAudioForTranscode(accessToken, prepared.filePath, prepared.filename, {
+                meta: {
+                  jobId,
+                  youtubeId: part.youtubeId,
+                  title: part.title,
+                  durationSeconds: prepared.durationSeconds,
+                  partLabel: part.partLabel,
+                },
+              })
+            },
+            poll: async (index, putResult) => {
+              const part = parts[index]!
+              const transcoded = await pollPutAudioTranscode(accessToken, putResult, {
+                meta: {
+                  jobId,
+                  youtubeId: part.youtubeId,
+                  title: part.title,
+                  durationSeconds: part.durationSeconds,
+                  partLabel: part.partLabel,
+                },
+                withPutSlot: fn => pipeline.withPutSlot(fn),
+                onTranscodePoll: ({ percent }) => {
+                  updateTrack(job, part.playlistIndex, 'transcoding')
+                  transcodePercentByIndex.set(part.playlistIndex, percent ?? 50)
+                  reportExtractProgress()
+                },
+              })
+              if (part.cacheKey && part.sourceSha256) {
+                await writeSplitPartTranscodeCache(
+                  audioWorkDir,
+                  part.cacheKey,
+                  transcoded,
+                  part.sourceSha256,
+                )
+              }
+              finishExtractedPart(part.playlistIndex, transcoded)
+              reportExtractProgress()
+              return transcoded
+            },
+          })
+        }
+        catch (err) {
+          extractFatal = extractFatal ?? err
+          throw err
+        }
+      })())
+    }
+
+    const groupResults = await Promise.allSettled(groupRuns)
+    const groupFailure = groupResults.find(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    )
+    if (groupFailure) throw groupFailure.reason
+
+    const extractCount = extractActions.length
 
     if (extractCount === 0 && reuseActions.length > 0) {
       setJobProgress({

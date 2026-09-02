@@ -241,6 +241,115 @@ function guessContentType(filePath: string): string {
   return 'application/octet-stream'
 }
 
+export interface PutAudioForTranscodeResult {
+  uploadId: string
+  sha256: string
+  filePath: string
+  filename: string
+  sizeMb: number
+  budget: number
+}
+
+export interface PutAudioForTranscodeOptions {
+  poll?: { maxWaitMs?: number }
+  meta?: TranscodeUploadMeta
+}
+
+async function putToUploadUrl(
+  uploadUrl: string | null,
+  filePath: string,
+): Promise<void> {
+  if (!uploadUrl) return
+  await putAudioFile(uploadUrl, filePath, guessContentType(filePath))
+}
+
+export async function putAudioForTranscode(
+  accessToken: string,
+  filePath: string,
+  filename: string,
+  options?: PutAudioForTranscodeOptions,
+): Promise<PutAudioForTranscodeResult> {
+  const fileStat = await stat(filePath)
+  const sha256 = await hashFileSha256(filePath)
+  const sizeMb = fileStat.size / 1_000_000
+  const budget = options?.poll?.maxWaitMs ?? transcodePollBudget({
+    bytes: fileStat.size,
+    durationSeconds: options?.meta?.durationSeconds,
+  })
+
+  const upload = await getUploadUrl(accessToken, { sha256, filename })
+  await putToUploadUrl(upload.uploadUrl, filePath)
+
+  return {
+    uploadId: upload.uploadId,
+    sha256,
+    filePath,
+    filename,
+    sizeMb,
+    budget,
+  }
+}
+
+export async function pollPutAudioTranscode(
+  accessToken: string,
+  put: PutAudioForTranscodeResult,
+  options?: {
+    onTranscodePoll?: (info: { attempt: number; phase?: string; percent?: number }) => void
+    meta?: TranscodeUploadMeta
+    /** Serialize stall re-PUT with the caller's single PUT slot. */
+    withPutSlot?: <T>(fn: () => Promise<T>) => Promise<T>
+  },
+): Promise<TranscodedAudioResult> {
+  const pollOptions = {
+    maxWaitMs: put.budget,
+    onPoll: options?.onTranscodePoll,
+    meta: options?.meta,
+    sizeMb: put.sizeMb,
+  }
+  const withPutSlot = options?.withPutSlot ?? (async <T>(fn: () => Promise<T>) => fn())
+
+  try {
+    return await pollTranscoded(accessToken, put.uploadId, pollOptions)
+  }
+  catch (err) {
+    if (!(err instanceof TranscodeGiveUpError) || err.reason === 'timeout') throw err
+
+    const again = await getUploadUrl(accessToken, { sha256: put.sha256, filename: put.filename })
+    const decision = transcodeRetryDecision({
+      reason: err.reason,
+      alreadyRetried: false,
+      newUploadUrl: again.uploadUrl,
+      oldUploadId: put.uploadId,
+      newUploadId: again.uploadId,
+    })
+    if (decision.action === 'throw') throw err
+
+    console.info(formatTranscodeLogLine({
+      result: 'retry',
+      jobId: options?.meta?.jobId,
+      youtubeId: options?.meta?.youtubeId,
+      partLabel: options?.meta?.partLabel,
+      sizeMb: put.sizeMb,
+      durationSec: options?.meta?.durationSeconds,
+      uploadId: decision.uploadId,
+      priorUploadId: put.uploadId,
+      attempt: 1,
+      elapsedMs: 0,
+    }))
+
+    if (decision.action === 'reput' && again.uploadUrl) {
+      const retryUrl = again.uploadUrl
+      await withPutSlot(() => putToUploadUrl(retryUrl, put.filePath))
+      return pollTranscoded(accessToken, decision.uploadId, pollOptions)
+    }
+
+    return pollTranscoded(accessToken, decision.uploadId, {
+      ...pollOptions,
+      maxWaitMs: put.budget,
+    })
+  }
+}
+
 export async function uploadAudioFile(
   accessToken: string,
   filePath: string,
@@ -251,62 +360,12 @@ export async function uploadAudioFile(
     meta?: TranscodeUploadMeta
   },
 ): Promise<TranscodedAudioResult> {
-  const fileStat = await stat(filePath)
-  const sha256 = await hashFileSha256(filePath)
-  const sizeMb = fileStat.size / 1_000_000
-  const budget = options?.poll?.maxWaitMs ?? transcodePollBudget({
-    bytes: fileStat.size,
-    durationSeconds: options?.meta?.durationSeconds,
-  })
-  const pollOptions = {
-    maxWaitMs: budget,
-    onPoll: options?.onTranscodePoll,
+  const put = await putAudioForTranscode(accessToken, filePath, filename, {
+    poll: options?.poll,
     meta: options?.meta,
-    sizeMb,
-  }
-
-  const upload = await getUploadUrl(accessToken, { sha256, filename })
-  if (upload.uploadUrl) {
-    await putAudioFile(upload.uploadUrl, filePath, guessContentType(filePath))
-  }
-
-  try {
-    return await pollTranscoded(accessToken, upload.uploadId, pollOptions)
-  }
-  catch (err) {
-    if (!(err instanceof TranscodeGiveUpError) || err.reason === 'timeout') throw err
-
-    const again = await getUploadUrl(accessToken, { sha256, filename })
-    const decision = transcodeRetryDecision({
-      reason: err.reason,
-      alreadyRetried: false,
-      newUploadUrl: again.uploadUrl,
-      oldUploadId: upload.uploadId,
-      newUploadId: again.uploadId,
-    })
-    if (decision.action === 'throw') throw err
-
-    console.info(formatTranscodeLogLine({
-      result: 'retry',
-      jobId: options?.meta?.jobId,
-      youtubeId: options?.meta?.youtubeId,
-      partLabel: options?.meta?.partLabel,
-      sizeMb,
-      durationSec: options?.meta?.durationSeconds,
-      uploadId: decision.uploadId,
-      priorUploadId: upload.uploadId,
-      attempt: 1,
-      elapsedMs: 0,
-    }))
-
-    if (decision.action === 'reput' && again.uploadUrl) {
-      await putAudioFile(again.uploadUrl, filePath, guessContentType(filePath))
-      return pollTranscoded(accessToken, decision.uploadId, pollOptions)
-    }
-
-    return pollTranscoded(accessToken, decision.uploadId, {
-      ...pollOptions,
-      maxWaitMs: budget,
-    })
-  }
+  })
+  return pollPutAudioTranscode(accessToken, put, {
+    onTranscodePoll: options?.onTranscodePoll,
+    meta: options?.meta,
+  })
 }

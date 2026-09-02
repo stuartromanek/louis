@@ -11,9 +11,6 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ### Added
 - **Homelab one-click hosting** — [docs/HOSTING.md](docs/HOSTING.md): Portainer app template ([`deploy/portainer/`](deploy/portainer/)); Coolify steps; best-effort CasaOS bundle ([`deploy/casaos/`](deploy/casaos/)).
-
-### Removed
-- **Umbrel community store bundle** — removed [`deploy/umbrel/`](deploy/umbrel/) and all Umbrel hosting docs; use Portainer or plain Docker instead.
 - **Playlist artwork** — new playlists get a generated [DiceBear](https://www.dicebear.com/how-to-use/http-api/) cover on create. Playlist menu → **Artwork** opens a generate / upload / crop flyout (5×7 cover, session history; Yoto `metadata.cover.imageL`).
 - **Track trim** — scissors on a YouTube track (or a split group) edits the **full** source. Trim keeps that region and re-splits if the keep is still over 55 minutes (or collapses to one slat if it is not). Waveform + preview in a flyout (desktop) or tray (phone).
 - **Auto-split long tracks** — YouTube sources over 55 minutes expand into connected Part 1 / Part 2 / … playlist slats on add (move and delete as a group). Save downloads the audio once, then ffmpeg-splits into legal MYO chapters. Replaces the old “Enable long tracks?” confirm gate.
@@ -35,6 +32,9 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - **New playlist** in the idle playlist empty state is a link that starts the New playlist flow.
 
 ### Changed
+- **Faster playlist open** — Opening a playlist uses the saved card titles and Yoto track art. It no longer re-fetches YouTube video metadata (yt-dlp) on load. Public and mine icon catalogs cache for 5 minutes.
+- **Faster library list** — `/content/mine` no longer N+1 GETs every playlist for track count. Count only if Yoto already included chapters; duration still comes from metadata.
+- **Faster Update overlay** — Save overlaps download and leveling with Yoto’s transcode wait (one PUT at a time, up to two in-flight polls). The overlay appears on Confirm, the inner bar no longer restarts when the label changes, the overall percent uses tabular numbers, the client polls every 400ms during upload/transcode (1s otherwise), and the overlay dismisses when the job completes — card reload and library stats continue in the background. Near-instant completes still show for 450ms so they don’t flash.
 - **Dual-registry Docker publish** — each `v*` release pushes the same multi-arch image to Docker Hub (`stuartromanek/louis`) and GHCR (`ghcr.io/stuartromanek/louis`). [`docker-compose.yml`](docker-compose.yml) defaults to Docker Hub.
 - **`/api/youtube/*` hybrid discovery** — search, video details, playlist import, and channel browse use bundled/`PATH` yt-dlp when `LOUIS_YOUTUBE_API_KEY` is unset; Data API when a key is set. Quota or upstream failures (403/502/503) fall back to yt-dlp. Self-host, Docker, HA, and desktop share the same routes.
 - **`LOUIS_YOUTUBE_API_KEY` is optional** — only `LOUIS_YOTO_CLIENT_ID` is required for self-host. Desktop first-run includes a skippable YouTube step (**Next** with a key, **Skip** for bundled yt-dlp). Search and import still work without a key; a Data API key is recommended (faster search, `safeSearch=moderate` on typed search) and can be added later in Settings → Advanced (desktop) or env / HA options.
@@ -58,6 +58,7 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - Auto-split shore-up: the overlay no longer fails a living save at 90 minutes (still-working hint only); lost-job copy asks you to check Yoto; ffmpeg split/loudnorm timeouts scale with duration; a partial re-extract cuts that chapter instead of uploading the full file; save re-plans when a probe would stretch a part past 60 minutes.
 
 ### Removed
+- **Umbrel community store bundle** — removed [`deploy/umbrel/`](deploy/umbrel/) and all Umbrel hosting docs; use Portainer or plain Docker instead.
 - `public.demoMode` / Settings demo-instance banner. yt-dlp Check and Update are no longer gated on a demo flag.
 
 ### Fixed

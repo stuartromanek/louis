@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { SaveProgress } from '~/components/myo-editor/useMyoEditor'
 import type { EmojiId } from '~/utils/emojiCatalog'
+import { saveOperationBarShouldReset } from '#shared/myo-editor/savePoll'
 import {
+  saveOperationIsIndeterminate,
   saveOperationLabel,
   saveOverallLabel,
   saveSlowWaitHint,
@@ -24,7 +26,7 @@ const operationLabel = computed(() =>
 const trackCountMeta = computed(() => saveTrackCountMeta(props.progress.tracks))
 
 const isIndeterminateOp = computed(() =>
-  props.progress.tracks.some(track => track.status === 'extracting' || track.status === 'leveling'),
+  saveOperationIsIndeterminate(props.progress.tracks),
 )
 
 const showRichChrome = computed(
@@ -33,7 +35,7 @@ const showRichChrome = computed(
 
 const displayedOperationProgress = ref(0)
 let animationFrameId = 0
-let lastOperationLabel: string | null | undefined
+let lastJobId: string | undefined
 
 function cancelProgressAnimation() {
   if (import.meta.client && animationFrameId) {
@@ -43,14 +45,14 @@ function cancelProgressAnimation() {
 }
 
 watch(
-  () => [operationLabel.value, props.progress.operationProgress, isIndeterminateOp.value] as const,
-  ([label, target, extracting]) => {
+  () => [props.progress.jobId, props.progress.operationProgress, isIndeterminateOp.value] as const,
+  ([jobId, target, extracting]) => {
     cancelProgressAnimation()
 
-    if (lastOperationLabel !== undefined && label !== lastOperationLabel) {
+    if (saveOperationBarShouldReset(lastJobId, jobId)) {
       displayedOperationProgress.value = 0
     }
-    lastOperationLabel = label
+    lastJobId = jobId
 
     if (import.meta.server) {
       displayedOperationProgress.value = target
@@ -249,6 +251,7 @@ const operationFillWidth = computed(() =>
   font-weight: 700;
   font-size: clamp(1.75rem, 1.2rem + 2.5vw, 2.75rem);
   line-height: 0.9;
+  font-variant-numeric: tabular-nums;
   color: var(--color-maru-black);
   display: inline-block;
   text-box-trim: trim-both;
