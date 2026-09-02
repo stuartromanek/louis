@@ -9,6 +9,8 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-02
+
 ### Added
 - **Homelab one-click hosting** — [docs/HOSTING.md](docs/HOSTING.md): Portainer app template ([`deploy/portainer/`](deploy/portainer/)); Coolify steps; best-effort CasaOS bundle ([`deploy/casaos/`](deploy/casaos/)).
 - **Playlist artwork** — new playlists get a generated [DiceBear](https://www.dicebear.com/how-to-use/http-api/) cover on create. Playlist menu → **Artwork** opens a generate / upload / crop flyout (5×7 cover, session history; Yoto `metadata.cover.imageL`).
@@ -134,7 +136,8 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - Marketing page (`/marketing`) and `public/marketing/` assets (Louis/Yoto art lives under `public/images/`).
 - Experimental muted `<video>` splash cue path (`louis.mp4`); splash audio uses the shared UI sound player only.
 
-[Unreleased]: https://github.com/stuartromanek/louis/compare/v1.1.2...main
+[Unreleased]: https://github.com/stuartromanek/louis/compare/v1.2.0...main
+[1.2.0]: https://github.com/stuartromanek/louis/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/stuartromanek/louis/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/stuartromanek/louis/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/stuartromanek/louis/compare/v1.0.0...v1.1.0
