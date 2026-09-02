@@ -12,7 +12,7 @@
   --app-splash-wordmark-at: 450ms;
   --app-splash-letter-stagger: 35ms;
   --app-splash-letter-dur: 280ms;
-  --app-splash-chips-at: 1700ms;
+  --app-splash-chips-at: 1200ms;
   --app-splash-chip-stagger: 45ms;
   --app-splash-chip-dur: 220ms;
   --app-splash-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
@@ -27,7 +27,6 @@
   --app-splash-stage-max: 512px;
   --app-splash-stage-scale: 0.72;
   --app-splash-stage: calc(var(--app-splash-stage-scale) * min(80vmin, var(--app-splash-stage-max)));
-  --app-splash-stage-ref: calc(var(--app-splash-stage-scale) * var(--app-splash-stage-max));
   --app-splash-wordmark-size: clamp(3.25rem, 2.1rem + 5vw, 6.5rem);
 
   position: fixed;
@@ -52,9 +51,9 @@
 
 .app-splash__visual {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* Explicit stage box so absolute wordmark/chips share one containing block */
+  width: var(--app-splash-stage);
+  height: var(--app-splash-stage);
 }
 
 .app-splash__wordmark {
@@ -65,7 +64,7 @@
     - var(--app-splash-wordmark-size) * 0.88
   );
   left: 50%;
-  translate: -50% 0;
+  transform: translate(-50%, 0);
   display: flex;
   flex-wrap: nowrap;
   align-items: baseline;
@@ -89,7 +88,8 @@
   transform-origin: 50% 70%;
   -webkit-text-stroke: 6px var(--color-maru-black);
   paint-order: stroke fill;
-  text-shadow: 7px 7px 0 var(--color-maru-black);
+  /* drop-shadow follows the painted glyph; text-shadow + text-stroke is hollow in Safari */
+  filter: drop-shadow(7px 7px 0 var(--color-maru-black));
   opacity: 0;
 }
 
@@ -121,14 +121,21 @@
 }
 
 .app-splash__chips {
+  position: absolute;
+  z-index: 2;
+  /* % of the stage box — tracks scale without length÷length margin calcs */
+  top: calc(83% + 10px);
+  left: 50%;
+  transform: translate(-50%, 0);
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: center;
   gap: 0;
-  margin: calc(var(--app-splash-stage) / var(--app-splash-stage-ref) * -4rem) 0 0;
-  position: relative;
-  z-index: 2;
+  margin: 0;
+  width: max-content;
+  max-width: none;
+  pointer-events: none;
 }
 
 .app-splash__chip {
@@ -201,8 +208,8 @@
 }
 
 .app-splash__stage {
-  width: var(--app-splash-stage);
-  height: var(--app-splash-stage);
+  width: 100%;
+  height: 100%;
   pointer-events: none;
 }
 
@@ -246,7 +253,7 @@
 @media (width <= 599px) {
   .app-splash__letter {
     -webkit-text-stroke: 4.5px var(--color-maru-black);
-    text-shadow: 5px 5px 0 var(--color-maru-black);
+    filter: drop-shadow(5px 5px 0 var(--color-maru-black));
   }
 
   .app-splash__chip {
@@ -259,7 +266,7 @@
 @media (width <= 310px) {
   .app-splash__letter {
     -webkit-text-stroke: 3.5px var(--color-maru-black);
-    text-shadow: 3px 3px 0 var(--color-maru-black);
+    filter: drop-shadow(3px 3px 0 var(--color-maru-black));
   }
 
   .app-splash__chip {

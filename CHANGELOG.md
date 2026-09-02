@@ -9,6 +9,13 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [Unreleased]
 
+### Fixed
+- Splash **Louis!** wordmark uses `filter: drop-shadow` instead of `text-shadow` so Safari renders a solid offset shadow with `-webkit-text-stroke` (was hollow outline-only).
+- Splash tagline chips are absolutely positioned under the Lottie stage box (explicit stage-sized visual + `top: calc(83% + 10px)`) so they track the player without a fragile negative-margin calc or sitting in a row beside it.
+
+### Changed
+- Splash tagline chips inflate 500ms earlier (`1200ms` after splash start).
+
 ## [1.2.1] - 2026-09-02
 
 ### Fixed

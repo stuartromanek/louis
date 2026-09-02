@@ -283,16 +283,16 @@ onUnmounted(() => {
             class="app-splash__stage"
             aria-hidden="true"
           />
+          <p
+            :key="`chips-${typeKey}`"
+            class="app-splash__chips"
+            aria-label="Yoto, meet YouTube"
+          >
+            <span class="app-splash__chip app-splash__chip--blue" style="--i: 0; --tilt: -3deg">Yoto,</span>
+            <span class="app-splash__chip app-splash__chip--pink" style="--i: 1; --tilt: 2.5deg">meet</span>
+            <span class="app-splash__chip app-splash__chip--orange" style="--i: 2; --tilt: -1.5deg">YouTube</span>
+          </p>
         </div>
-        <p
-          :key="`chips-${typeKey}`"
-          class="app-splash__chips"
-          aria-label="Yoto, meet YouTube"
-        >
-          <span class="app-splash__chip app-splash__chip--blue" style="--i: 0; --tilt: -3deg">Yoto,</span>
-          <span class="app-splash__chip app-splash__chip--pink" style="--i: 1; --tilt: 2.5deg">meet</span>
-          <span class="app-splash__chip app-splash__chip--orange" style="--i: 2; --tilt: -1.5deg">YouTube</span>
-        </p>
       </div>
       <p
         v-if="debug"
