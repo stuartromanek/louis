@@ -60,6 +60,7 @@ A YouTube Data API key is **recommended** (faster search, moderate safeSearch on
 - Louis listens on **`http://127.0.0.1:4010`** (not the Docker/dev port 4000).
 - Search YouTube, build a playlist, and save to Yoto as usual.
 - Open **Settings → Advanced** anytime to update API keys, **Search content filtering** (none / moderate / strict; requires a YouTube API key), or the optional cookies path.
+- Track Art needs Yoto scope `user:icons:manage`. If icon upload/patch is denied after an upgrade, **Disconnect** and **Connect** once.
 
 ## Where settings are stored
 

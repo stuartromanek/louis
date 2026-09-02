@@ -18,9 +18,10 @@ Self-hosted **Nuxt** server app. Yoto OAuth token exchange and YouTube audio dow
 - Browse your Yoto playlists. **New** names a playlist and creates it on Yoto right away (empty, or with tracks already picked in Search)
 - Drag-and-drop playlist editing (desktop); phone Search / Library flow with Add to playlist
 - Rename, replace artwork, or delete a loaded playlist from the playlist menu
+- Auto-split long YouTube sources (>55 min) into Part slats; trim intros/outros before save
 - Save / Update to Yoto with download and transcode progress; optional normalize for new YouTube extracts
-- Per-track 16×16 art (Yoto icon library, [yotoicons.com](https://yotoicons.com/), or draw)
-- Optional **desktop app** (macOS / Windows) — same app, no Docker required
+- Per-track 16×16 art (Yoto icon library, [yotoicons.com](https://yotoicons.com/), or draw) — reconnect Yoto once if icon upload asks for `user:icons:manage`
+- Optional **desktop app** (macOS / Windows) — same app, no Docker required; installers are **unsigned** (Gatekeeper / SmartScreen may warn)
 
 
 

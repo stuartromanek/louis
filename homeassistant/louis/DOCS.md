@@ -46,4 +46,6 @@ Docker/`NODE_ENV=production` would otherwise force Secure cookies, which browser
 2. Open the UI on port **4000**  
 3. Connect Yoto and search YouTube  
 
+Track Art (icon upload / patch) needs the Yoto scope `user:icons:manage`. If you connected before that scope shipped, **Disconnect** and **Connect** once so Louis can request it.
+
 Requires a multi-arch GHCR image (`linux/amd64` + `linux/arm64`) published on each `v*` release — Pi / Yellow / most appliances need arm64.

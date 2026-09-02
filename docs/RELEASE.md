@@ -132,6 +132,17 @@ Checklist for tag `vX.Y.Z`:
 - [ ] Deploy that tag on Railway (or your host) when you want a pinned Docker version; `:latest` tracks the newest tagged release
 - [ ] Start the next cycle by writing new bullets under `[Unreleased]` again
 
+## Announcement notes
+
+When posting a public update for a large minor:
+
+1. **Creator tools** — Track Art, trim, auto-split, normalize, playlist artwork
+2. **Faster MYO** — playlist open, library list, Update overlay (overlapping extract + transcode)
+3. **Run it your way** — desktop, Home Assistant, Docker Hub + GHCR, Portainer; optional YouTube API; Add to Home
+4. **Caveats** — existing users should **reconnect** once for `user:icons:manage`; desktop installers are **unsigned** (Gatekeeper / SmartScreen may warn); Docker is **single-instance** only; do **not** advertise Umbrel (removed); YouTube search works without an API key via yt-dlp
+
+Link the GitHub Release, [HOSTING.md](HOSTING.md), and desktop download assets.
+
 ## Config
 
 See [`.release-it.json`](../.release-it.json). Notable choices:

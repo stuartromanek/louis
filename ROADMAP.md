@@ -60,7 +60,7 @@ Optional per-result toggle to expand YouTube chapters into separate playlist tra
 
 ### Audio trim
 
-Cut intros/outros (and similar) before save. Non-trivial UX; trim points per track in the playlist editor.
+~~Cut intros/outros (and similar) before save. Non-trivial UX; trim points per track in the playlist editor.~~ — **done**: scissors on a YouTube track or split group; waveform flyout/tray; keep-region re-splits when still over 55 minutes.
 
 ### YouTube URL paste
 
@@ -76,4 +76,4 @@ Cut intros/outros (and similar) before save. Non-trivial UX; trim points per tra
 
 ## Done / shipped
 
-Tracked in git history, [CHANGELOG.md](CHANGELOG.md), and the README feature list rather than here. Recent unreleased highlights: normalize new YouTube extracts at Update, batch Update of dirty playlists from Menu, duplicate-track toast, Yoto playlist nomenclature (Playlists / New playlist; physical MYO linking stays in the Yoto app).
+Tracked in git history, [CHANGELOG.md](CHANGELOG.md), and the README feature list rather than here. Recent highlights: Track Art, trim, auto-split, normalize at Update, batch Update from Menu, playlist artwork, faster open/library/Update overlay, homelab hosting (Portainer / HA / Docker Hub), Add to Home.
