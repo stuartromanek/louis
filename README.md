@@ -10,7 +10,7 @@ Self-hosted **Nuxt** server app. Yoto OAuth token exchange and YouTube audio dow
 
 Demo:
 
-https://louis.romanek.us/video/compressed_louis-overview.mp4
+[https://github.com/user-attachments/assets/717ae10e-c22e-40ae-8175-acfed4fce100](https://github.com/user-attachments/assets/717ae10e-c22e-40ae-8175-acfed4fce100)
 
 [Website](https://louis.romanek.us/) · [Download](#download-desktop) · [Docker](#docker) · [Home Assistant](#home-assistant) · [Hosting](docs/HOSTING.md) · [Desktop docs](docs/DESKTOP.md) · [Contributing](CONTRIBUTING.md) · [Releases](docs/RELEASE.md)
 
