@@ -17,10 +17,10 @@ One-click and guided installs for Docker on NAS, homelab, and LAN. Louis also sh
 
 1. **Single instance only** — save progress is in memory; do not run multiple replicas.
 2. **Persistent volume** at `/data/audio` (preview/save cache, optional yt-dlp updates).
-3. **Required env:** `LOUIS_YOTO_CLIENT_ID` (public PKCE client from [yoto.dev](https://yoto.dev/get-started/start-here/)).
-4. **Yoto redirect URI** — register on yoto.dev the exact origin you will open:
-   - LAN: `http://<host-ip-or-name>:4000/api/yoto/auth/callback`
-   - HTTPS: `https://<your-domain>/api/yoto/auth/callback`
+3. **Required env:** `LOUIS_YOTO_CLIENT_ID` (public PKCE client). Paste Louis’s bundled ID (`PK00MDKCVwWvOG8o3px3qSl57FhfUZxm`) only when your open-URL matches a redirect already on Louis’s Yoto app (desktop `127.0.0.1:4010`; HA default `homeassistant.local:4000`). For a NAS IP, custom hostname, or HTTPS domain, create your **own** public client at [yoto.dev](https://yoto.dev/get-started/start-here/) and register that exact callback — see root [README](../README.md#1-yoto-client-id).
+4. **Yoto redirect URI** — must be registered on the Yoto app that owns your client ID:
+   - Louis bundled: only the pre-registered desktop / HA-default URIs above
+   - Your own client: LAN `http://<host-ip-or-name>:4000/api/yoto/auth/callback` or HTTPS `https://<your-domain>/api/yoto/auth/callback`
    - Leave `LOUIS_YOTO_REDIRECT_URI` unset to let Louis use the Host header you actually opened.
 5. **Open Louis at that same origin** — phones/tablets cannot use the Docker host’s `localhost`. Use NAS IP or hostname.
 6. **`LOUIS_COOKIE_SECURE`** — image default is `false` (LAN HTTP). Set `true` only behind HTTPS / reverse proxy.
@@ -57,10 +57,10 @@ Artifacts: [`deploy/portainer/`](../deploy/portainer/)
 ### Deploy Louis
 
 1. **App Templates** → **Louis** → **Deploy the stack**
-2. Set **LOUIS_YOTO_CLIENT_ID** (required)
+2. Set **LOUIS_YOTO_CLIENT_ID** (required) — your own public client for a NAS IP / custom host (typical), or Louis’s bundled ID only if you use a pre-registered redirect (see [README](../README.md#1-yoto-client-id))
 3. Optional: YouTube API key, redirect URI pin, `LOUIS_COOKIE_SECURE`
 4. Deploy; open `http://<host>:4000`
-5. Register redirect URI on yoto.dev, then **Connect** in Louis
+5. With your own client: register that origin’s `/api/yoto/auth/callback` on yoto.dev, then **Connect** in Louis
 
 Stack file used: [`deploy/portainer/docker-compose.yml`](../deploy/portainer/docker-compose.yml) (image-only, no local build).
 
@@ -72,7 +72,7 @@ Uses the repo root [`docker-compose.yml`](../docker-compose.yml) — no separate
 
 1. **New resource** → **Public repository** → `https://github.com/stuartromanek/louis`
 2. Build pack: **Docker Compose**, path `docker-compose.yml`
-3. Environment: `LOUIS_YOTO_CLIENT_ID` (required); optional YouTube key
+3. Environment: `LOUIS_YOTO_CLIENT_ID` (required — own client for custom domain / host, or bundled ID only for pre-registered redirects); optional YouTube key
 4. Confirm volume **`louis-audio`** → `/data/audio`
 5. Domain or host port **4000**; set `LOUIS_COOKIE_SECURE` to match HTTP vs HTTPS
 6. Deploy; verify `/api/health`
@@ -87,13 +87,13 @@ If you still want to try it:
 
 1. CasaOS → **Settings** → **App Store** → **Add source**
 2. Store URL: `https://cdn.jsdelivr.net/gh/stuartromanek/louis@gh-pages/store.json`
-3. Install **Louis**; set **LOUIS_YOTO_CLIENT_ID**; register redirect URI on yoto.dev
+3. Install **Louis**; set **LOUIS_YOTO_CLIENT_ID** (own client for custom origin — see [README](../README.md#1-yoto-client-id)); register that redirect on your yoto.dev app
 
 ---
 
 ## Cloud PaaS (Railway, Render, Fly)
 
-Not recommended as primary hosting: Louis needs a **persistent volume**, **single instance**, and YouTube downloads often fail from datacenter IPs without extra cookies setup. Homelab Docker or the desktop app is a better fit. If you still deploy to cloud, use HTTPS, set `LOUIS_COOKIE_SECURE=true`, attach a volume at `/data/audio`, and pin a redirect URI on yoto.dev.
+Not recommended as primary hosting: Louis needs a **persistent volume**, **single instance**, and YouTube downloads often fail from datacenter IPs without extra cookies setup. Homelab Docker or the desktop app is a better fit. If you still deploy to cloud, use HTTPS, set `LOUIS_COOKIE_SECURE=true`, attach a volume at `/data/audio`, create your **own** yoto.dev public client, and pin that redirect URI.
 
 ---
 
@@ -101,7 +101,7 @@ Not recommended as primary hosting: Louis needs a **persistent volume**, **singl
 
 | Symptom | Check |
 | ------- | ----- |
-| OAuth fails after login | Redirect URI on yoto.dev must match the URL in the browser bar exactly |
+| OAuth fails after login | Redirect URI on the Yoto app for your client ID must match the URL in the browser bar exactly |
 | Connect works on PC only | Other devices must use host IP/hostname, not `localhost` |
 | Search works, save fails | `/api/health` — yt-dlp/ffmpeg; YouTube may block anonymous datacenter IPs |
 | Stale app after update | Re-pull `stuartromanek/louis:latest` or restart stack |

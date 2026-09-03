@@ -20,7 +20,7 @@ npm run desktop:fetch-binaries   # once per machine / when bumping the pin
 npm run desktop:spike
 ```
 
-Credentials: **Settings → Desktop API keys** (saved under Application Support). Spike may also load repo `.env` when prefs fields are empty. Packaged builds never load `.env`.
+Credentials: **Settings → Advanced** (saved under Application Support). Spike may also load repo `.env` when prefs fields are empty. Packaged builds never load `.env`.
 
 Register this redirect URI on your Yoto developer app:
 
@@ -41,5 +41,4 @@ Signing secrets for CI: [DESKTOP_SIGNING.md](../docs/DESKTOP_SIGNING.md). Releas
 | Area | Current behavior |
 |------|------------------|
 | Code signing | Unsigned in CI until secrets + config overrides |
-| README Download links | Phase 6 |
 | Port | Fixed `127.0.0.1:4010` |
