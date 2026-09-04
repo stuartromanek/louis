@@ -34,7 +34,7 @@ http://homeassistant.local:4000/api/yoto/auth/callback
 
 Open Louis at `http://homeassistant.local:4000`. **Do not use Home Assistant ingress** for v1 — path/host rewriting breaks Yoto OAuth and cookie auth.
 
-**Custom host or HTTPS:** create your **own** public PKCE client at [yoto.dev](https://yoto.dev/get-started/start-here/), register the exact redirect (for example your HTTPS URL in front of port 4000), paste that client ID into **yoto_client_id**, and set **yoto_redirect_uri** to match. Leave the secret empty.
+**Custom host or HTTPS:** create your **own** public PKCE client at [yoto.dev](https://yoto.dev/get-started/start-here/), paste the exact callback into **Allowed Callback URLs** (for example `https://your-domain/api/yoto/auth/callback` in front of port 4000 — not desktop’s `127.0.0.1:4010`), paste that client ID into **yoto_client_id**, and set **yoto_redirect_uri** to match. Leave the secret empty.
 
 ## cookie_secure
 

@@ -22,7 +22,7 @@ npm run desktop:spike
 
 Credentials: **Settings → Advanced** (saved under Application Support). Spike may also load repo `.env` when prefs fields are empty. Packaged builds never load `.env`.
 
-Register this redirect URI on your Yoto developer app:
+Paste this into yoto.dev **Allowed Callback URLs** (desktop port **4010**):
 
 `http://127.0.0.1:4010/api/yoto/auth/callback`
 

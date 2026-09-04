@@ -446,8 +446,9 @@ watch(
               :href="YOUTUBE_API_URL"
               target="_blank"
               rel="noopener noreferrer"
-            >Google Cloud Console</a>,
-            create an API key, and paste it here.
+            >Google Cloud Console</a>.
+            If asked what data you will access, choose <strong>Public data</strong> (API key — not User data / OAuth).
+            Paste the key here.
             <template v-if="only === 'youtube'"> Skip below to continue without a key.</template>
         </p>
       </div>
@@ -527,7 +528,7 @@ watch(
           <span class="prefs-projector__label">OAuth redirect URI</span>
           <MaruTooltip
             placement="bottom"
-            text="Louis always uses this loopback URI for desktop OAuth. It must match your Yoto app settings exactly."
+            text="Louis always uses this loopback URI for desktop OAuth (port 4010). Paste it into Allowed Callback URLs on yoto.dev — exact match."
           >
             <button
               type="button"
@@ -566,10 +567,10 @@ watch(
             Already registered on Louis’s Yoto app. Copy it if you want to verify at
           </template>
           <template v-else-if="only === 'redirect'">
-            Register this exact URI on your Yoto developer app at
+            Paste this exact URI into <strong>Allowed Callback URLs</strong> on your Yoto app at
           </template>
           <template v-else>
-            Add this exact URI on your Yoto developer app at
+            Paste this exact URI into <strong>Allowed Callback URLs</strong> on your Yoto app at
           </template>
           <a
             class="prefs-projector__hint-link"
@@ -579,7 +580,7 @@ watch(
           >yoto.dev</a>
           <template v-if="only === 'redirect' && usingBundledClient">.</template>
           <template v-else>
-            (port <span class="font-maru-mono">4010</span>, host <span class="font-maru-mono">127.0.0.1</span>).
+            (desktop port <span class="font-maru-mono">4010</span>, host <span class="font-maru-mono">127.0.0.1</span> — Docker/HA use <span class="font-maru-mono">4000</span>).
           </template>
         </p>
       </div>

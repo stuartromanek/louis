@@ -18,9 +18,9 @@ One-click and guided installs for Docker on NAS, homelab, and LAN. Louis also sh
 1. **Single instance only** — save progress is in memory; do not run multiple replicas.
 2. **Persistent volume** at `/data/audio` (preview/save cache, optional yt-dlp updates).
 3. **Required env:** `LOUIS_YOTO_CLIENT_ID` (public PKCE client). Paste Louis’s bundled ID (`PK00MDKCVwWvOG8o3px3qSl57FhfUZxm`) only when your open-URL matches a redirect already on Louis’s Yoto app (desktop `127.0.0.1:4010`; HA default `homeassistant.local:4000`). For a NAS IP, custom hostname, or HTTPS domain, create your **own** public client at [yoto.dev](https://yoto.dev/get-started/start-here/) and register that exact callback — see root [README](../README.md#1-yoto-client-id).
-4. **Yoto redirect URI** — must be registered on the Yoto app that owns your client ID:
+4. **Yoto redirect URI** — paste into yoto.dev **Allowed Callback URLs** on the app that owns your client ID (exact match):
    - Louis bundled: only the pre-registered desktop / HA-default URIs above
-   - Your own client: LAN `http://<host-ip-or-name>:4000/api/yoto/auth/callback` or HTTPS `https://<your-domain>/api/yoto/auth/callback`
+   - Your own client: LAN `http://<host-ip-or-name>:4000/api/yoto/auth/callback` or HTTPS `https://<your-domain>/api/yoto/auth/callback` (Nginx Proxy Manager / reverse proxy is fine — use the public HTTPS origin, not `127.0.0.1:4010`)
    - Leave `LOUIS_YOTO_REDIRECT_URI` unset to let Louis use the Host header you actually opened.
 5. **Open Louis at that same origin** — phones/tablets cannot use the Docker host’s `localhost`. Use NAS IP or hostname.
 6. **`LOUIS_COOKIE_SECURE`** — image default is `false` (LAN HTTP). Set `true` only behind HTTPS / reverse proxy.
@@ -101,7 +101,7 @@ Not recommended as primary hosting: Louis needs a **persistent volume**, **singl
 
 | Symptom | Check |
 | ------- | ----- |
-| OAuth fails after login | Redirect URI on the Yoto app for your client ID must match the URL in the browser bar exactly |
+| OAuth fails after login | Paste the callback into yoto.dev **Allowed Callback URLs** — must match the URL in the browser bar exactly (desktop `:4010`, Docker/HA `:4000` or HTTPS hostname) |
 | Connect works on PC only | Other devices must use host IP/hostname, not `localhost` |
 | Search works, save fails | `/api/health` — yt-dlp/ffmpeg; YouTube may block anonymous datacenter IPs |
 | Stale app after update | Re-pull `stuartromanek/louis:latest` or restart stack |

@@ -48,7 +48,7 @@ Installers ship as **Assets** on each GitHub Release (same `vX.Y.Z` as Docker):
 | macOS Intel         | `Louis-<version>-x64.dmg`   |
 | Windows             | `Louis-Setup-<version>.exe` |
 
-After install, the setup wizard asks for a Yoto client ID, then a **recommended** YouTube Data API key (Skip uses bundled yt-dlp). Prefer **Use default client** for Yoto, or bring your own from [yoto.dev](https://yoto.dev/get-started/start-here/) with redirect `http://127.0.0.1:4010/api/yoto/auth/callback`. Change keys later in **Settings → Advanced**. Details: [docs/DESKTOP.md](docs/DESKTOP.md).
+After install, the setup wizard asks for a Yoto client ID, then a **recommended** YouTube Data API key (Skip uses bundled yt-dlp). Prefer **Use default client** for Yoto, or bring your own from [yoto.dev](https://yoto.dev/get-started/start-here/) and paste `http://127.0.0.1:4010/api/yoto/auth/callback` into **Allowed Callback URLs**. Change keys later in **Settings → Advanced**. Details: [docs/DESKTOP.md](docs/DESKTOP.md).
 
 Installers are currently **unsigned** (Gatekeeper / SmartScreen may warn). Signing notes: [docs/DESKTOP_SIGNING.md](docs/DESKTOP_SIGNING.md). End-user install walkthroughs: [louis.romanek.us](https://louis.romanek.us/#install).
 
@@ -105,12 +105,14 @@ For any **other** origin (NAS IP, custom hostname, HTTPS domain), create your **
 
 | Setting | Value |
 | ------- | ----- |
-| Redirect URI | `http://<host-ip-or-name>:4000/api/yoto/auth/callback` or `https://your-domain/api/yoto/auth/callback` — same origin you open Louis |
+| **Allowed Callback URLs** (yoto.dev field name) | `http://<host-ip-or-name>:4000/api/yoto/auth/callback` or `https://your-domain/api/yoto/auth/callback` — same origin you open Louis |
 | Scopes | `offline_access user:content:view user:content:manage user:icons:manage` |
+
+Ports: desktop OAuth is **4010** (`127.0.0.1` only). Docker / Home Assistant / reverse proxy (Nginx Proxy Manager, etc.) use **4000**, or your HTTPS hostname with no port when TLS terminates at the proxy. Paste the callback into **Allowed Callback URLs** — not Login URI / Logout URI.
 
 ### 2. YouTube API (recommended)
 
-A YouTube Data API v3 key is **recommended** for faster search and `safeSearch=moderate` on typed search. In [Google Cloud Console](https://console.cloud.google.com/): create or pick a project, [enable YouTube Data API v3](https://console.cloud.google.com/apis/library/youtube.googleapis.com), then [create an API key](https://console.cloud.google.com/apis/credentials) (restricting it to that API is optional but smart). Walkthrough: [YouTube Data API getting started](https://developers.google.com/youtube/v3/getting-started).
+A YouTube Data API v3 key is **recommended** for faster search and `safeSearch=moderate` on typed search. In [Google Cloud Console](https://console.cloud.google.com/): create or pick a project, [enable YouTube Data API v3](https://console.cloud.google.com/apis/library/youtube.googleapis.com), then [create an API key](https://console.cloud.google.com/apis/credentials). If Google asks **What data will you be accessing?**, choose **Public data** (not User data) — Louis only needs an API key for public video search, not Google user OAuth. Restricting the key to YouTube Data API v3 is optional but smart. Walkthrough: [YouTube Data API getting started](https://developers.google.com/youtube/v3/getting-started).
 
 Search still works without a key (bundled yt-dlp): slower, no safeSearch, and search can break on a different week than download. Leave `LOUIS_YOUTUBE_API_KEY` unset to use that path.
 

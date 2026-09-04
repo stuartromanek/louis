@@ -31,7 +31,7 @@ Prefer **Use default client** in the setup wizard (or later under **Settings →
 To bring your own instead:
 
 1. Create a **public** (PKCE) client at [yoto.dev](https://yoto.dev/get-started/start-here/).
-2. Register this redirect URI **exactly**:
+2. Paste this URI into **Allowed Callback URLs** (exact match; desktop uses port **4010**, not 4000):
 
    `http://127.0.0.1:4010/api/yoto/auth/callback`
 
@@ -39,7 +39,7 @@ To bring your own instead:
 
 ### 2. YouTube API key (recommended, skippable)
 
-Paste a YouTube Data API v3 key for faster search and moderate safeSearch on typed search (Google Cloud Console). **Skip** continues without a key — bundled yt-dlp still searches (slower, no safeSearch). You can add a key later under **Settings → Advanced**.
+Paste a YouTube Data API v3 key for faster search and moderate safeSearch on typed search. In Google Cloud Console, if asked **What data will you be accessing?**, choose **Public data** — that creates an API key (Louis does not need Google user OAuth). **Skip** continues without a key — bundled yt-dlp still searches (slower, no safeSearch). You can add a key later under **Settings → Advanced**.
 
 ### 3. Ready
 
@@ -101,7 +101,7 @@ That section appears in the desktop app (**Settings → Advanced**). In local `n
 Sign-in uses browser cookies for `127.0.0.1:4010`. Clearing Settings does not clear those cookies. Disconnect in the app or clear site data for that origin if you need a full reset.
 
 **OAuth redirect errors**  
-Confirm the Yoto portal redirect URI is exactly `http://127.0.0.1:4010/api/yoto/auth/callback` (loopback `127.0.0.1`, port **4010**). Desktop Connect uses your system browser; after success, close that tab and return to Louis (the app polls until signed in).
+Confirm the Yoto portal **Allowed Callback URLs** entry is exactly `http://127.0.0.1:4010/api/yoto/auth/callback` (loopback `127.0.0.1`, port **4010** — not Docker’s 4000). Desktop Connect uses your system browser; after success, close that tab and return to Louis (the app polls until signed in).
 
 **Search or download failures**  
 Search does not need a YouTube API key (yt-dlp). If you set one, check quota. For downloads, try cookies path if YouTube blocks anonymous extract. Keep Louis updated — releases refresh the bundled download tools.
