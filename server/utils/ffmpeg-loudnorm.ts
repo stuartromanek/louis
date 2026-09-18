@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { ffmpegTimeoutMs } from './ffmpeg-split.ts'
+import { emitPipelineEvent } from './pipeline-log.ts'
 
 const execFileAsync = promisify(execFile)
 
@@ -79,9 +80,15 @@ export async function loudnormAudioFile(
   destPath: string,
   durationSeconds?: number,
 ): Promise<string | null> {
+  const startedAt = Date.now()
+  emitPipelineEvent('loudnorm.start', { durationSeconds })
   const ffmpeg = await ffmpegBinary()
   if (!ffmpeg) {
     console.warn('[loudnorm] ffmpeg not found; uploading original audio')
+    emitPipelineEvent('loudnorm.fallback', {
+      reason: 'missing_ffmpeg',
+      durationMs: Date.now() - startedAt,
+    })
     return null
   }
 
@@ -110,6 +117,10 @@ export async function loudnormAudioFile(
     const measured = parseLoudnormJson(String(first.stderr || ''))
     if (!measured) {
       console.warn('[loudnorm] could not parse first-pass JSON; uploading original audio')
+      emitPipelineEvent('loudnorm.fallback', {
+        reason: 'parse',
+        durationMs: Date.now() - startedAt,
+      })
       return null
     }
 
@@ -125,6 +136,10 @@ export async function loudnormAudioFile(
       ],
       { timeout },
     )
+    emitPipelineEvent('loudnorm.ok', {
+      measuredI: measured.measuredI,
+      durationMs: Date.now() - startedAt,
+    })
     return destPath
   }
   catch (err) {
@@ -132,6 +147,11 @@ export async function loudnormAudioFile(
       '[loudnorm] failed; uploading original audio:',
       err instanceof Error ? err.message : err,
     )
+    emitPipelineEvent('loudnorm.fallback', {
+      reason: 'error',
+      durationMs: Date.now() - startedAt,
+      error: err instanceof Error ? err.message : String(err),
+    })
     return null
   }
 }

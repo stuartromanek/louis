@@ -5,11 +5,21 @@ import { createError } from 'h3'
 import {
   classifyYtdlpStderr,
   formatYtdlpError,
+  isHard403,
   shouldEscalateToCookies,
 } from '../../shared/myo-editor/ytdlpErrors.ts'
+import {
+  excerptYtdlpOutput,
+  redactYtdlpArgs,
+} from '../../shared/pipeline-log/redact.ts'
 import { resolveYtdlpBinary } from './ytdlp-binary.ts'
 import { resolveYtdlpCookiesArgs } from './ytdlp-cookies.ts'
 import { ytdlpJsRuntimeArgs } from './ytdlp-js-runtime.ts'
+import {
+  emitPipelineEvent,
+  isPipelineLogVerbose,
+  withPipelineContext,
+} from './pipeline-log.ts'
 
 const execFileAsync = promisify(execFile)
 
@@ -109,15 +119,51 @@ function throwDiscoveryError(
   })
 }
 
+type DiscoveryAttemptLog = {
+  action: 'ok' | 'retry' | 'escalate' | 'fail'
+  runId: string
+  cacheKey: string
+  attempt: number
+  maxAttempts: number
+  playerClient: string
+  auth: string
+  durationMs: number
+  ok: boolean
+  exitCode?: number | string
+  killed?: boolean
+  timedOut?: boolean
+  errorClass?: string
+  hard403?: boolean
+  argv: string[]
+  stderrExcerpt?: string
+}
+
+function emitDiscoveryAttempt(fields: DiscoveryAttemptLog): void {
+  const { action, cacheKey, errorClass, playerClient } = fields
+  if (action === 'retry') {
+    console.info(`[yt-dlp] discovery retry client=${playerClient} reason=${errorClass} key=${cacheKey}`)
+  }
+  else if (action === 'escalate') {
+    console.info(`[yt-dlp] discovery escalate reason=${errorClass} key=${cacheKey}`)
+  }
+  emitPipelineEvent('ytdlp.attempt', { mode: 'discovery', ...fields })
+}
+
 async function execYtdlpJson(
   binaryPath: string,
   args: string[],
-): Promise<string> {
-  const { stdout } = await execFileAsync(binaryPath, args, {
+): Promise<{ stdout: string, stderr: string, durationMs: number }> {
+  const started = Date.now()
+  const { stdout, stderr } = await execFileAsync(binaryPath, args, {
     timeout: YTDLP_DISCOVERY_TIMEOUT_MS,
     maxBuffer: YTDLP_DISCOVERY_MAX_BUFFER,
+    encoding: 'utf8',
   })
-  return stdout
+  return {
+    stdout: String(stdout ?? ''),
+    stderr: String(stderr ?? ''),
+    durationMs: Date.now() - started,
+  }
 }
 
 function parseDump(stdout: string): YtdlpDumpEntry {
@@ -161,70 +207,163 @@ function parseDump(stdout: string): YtdlpDumpEntry {
  */
 export async function runYtdlpJson(options: RunYtdlpJsonOptions): Promise<YtdlpDumpEntry> {
   return withDiscoverySlot(async () => {
-    const ytdlp = await resolveYtdlpBinary(options.event)
-    const cookiesArgs = await resolveYtdlpCookiesArgs(options.event)
-    const jsRuntimeArgs = ytdlpJsRuntimeArgs(options.event)
-    const baseArgs = [
-      ...jsRuntimeArgs,
-      '--skip-download',
-      '--no-warnings',
-      '--ignore-no-formats-error',
-      '-J',
-      ...options.args,
-    ]
+    return withPipelineContext({ surface: 'discovery', cacheKey: options.cacheKey }, async () => {
+      const ytdlp = await resolveYtdlpBinary(options.event)
+      const cookiesArgs = await resolveYtdlpCookiesArgs(options.event)
+      const jsRuntimeArgs = ytdlpJsRuntimeArgs(options.event)
+      const verbose = isPipelineLogVerbose()
+      const runId = crypto.randomUUID()
+      const runStartedAt = Date.now()
+      const baseArgs = [
+        ...jsRuntimeArgs,
+        '--skip-download',
+        '--no-warnings',
+        '--ignore-no-formats-error',
+        '-J',
+        ...(verbose ? ['-v'] : []),
+        ...options.args,
+      ]
 
-    type DiscoveryAttempt = { cookies: boolean, playerClient: string | null }
-    const attempts: DiscoveryAttempt[] = [{ cookies: false, playerClient: null }]
-    if (cookiesArgs.length > 0) attempts.push({ cookies: true, playerClient: null })
+      type DiscoveryAttempt = { cookies: boolean, playerClient: string | null }
+      const attempts: DiscoveryAttempt[] = [{ cookies: false, playerClient: null }]
+      if (cookiesArgs.length > 0) attempts.push({ cookies: true, playerClient: null })
 
-    let lastStderr = ''
-    let lastKilled = false
-    let cookiesTried = false
-    let insertedAndroid = false
+      let lastStderr = ''
+      let lastKilled = false
+      let cookiesTried = false
+      let insertedAndroid = false
+      let lastErrorClass: string | undefined
 
-    for (let i = 0; i < attempts.length; i++) {
-      const attempt = attempts[i]!
-      if (attempt.cookies) cookiesTried = true
-      const clientArgs = attempt.playerClient
-        ? ['--extractor-args', `youtube:player_client=${attempt.playerClient}`]
-        : []
-      const args = attempt.cookies
-        ? [...cookiesArgs, ...clientArgs, ...baseArgs]
-        : [...clientArgs, ...baseArgs]
-      try {
-        const stdout = await execYtdlpJson(ytdlp.path, args)
-        return parseDump(stdout)
-      }
-      catch (err: unknown) {
-        const e = err as ExecFileError & { statusCode?: number }
-        if (e.statusCode) throw err
-        lastStderr = stderrFromError(err)
-        lastKilled = Boolean(e.killed)
-        const errorClass = classifyYtdlpStderr(lastStderr)
+      emitPipelineEvent('ytdlp.run.start', {
+        runId,
+        mode: 'discovery',
+        cookiesConfigured: cookiesArgs.length > 0,
+        ytdlpVersion: ytdlp.version,
+        ytdlpManaged: ytdlp.managed,
+        verbose,
+        cacheKey: options.cacheKey,
+      })
 
-        if (
-          errorClass === 'bot_signin'
-          && !attempt.cookies
-          && !attempt.playerClient
-          && !insertedAndroid
-        ) {
-          insertedAndroid = true
-          attempts.splice(i + 1, 0, { cookies: false, playerClient: 'android' })
-          console.info(`[yt-dlp] discovery retry client=android reason=bot_signin key=${options.cacheKey}`)
-          continue
+      for (let i = 0; i < attempts.length; i++) {
+        const attempt = attempts[i]!
+        if (attempt.cookies) cookiesTried = true
+        const clientArgs = attempt.playerClient
+          ? ['--extractor-args', `youtube:player_client=${attempt.playerClient}`]
+          : []
+        const args = attempt.cookies
+          ? [...cookiesArgs, ...clientArgs, ...baseArgs]
+          : [...clientArgs, ...baseArgs]
+        const clientLabel = attempt.playerClient ?? 'default'
+        const authLabel = attempt.cookies ? 'cookies' : 'anon'
+        const started = Date.now()
+        try {
+          const captured = await execYtdlpJson(ytdlp.path, args)
+          emitDiscoveryAttempt({
+            runId,
+            cacheKey: options.cacheKey,
+            attempt: i + 1,
+            maxAttempts: attempts.length,
+            playerClient: clientLabel,
+            auth: authLabel,
+            durationMs: captured.durationMs,
+            ok: true,
+            action: 'ok',
+            argv: redactYtdlpArgs(args),
+            stderrExcerpt: excerptYtdlpOutput(captured.stderr, { verbose }) || undefined,
+          })
+          emitPipelineEvent('ytdlp.run.end', {
+            runId,
+            mode: 'discovery',
+            ok: true,
+            attempts: i + 1,
+            durationMs: Date.now() - runStartedAt,
+            cacheKey: options.cacheKey,
+          })
+          return parseDump(captured.stdout)
         }
+        catch (err: unknown) {
+          const e = err as ExecFileError & { statusCode?: number, code?: number | string }
+          if (e.statusCode) throw err
+          lastStderr = stderrFromError(err)
+          lastKilled = Boolean(e.killed)
+          const errorClass = classifyYtdlpStderr(lastStderr)
+          lastErrorClass = errorClass
+          const durationMs = Date.now() - started
+          const attemptFields = {
+            runId,
+            cacheKey: options.cacheKey,
+            attempt: i + 1,
+            maxAttempts: attempts.length,
+            playerClient: clientLabel,
+            auth: authLabel,
+            durationMs,
+            ok: false as const,
+            exitCode: e.code,
+            killed: lastKilled || undefined,
+            timedOut: lastKilled || undefined,
+            errorClass,
+            hard403: isHard403(lastStderr) || undefined,
+            argv: redactYtdlpArgs(args),
+            stderrExcerpt: excerptYtdlpOutput(lastStderr, { verbose }) || undefined,
+          }
 
-        const canEscalate = !attempt.cookies
-          && cookiesArgs.length > 0
-          && shouldEscalateToCookies(errorClass, lastStderr)
-        if (canEscalate) {
-          console.info(`[yt-dlp] discovery escalate reason=${errorClass} key=${options.cacheKey}`)
-          continue
+          if (
+            errorClass === 'bot_signin'
+            && !attempt.cookies
+            && !attempt.playerClient
+            && !insertedAndroid
+          ) {
+            insertedAndroid = true
+            attempts.splice(i + 1, 0, { cookies: false, playerClient: 'android' })
+            emitDiscoveryAttempt({ ...attemptFields, action: 'retry' })
+            continue
+          }
+
+          const canEscalate = !attempt.cookies
+            && cookiesArgs.length > 0
+            && shouldEscalateToCookies(errorClass, lastStderr)
+          if (canEscalate) {
+            emitDiscoveryAttempt({ ...attemptFields, action: 'escalate' })
+            continue
+          }
+          emitDiscoveryAttempt({ ...attemptFields, action: 'fail' })
+          emitPipelineEvent('ytdlp.run.end', {
+            runId,
+            mode: 'discovery',
+            ok: false,
+            attempts: i + 1,
+            errorClass,
+            durationMs: Date.now() - runStartedAt,
+            cacheKey: options.cacheKey,
+          })
+          throwDiscoveryError(lastStderr, { killed: lastKilled, cookiesTried })
         }
-        throwDiscoveryError(lastStderr, { killed: lastKilled, cookiesTried })
       }
-    }
 
-    throwDiscoveryError(lastStderr, { killed: lastKilled, cookiesTried })
+      emitDiscoveryAttempt({
+        runId,
+        cacheKey: options.cacheKey,
+        attempt: attempts.length,
+        maxAttempts: attempts.length,
+        playerClient: 'default',
+        auth: cookiesTried ? 'cookies' : 'anon',
+        durationMs: Date.now() - runStartedAt,
+        ok: false,
+        action: 'fail',
+        errorClass: lastErrorClass,
+        argv: redactYtdlpArgs(baseArgs),
+        stderrExcerpt: excerptYtdlpOutput(lastStderr, { verbose }) || undefined,
+      })
+      emitPipelineEvent('ytdlp.run.end', {
+        runId,
+        mode: 'discovery',
+        ok: false,
+        attempts: attempts.length,
+        errorClass: lastErrorClass,
+        durationMs: Date.now() - runStartedAt,
+        cacheKey: options.cacheKey,
+      })
+      throwDiscoveryError(lastStderr, { killed: lastKilled, cookiesTried })
+    })
   })
 }

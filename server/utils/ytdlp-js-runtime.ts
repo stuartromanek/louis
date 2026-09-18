@@ -5,8 +5,8 @@ import type { H3Event } from 'h3'
 import {
   electronAsNodeProbe,
   jsRuntimeExecOptions,
-} from '../../shared/ytdlp-js-runtime-probe.mjs'
-import { parseYtdlpJsRuntimeSpec } from '../../shared/ytdlp-js-runtime-spec.mjs'
+} from '#shared/ytdlp-js-runtime-probe.mjs'
+import { parseYtdlpJsRuntimeSpec } from '#shared/ytdlp-js-runtime-spec.mjs'
 import { pickLouisEnv } from './louis-env'
 
 export { parseYtdlpJsRuntimeSpec }

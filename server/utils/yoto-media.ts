@@ -13,6 +13,24 @@ import {
   transcodeShouldStall,
   type TranscodeGiveUpReason,
 } from './yoto-transcode-poll'
+import { emitPipelineEvent } from './pipeline-log'
+
+function logTranscode(options: Parameters<typeof formatTranscodeLogLine>[0]) {
+  console.info(formatTranscodeLogLine(options))
+  emitPipelineEvent('yoto.transcode', {
+    result: options.result,
+    youtubeId: options.youtubeId,
+    partLabel: options.partLabel,
+    sizeMb: options.sizeMb,
+    durationSec: options.durationSec,
+    uploadId: options.uploadId,
+    priorUploadId: options.priorUploadId,
+    attempt: options.attempt,
+    lastPhase: options.lastPhase,
+    lastPercent: options.lastPercent,
+    elapsedMs: options.elapsedMs,
+  })
+}
 
 interface UploadUrlResponse {
   upload: {
@@ -153,14 +171,14 @@ export async function pollTranscoded(
           statusMessage: 'Yoto transcoding completed without a track hash',
         })
       }
-      console.info(formatTranscodeLogLine({
+      logTranscode({
         ...logContext,
         result: 'ok',
         attempt,
         lastPhase,
         lastPercent,
         elapsedMs: Date.now() - startedAt,
-      }))
+      })
       return {
         transcodedSha256: transcode.transcodedSha256,
         transcodedInfo: transcode.transcodedInfo ?? {},
@@ -168,14 +186,14 @@ export async function pollTranscoded(
     }
 
     if (phase && TRANSCODE_FAILURE_PHASES.has(phase)) {
-      console.info(formatTranscodeLogLine({
+      logTranscode({
         ...logContext,
         result: 'failed',
         attempt,
         lastPhase,
         lastPercent,
         elapsedMs: Date.now() - startedAt,
-      }))
+      })
       throw new TranscodeGiveUpError(
         'failed',
         `Yoto audio transcoding failed (${phase})`,
@@ -186,14 +204,14 @@ export async function pollTranscoded(
     const elapsedMs = Date.now() - startedAt
     const unchangedMs = Date.now() - lastChangeAt
     if (transcodeShouldStall({ elapsedMs, unchangedMs })) {
-      console.info(formatTranscodeLogLine({
+      logTranscode({
         ...logContext,
         result: 'stall',
         attempt,
         lastPhase,
         lastPercent,
         elapsedMs,
-      }))
+      })
       throw new TranscodeGiveUpError(
         'stall',
         formatTranscodeGiveUpMessage({
@@ -208,14 +226,14 @@ export async function pollTranscoded(
     }
 
     if (elapsedMs >= maxWaitMs) {
-      console.info(formatTranscodeLogLine({
+      logTranscode({
         ...logContext,
         result: 'timeout',
         attempt,
         lastPhase,
         lastPercent,
         elapsedMs,
-      }))
+      })
       throw new TranscodeGiveUpError(
         'timeout',
         formatTranscodeGiveUpMessage({
@@ -324,7 +342,7 @@ export async function pollPutAudioTranscode(
     })
     if (decision.action === 'throw') throw err
 
-    console.info(formatTranscodeLogLine({
+    logTranscode({
       result: 'retry',
       jobId: options?.meta?.jobId,
       youtubeId: options?.meta?.youtubeId,
@@ -335,7 +353,7 @@ export async function pollPutAudioTranscode(
       priorUploadId: put.uploadId,
       attempt: 1,
       elapsedMs: 0,
-    }))
+    })
 
     if (decision.action === 'reput' && again.uploadUrl) {
       const retryUrl = again.uploadUrl

@@ -53,6 +53,7 @@ import { tryGeneratePlaylistCover } from './yoto-cover'
 import { fetchYotoCardDetail } from './yoto-card-detail'
 import { getYotoAccessToken } from './yoto'
 import { createExtractPipeline } from './extract-pipeline'
+import { emitPipelineEvent, withPipelineContext } from './pipeline-log'
 
 /** Process-local only — cleared on every container restart/redeploy. */
 const jobs = new Map<string, SaveJobState>()
@@ -167,10 +168,22 @@ export function startSaveJob(
   }
   jobs.set(jobId, job)
 
-  void (async () => {
+  void withPipelineContext({
+    surface: 'save',
+    jobId,
+    cardId: job.cardId,
+    normalizeVolume,
+  }, async () => {
+    const startedAt = Date.now()
+    emitPipelineEvent('save.job.start', {
+      operation: target.operation,
+      cardId: job.cardId,
+      normalizeVolume,
+      trackCount: playlist.length,
+    })
     try {
       const accessToken = await getYotoAccessToken(event)
-      await runSaveJob(
+      const outcome = await runSaveJob(
         event,
         accessToken,
         jobId,
@@ -181,16 +194,42 @@ export function startSaveJob(
         acknowledgeCapacityRisk,
         normalizeVolume,
       )
+      const latest = jobs.get(jobId)
+      if (outcome === 'complete') {
+        emitPipelineEvent('save.job.complete', {
+          operation: target.operation,
+          cardId: latest?.cardId ?? job.cardId,
+          normalizeVolume,
+          durationMs: Date.now() - startedAt,
+        })
+      }
+      else {
+        emitPipelineEvent('save.job.fail', {
+          operation: target.operation,
+          cardId: latest?.cardId ?? job.cardId,
+          normalizeVolume,
+          durationMs: Date.now() - startedAt,
+          error: latest?.error,
+        })
+      }
     }
     catch (err: unknown) {
       const e = err as { statusMessage?: string; message?: string }
+      const error = withMappedYotoLimitError(e.statusMessage ?? e.message ?? 'Save failed')
       updateJob(jobId, {
         status: 'failed',
-        error: withMappedYotoLimitError(e.statusMessage ?? e.message ?? 'Save failed'),
+        error,
         progress: 100,
       })
+      emitPipelineEvent('save.job.fail', {
+        operation: target.operation,
+        cardId: job.cardId,
+        normalizeVolume,
+        durationMs: Date.now() - startedAt,
+        error,
+      })
     }
-  })()
+  })
 
   return job
 }
@@ -205,9 +244,9 @@ async function runSaveJob(
   baselinePlaylist: PlaylistTrack[],
   acknowledgeCapacityRisk: boolean,
   normalizeVolume: boolean,
-) {
+): Promise<'complete' | 'failed'> {
   const job = jobs.get(jobId)
-  if (!job) return
+  if (!job) return 'failed'
 
   const uploadedByIndex = new Map<number, TranscodedAudioResult>()
   let createOutcomeUncertain = false
@@ -458,10 +497,21 @@ async function runSaveJob(
           cacheHits: cachedHits,
         })
         if (extractPlan.skipDownload) {
+          emitPipelineEvent('save.extract.start', {
+            videoId: youtubeId,
+            skipDownload: true,
+            normalizeVolume,
+          })
           for (let partIndex = 0; partIndex < ordered.length; partIndex++) {
             const hit = cachedHits[partIndex]
             if (hit) finishExtractedPart(ordered[partIndex]!.playlistIndex, hit)
           }
+          emitPipelineEvent('save.extract.end', {
+            videoId: youtubeId,
+            ok: true,
+            skipDownload: true,
+            normalizeVolume,
+          })
           reportExtractProgress()
           return []
         }
@@ -474,13 +524,40 @@ async function runSaveJob(
         }
         updateTrack(job, firstIndex, 'extracting')
         reportExtractProgress()
-        const downloaded = await downloadYoutubeAudio(youtubeId, event, {
-          enforceMyoSizeLimit: false,
+        emitPipelineEvent('save.extract.start', {
+          videoId: youtubeId,
+          skipDownload: false,
+          normalizeVolume,
         })
-        pauseBeforeNextExtract = Boolean(downloaded.recoveredFromRetryableFailure)
-        downloadedByYoutubeId.set(youtubeId, downloaded)
-        const probed = await probeAudioDurationSeconds(downloaded.filePath)
-        if (probed) durationByYoutubeId.set(youtubeId, probed)
+        try {
+          const downloaded = await downloadYoutubeAudio(youtubeId, event, {
+            enforceMyoSizeLimit: false,
+          })
+          pauseBeforeNextExtract = Boolean(downloaded.recoveredFromRetryableFailure)
+          downloadedByYoutubeId.set(youtubeId, downloaded)
+          const probed = await probeAudioDurationSeconds(downloaded.filePath)
+          if (probed) durationByYoutubeId.set(youtubeId, probed)
+          emitPipelineEvent('save.extract.end', {
+            videoId: youtubeId,
+            ok: true,
+            skipDownload: false,
+            fromCache: downloaded.fromCache,
+            recovered: Boolean(downloaded.recoveredFromRetryableFailure),
+            probedDuration: probed,
+            normalizeVolume,
+          })
+        }
+        catch (err: unknown) {
+          const e = err as { statusMessage?: string; message?: string }
+          emitPipelineEvent('save.extract.end', {
+            videoId: youtubeId,
+            ok: false,
+            skipDownload: false,
+            normalizeVolume,
+            error: e.statusMessage ?? e.message ?? 'extract failed',
+          })
+          throw err
+        }
         replanFromProbedDurations()
         ordered = orderedExtractGroup(youtubeId)
       }
@@ -555,6 +632,16 @@ async function runSaveJob(
     }
 
     async function preparePart(part: ExtractPartWork) {
+      emitPipelineEvent('save.prepare', {
+        videoId: part.youtubeId,
+        playlistIndex: part.playlistIndex,
+        shouldCut: part.shouldCut,
+        loudnormPart: part.loudnormPart,
+        loudnormFullFile: part.loudnormFullFile,
+        shareLeveled: part.shareLeveled,
+        partLabel: part.partLabel,
+        normalizeVolume,
+      })
       const downloaded = downloadedByYoutubeId.get(part.youtubeId)
       if (!downloaded) {
         throw createError({
@@ -869,6 +956,7 @@ async function runSaveJob(
     }
 
     updateJob(jobId, { status: 'complete', progress: 100, operationProgress: 100 })
+    return 'complete'
   }
   catch (err: unknown) {
     const e = err as { statusMessage?: string; message?: string }
@@ -898,6 +986,7 @@ async function runSaveJob(
       outcomeUncertain: createOutcomeUncertain || undefined,
       progress: 100,
     })
+    return 'failed'
   }
   finally {
     stopHeartbeat()

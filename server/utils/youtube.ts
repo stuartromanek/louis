@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3'
 import { normalizeYoutubeSafeSearch, type YoutubeSafeSearch } from '../../shared/youtubeSafeSearch.ts'
+import { emitPipelineEvent } from './pipeline-log.ts'
 
 const YOUTUBE_API_CACHE_TTL_MS = 60_000
 
@@ -139,6 +140,11 @@ export async function checkYoutubeVideoAvailability(
 
     const item = data.items?.[0]
     if (!item) {
+      emitPipelineEvent('ytdlp.preflight', {
+        videoId: youtubeId,
+        result: 'fail',
+        reason: 'not_found',
+      })
       return {
         ok: false,
         message: `YouTube video ${youtubeId} was not found or has been removed.`,
@@ -149,6 +155,11 @@ export async function checkYoutubeVideoAvailability(
     const privacyStatus = item.status?.privacyStatus?.toLowerCase()
 
     if (uploadStatus && uploadStatus !== 'processed' && uploadStatus !== 'uploaded') {
+      emitPipelineEvent('ytdlp.preflight', {
+        videoId: youtubeId,
+        result: 'fail',
+        reason: uploadStatus,
+      })
       return {
         ok: false,
         message: `YouTube video ${youtubeId} is not available for download (${uploadStatus}).`,
@@ -156,6 +167,11 @@ export async function checkYoutubeVideoAvailability(
     }
 
     if (privacyStatus === 'private') {
+      emitPipelineEvent('ytdlp.preflight', {
+        videoId: youtubeId,
+        result: 'fail',
+        reason: 'private',
+      })
       return {
         ok: false,
         message: `YouTube video ${youtubeId} is private and cannot be downloaded.`,
@@ -170,6 +186,11 @@ export async function checkYoutubeVideoAvailability(
       `[yt-dlp] Data API preflight skipped for ${youtubeId}:`,
       e.statusMessage ?? e.message ?? err,
     )
+    emitPipelineEvent('ytdlp.preflight', {
+      videoId: youtubeId,
+      result: 'error',
+      message: e.statusMessage ?? e.message ?? 'YouTube API error',
+    })
     return null
   }
 }

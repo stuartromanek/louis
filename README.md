@@ -27,14 +27,20 @@ Demo:
 - Per-track 16×16 art (Yoto icon library, [yotoicons.com](https://yotoicons.com/), upload, or draw) — reconnect Yoto once if icon upload asks for `user:icons:manage`
 - Same app as **desktop** (macOS / Windows), **Docker**, or **Home Assistant** — installers are **unsigned** (Gatekeeper / SmartScreen may warn)
 
+
+
 ## Choose how to run
 
-| You want… | Start here |
-| --------- | ---------- |
-| Mac / Windows app, no Docker | [Download (desktop)](#download-desktop) |
-| Docker on a NAS / homelab | [Docker](#docker) · [Hosting](docs/HOSTING.md) |
-| Home Assistant on your LAN | [Home Assistant](#home-assistant) |
-| Local Node development | [Native development](#native-development) |
+
+| You want…                    | Start here                                     |
+| ---------------------------- | ---------------------------------------------- |
+| Mac / Windows app, no Docker | [Download (desktop)](#download-desktop)        |
+| Docker on a NAS / homelab    | [Docker](#docker) · [Hosting](docs/HOSTING.md) |
+| Home Assistant on your LAN   | [Home Assistant](#home-assistant)              |
+| Local Node development       | [Native development](#native-development)      |
+
+
+
 
 ## Download (desktop)
 
@@ -42,11 +48,13 @@ Installers ship as **Assets** on each GitHub Release (same `vX.Y.Z` as Docker):
 
 **[Latest release](https://github.com/stuartromanek/louis/releases/latest)**
 
+
 | Platform            | Asset                       |
 | ------------------- | --------------------------- |
 | macOS Apple Silicon | `Louis-<version>-arm64.dmg` |
 | macOS Intel         | `Louis-<version>-x64.dmg`   |
 | Windows             | `Louis-Setup-<version>.exe` |
+
 
 After install, the setup wizard asks for a Yoto client ID, then a **recommended** YouTube Data API key (Skip uses bundled yt-dlp). Prefer **Use default client** for Yoto, or bring your own from [yoto.dev](https://yoto.dev/get-started/start-here/) and paste `http://127.0.0.1:4010/api/yoto/auth/callback` into **Allowed Callback URLs**. Change keys later in **Settings → Advanced**. Details: [docs/DESKTOP.md](docs/DESKTOP.md).
 
@@ -92,21 +100,27 @@ Full options, redirect URI, and `cookie_secure` notes: [homeassistant/louis/DOCS
 
 ## Self-host
 
+
+
 ### 1. Yoto client ID
 
 Louis ships a **public** PKCE client ID (not a secret): `PK00MDKCVwWvOG8o3px3qSl57FhfUZxm`. Paste it into `LOUIS_YOTO_CLIENT_ID` when you open Louis at a redirect already registered on Louis’s Yoto app — same value as desktop **Use default client** / the HA add-on default. There is **no** silent fallback if the env var is empty.
 
-| Redirect (exact) | Client |
-| ---------------- | ------ |
-| `http://127.0.0.1:4010/api/yoto/auth/callback` | Louis bundled (desktop) — see [DESKTOP.md](docs/DESKTOP.md) |
-| `http://homeassistant.local:4000/api/yoto/auth/callback` | Louis bundled (HA default) |
+
+| Redirect (exact)                                         | Client                                                      |
+| -------------------------------------------------------- | ----------------------------------------------------------- |
+| `http://127.0.0.1:4010/api/yoto/auth/callback`           | Louis bundled (desktop) — see [DESKTOP.md](docs/DESKTOP.md) |
+| `http://homeassistant.local:4000/api/yoto/auth/callback` | Louis bundled (HA default)                                  |
+
 
 For any **other** origin (NAS IP, custom hostname, HTTPS domain), create your **own** public client at [yoto.dev](https://yoto.dev/get-started/start-here/) so you can register that exact `/api/yoto/auth/callback`, then use that client ID instead:
 
-| Setting | Value |
-| ------- | ----- |
+
+| Setting                                         | Value                                                                                                                               |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | **Allowed Callback URLs** (yoto.dev field name) | `http://<host-ip-or-name>:4000/api/yoto/auth/callback` or `https://your-domain/api/yoto/auth/callback` — same origin you open Louis |
-| Scopes | `offline_access user:content:view user:content:manage user:icons:manage` |
+| Scopes                                          | `offline_access user:content:view user:content:manage user:icons:manage`                                                            |
+
 
 Ports: desktop OAuth is **4010** (`127.0.0.1` only). Docker / Home Assistant / reverse proxy (Nginx Proxy Manager, etc.) use **4000**, or your HTTPS hostname with no port when TLS terminates at the proxy. Paste the callback into **Allowed Callback URLs** — not Login URI / Logout URI.
 
@@ -118,49 +132,77 @@ Search still works without a key (bundled yt-dlp): slower, no safeSearch, and se
 
 ### 3. Environment
 
-Copy [`.env.example`](.env.example). Use `LOUIS_*` **names** so the same file works for local dev, `docker compose`, and `docker run --env-file .env` without rebuilding the image. Legacy `NUXT_*` / `NUXT_PUBLIC_*` names still work as a deprecated fallback (`LOUIS_*` wins when both are set).
+Copy `[.env.example](.env.example)`. Use `LOUIS_*` **names** so the same file works for local dev, `docker compose`, and `docker run --env-file .env` without rebuilding the image. Legacy `NUXT_`* / `NUXT_PUBLIC_*` names still work as a deprecated fallback (`LOUIS_*` wins when both are set).
 
 #### Required
 
-| Variable               | Notes            |
-| ---------------------- | ---------------- |
+
+| Variable               | Notes                                                                                                   |
+| ---------------------- | ------------------------------------------------------------------------------------------------------- |
 | `LOUIS_YOTO_CLIENT_ID` | Public PKCE client ID — Louis bundled (`PK00…`) for pre-registered redirects, or your own from yoto.dev |
+
+
+
 
 #### Yoto
 
-| Variable                   | Notes                                                                                                                                                                                                 |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `LOUIS_YOTO_REDIRECT_URI`  | Optional pin; must match the portal. Unset: Louis uses the Host the browser actually used. Prefer a hostname over a DHCP IP. Other devices cannot use the Docker host’s localhost                    |
-| `LOUIS_COOKIE_SECURE`      | OAuth cookie `Secure` flag. Docker image defaults `false` (LAN HTTP). Node-without-Docker: when unset, secure iff `NODE_ENV=production`. Set `true` behind HTTPS                                      |
+
+| Variable                  | Notes                                                                                                                                                                             |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LOUIS_YOTO_REDIRECT_URI` | Optional pin; must match the portal. Unset: Louis uses the Host the browser actually used. Prefer a hostname over a DHCP IP. Other devices cannot use the Docker host’s localhost |
+| `LOUIS_COOKIE_SECURE`     | OAuth cookie `Secure` flag. Docker image defaults `false` (LAN HTTP). Node-without-Docker: when unset, secure iff `NODE_ENV=production`. Set `true` behind HTTPS                  |
+
+
+
 
 #### YouTube / audio
 
-| Variable                      | Notes                                                                                                                                                                                                     |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `LOUIS_YOUTUBE_API_KEY`       | Recommended. YouTube Data API v3 (faster typed search). Unset: search without a key                                                                                                                     |
-| `LOUIS_YOUTUBE_SAFE_SEARCH`   | Typed-search content filtering when a Data API key is set: `none`, `moderate` (default), or `strict`. Desktop: **Settings → Advanced**; HA: **youtube_safe_search** option                                                                                               |
-| `LOUIS_AUDIO_WORK_DIR`         | Default `/data/audio` in Docker                                                                                                                                                                           |
+
+| Variable                       | Notes                                                                                                                                                                                                     |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LOUIS_YOUTUBE_API_KEY`        | Recommended. YouTube Data API v3 (faster typed search). Unset: search without a key                                                                                                                       |
+| `LOUIS_YOUTUBE_SAFE_SEARCH`    | Typed-search content filtering when a Data API key is set: `none`, `moderate` (default), or `strict`. Desktop: **Settings → Advanced**; HA: **youtube_safe_search** option                                |
+| `LOUIS_AUDIO_WORK_DIR`         | Default `/data/audio` in Docker. Preview/save cache plus `logs/pipeline.jsonl` (YouTube extract diagnostics). For a long local capture, point this at a stable path rather than OS tmp. |
 | `LOUIS_AUDIO_JOB_MAX_AGE_MS`   | Stale `jobs/` cleanup (default 1h)                                                                                                                                                                        |
 | `LOUIS_AUDIO_CACHE_MAX_AGE_MS` | Cache file TTL (default 14d)                                                                                                                                                                              |
-| `LOUIS_AUDIO_CACHE_MAX_BYTES`  | Combined preview + save cache cap (default 5 GiB)                                                                                                                                                         |
-| `LOUIS_YTDLP_PATH`             | Optional pin. Docker ships yt-dlp on `PATH`; Settings → Advanced can install a newer nightly into the audio volume / desktop app data (preferred when its version is newer) |
+| `LOUIS_AUDIO_CACHE_MAX_BYTES`  | Combined preview + save cache cap (default 5 GiB). Does not sweep `logs/`.                                                                                                                                |
+| `LOUIS_YTDLP_PATH`             | Optional pin. Docker ships yt-dlp on `PATH`; Settings → Advanced can install a newer nightly into the audio volume / desktop app data (preferred when its version is newer)                               |
 | `LOUIS_YTDLP_COOKIES_FILE`     | Optional Netscape `cookies.txt`. Downloads try anonymously first; cookies are used only if YouTube blocks with bot check, hard 403, or age-gate. Prefer a throwaway Google account; never commit the file |
 
+
+
+
 #### Advanced / debug
+
 
 | Variable                    | Notes                           |
 | --------------------------- | ------------------------------- |
 | `LOUIS_ENABLE_DEBUG_ROUTES` | `true` enables debug API routes |
+| `LOUIS_PIPELINE_LOG` | Pipeline journal on by default (`logs/pipeline.jsonl` under the audio work dir). Set `0` to disable |
+| `LOUIS_PIPELINE_LOG_VERBOSE` | `1` adds yt-dlp `-v` and larger stderr excerpts for a short capture window |
+
+After capturing, copy `logs/` off the volume if needed and run:
+
+```bash
+npm run diagnose:pipeline -- /data/audio
+npm run diagnose:pipeline -- --video dQw4w9wgXcQ --since 7d
+```
+
+
 
 ```bash
 docker run -p 4000:4000 --env-file .env louis:local
 ```
 
+
+
 ### 4. Deploy constraints
 
 - **Single instance** — save-job progress is in memory
 - **HTTPS in production** — Docker image defaults OAuth cookies to `LOUIS_COOKIE_SECURE=false` (LAN HTTP). Node-without-Docker defaults to `secure` when `NODE_ENV=production`. Set `true` behind TLS / reverse proxy; keep `false` for plain HTTP (Portainer LAN, Home Assistant)
-- **Persistent disk** — recommended for the audio cache under `LOUIS_AUDIO_WORK_DIR` (`cache/preview/`, `cache/save/`). Stale `jobs/` dirs and old cache files are swept on startup and after downloads. Compose uses the named volume `louis-audio`
+- **Persistent disk** — recommended for the audio cache under `LOUIS_AUDIO_WORK_DIR` (`cache/preview/`, `cache/save/`, `logs/`). Stale `jobs/` dirs and old cache files are swept on startup and after downloads; pipeline logs rotate by size and are not swept with the cache. Compose uses the named volume `louis-audio`
+
+
 
 ## Native development
 
@@ -187,6 +229,8 @@ Production without Docker:
 npm run build
 npm run start
 ```
+
+
 
 ## License & notices
 

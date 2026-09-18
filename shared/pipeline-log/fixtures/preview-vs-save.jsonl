@@ -1,0 +1,17 @@
+{"v":1,"ts":"2026-09-12T10:00:00.000Z","event":"runtime.snapshot","ytdlpVersion":"2026.09.01","jsRuntimeKind":"bare","cookiesConfigured":true,"cookiesReadable":true}
+{"v":1,"ts":"2026-09-12T10:01:00.000Z","event":"ytdlp.cache_hit","videoId":"aaaaaaaaaaa","mode":"preview","fileBytes":4096}
+{"v":1,"ts":"2026-09-12T10:02:00.000Z","event":"ytdlp.attempt","videoId":"aaaaaaaaaaa","mode":"save","attempt":1,"auth":"anon","playerClient":"default","action":"fail","ok":false,"errorClass":"bot_signin","hard403":false}
+{"v":1,"ts":"2026-09-12T10:02:00.100Z","event":"ytdlp.run.end","videoId":"aaaaaaaaaaa","mode":"save","ok":false,"errorClass":"bot_signin","attempts":4}
+{"v":1,"ts":"2026-09-12T11:00:00.000Z","event":"ytdlp.attempt","videoId":"bbbbbbbbbbb","mode":"preview","attempt":1,"auth":"anon","playerClient":"android","action":"ok","ok":true,"formatId":"251"}
+{"v":1,"ts":"2026-09-12T11:00:00.100Z","event":"ytdlp.run.end","videoId":"bbbbbbbbbbb","mode":"preview","ok":true,"formatId":"251"}
+{"v":1,"ts":"2026-09-12T11:01:00.000Z","event":"ytdlp.attempt","videoId":"bbbbbbbbbbb","mode":"save","attempt":1,"auth":"cookies","playerClient":"ios","action":"fail","ok":false,"errorClass":"retryable","formatId":"140"}
+{"v":1,"ts":"2026-09-12T11:01:00.100Z","event":"ytdlp.run.end","videoId":"bbbbbbbbbbb","mode":"save","ok":false,"errorClass":"retryable","formatId":"140"}
+{"v":1,"ts":"2026-09-12T12:00:00.000Z","event":"ytdlp.attempt","videoId":"ccccccccccc","mode":"save","attempt":1,"auth":"anon","playerClient":"default","action":"escalate","ok":false,"errorClass":"bot_signin"}
+{"v":1,"ts":"2026-09-12T12:00:01.000Z","event":"ytdlp.attempt","videoId":"ccccccccccc","mode":"save","attempt":2,"auth":"cookies","playerClient":"tv","action":"ok","ok":true}
+{"v":1,"ts":"2026-09-12T12:00:01.100Z","event":"ytdlp.run.end","videoId":"ccccccccccc","mode":"save","ok":true,"recovered":true,"escalated":true}
+{"v":1,"ts":"2026-09-12T12:01:00.000Z","event":"loudnorm.fallback","reason":"parse"}
+{"v":1,"ts":"2026-09-12T12:02:00.000Z","event":"yoto.transcode","result":"ok"}
+{"v":1,"ts":"2026-09-12T12:03:00.000Z","event":"save.job.start","operation":"update","normalizeVolume":true}
+{"v":1,"ts":"2026-09-12T12:03:30.000Z","event":"save.job.complete","operation":"update"}
+{"v":1,"ts":"2026-09-12T13:00:00.000Z","event":"ytdlp.cache_hit","videoId":"ddddddddddd","mode":"preview","fileBytes":8192}
+{"v":1,"ts":"2026-09-12T13:00:01.000Z","event":"ytdlp.preview_remux","videoId":"ddddddddddd","ok":true,"copied":true,"source":"ddddddddddd.m4a","fileBytes":8192}

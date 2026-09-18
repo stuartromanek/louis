@@ -22,6 +22,7 @@
     "desktop:build:win": "npm run desktop:sync-version && npm run desktop:fetch-binaries -- win32-x64 && npm run build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win nsis --x64 --publish never",
     "desktop:build:host": "node desktop/scripts/build-host.mjs",
     "test": "node --experimental-strip-types --test shared/*.test.ts shared/**/*.test.ts server/**/*.test.ts desktop/*.test.mjs desktop/**/*.test.mjs",
+    "diagnose:pipeline": "node --experimental-strip-types scripts/analyze-pipeline-log.mjs",
     "postinstall": "nuxt prepare",
     "release": "node desktop/scripts/release-it.mjs"
   },

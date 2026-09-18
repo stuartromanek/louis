@@ -2,6 +2,7 @@ import { createReadStream } from 'node:fs'
 import { stat } from 'node:fs/promises'
 import path from 'node:path'
 import { getYoutubePreviewAudio } from '../../../utils/youtube-download'
+import { withPipelineContext } from '../../../utils/pipeline-log'
 
 function previewMimeType(filename: string): string {
   switch (path.extname(filename).toLowerCase()) {
@@ -20,7 +21,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Invalid YouTube video id' })
   }
 
-  const audio = await getYoutubePreviewAudio(id, event)
+  const audio = await withPipelineContext(
+    { surface: 'preview', videoId: id, requestId: crypto.randomUUID() },
+    () => getYoutubePreviewAudio(id, event),
+  )
   const fileStat = await stat(audio.filePath)
   const mime = previewMimeType(audio.filename)
   const size = fileStat.size
