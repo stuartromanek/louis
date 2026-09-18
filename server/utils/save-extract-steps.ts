@@ -85,7 +85,7 @@ export function planYoutubeGroupExtract(input: {
     }
     const cut = shouldCut ? effectiveCutRange(track, input.actualDuration) : null
     const cutVia: ExtractCutVia | null = cut
-      ? (isTrimmed(track) ? 'trim' : 'split')
+      ? (isTrimmed(track, input.actualDuration) || !track.split ? 'trim' : 'split')
       : null
     return {
       cacheHit: false,

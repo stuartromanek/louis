@@ -12,6 +12,7 @@ import {
   isTrimmed,
   previewOffsetSeconds,
   resolveTrim,
+  scaleTrimToDuration,
   youtubeIdForTrack,
 } from '#shared/myo-editor/trackTrim'
 import { splitGroupSourceTitle, splitSourceDuration } from '#shared/myo-editor/splitTrack'
@@ -117,11 +118,31 @@ async function loadPeaks(next: PlaylistTrack) {
     )
     if (signal.aborted) return
     peaks.value = data.peaks
-    if (!(localDuration.value > 0) && data.duration > 0) {
-      localDuration.value = data.duration
-      const resolved = clampTrim(trimStart.value, trimEnd.value || data.duration, data.duration)
-      trimStart.value = resolved.startSeconds
-      trimEnd.value = resolved.endSeconds
+    if (data.duration > 0) {
+      const previous = localDuration.value
+      if (previous > 0 && Math.abs(previous - data.duration) > 0.05) {
+        const scaled = scaleTrimToDuration(
+          { startSeconds: trimStart.value, endSeconds: trimEnd.value || previous },
+          previous,
+          data.duration,
+        )
+        localDuration.value = data.duration
+        if (scaled) {
+          trimStart.value = scaled.startSeconds
+          trimEnd.value = scaled.endSeconds
+        }
+        else {
+          const resolved = clampTrim(0, data.duration, data.duration)
+          trimStart.value = resolved.startSeconds
+          trimEnd.value = resolved.endSeconds
+        }
+      }
+      else if (!(previous > 0)) {
+        localDuration.value = data.duration
+        const resolved = clampTrim(trimStart.value, trimEnd.value || data.duration, data.duration)
+        trimStart.value = resolved.startSeconds
+        trimEnd.value = resolved.endSeconds
+      }
     }
   }
   catch {

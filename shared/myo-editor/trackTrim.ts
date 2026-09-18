@@ -152,13 +152,16 @@ export function effectiveCutRange(
     return { startSeconds: start, durationSeconds: duration }
   }
 
-  const fileDuration = positiveSeconds(probedSourceDuration)
-    ?? sourceDurationSeconds(track)
-    ?? 0
+  const storedDuration = sourceDurationSeconds(track) ?? 0
+  const fileDuration = positiveSeconds(probedSourceDuration) ?? storedDuration
   if (!(fileDuration > 0)) return null
-  if (!isTrimmed(track, fileDuration)) return null
-  const trim = resolveTrim(track, fileDuration)
-  const duration = trim.endSeconds - trim.startSeconds
-  if (isFullFileTrim(trim.startSeconds, trim.endSeconds, fileDuration)) return null
-  return { startSeconds: trim.startSeconds, durationSeconds: duration }
+  // Scale keep-region onto the probed file. YouTube metadata is often a bit
+  // longer than ffmpeg's duration; clamp-only then treats a tail trim as the
+  // full file and the save path uploads uncut audio.
+  const fromDuration = storedDuration > 0 ? storedDuration : fileDuration
+  const keep = scaleTrimToDuration(track.trim, fromDuration, fileDuration)
+  if (!keep) return null
+  const duration = keep.endSeconds - keep.startSeconds
+  if (!(duration > 0)) return null
+  return { startSeconds: keep.startSeconds, durationSeconds: duration }
 }

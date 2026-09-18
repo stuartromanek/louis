@@ -371,13 +371,16 @@ async function runSaveJob(
         || replanned.some((track, index) => {
           const prev = previous[index]
           return prev?.id !== track.id
+            || prev?.duration !== track.duration
+            || prev?.trim?.startSeconds !== track.trim?.startSeconds
+            || prev?.trim?.endSeconds !== track.trim?.endSeconds
             || prev.split?.startSeconds !== track.split?.startSeconds
             || prev.split?.durationSeconds !== track.split?.durationSeconds
             || prev.split?.count !== track.split?.count
         })
-      if (!didReplan) return
-
+      // Always keep scaled trim/duration even when the split layout is unchanged.
       workingPlaylist = replanned
+      if (!didReplan) return
       workingPlan = buildSavePlan(baselinePlaylist, workingPlaylist, detail)
       if (workingPlan.errors.length > 0) {
         throw createError({
@@ -695,7 +698,7 @@ async function runSaveJob(
         const splitDir = path.join(audioWorkDir, 'jobs', jobId, part.youtubeId, 'parts')
         await mkdir(splitDir, { recursive: true })
         const destPath = path.join(splitDir, `part${track.split?.index ?? part.playlistIndex}.m4a`)
-        const cut = isTrimmed(track)
+        const cut = isTrimmed(track, actualDuration)
           ? await trimAudioFile({
               sourcePath: downloaded.filePath,
               destPath,

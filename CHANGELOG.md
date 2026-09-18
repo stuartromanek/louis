@@ -9,6 +9,15 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [Unreleased]
 
+### Added
+- **Pipeline journal** — YouTube preview, save, normalize, and remux write JSONL under `$LOUIS_AUDIO_WORK_DIR/logs/pipeline.jsonl` (on by default). `npm run diagnose:pipeline` prints preview-vs-save headlines. `LOUIS_PIPELINE_LOG=0` disables; `LOUIS_PIPELINE_LOG_VERBOSE=1` adds yt-dlp `-v` for a short capture.
+
+### Changed
+- After a successful preview, Update remuxes those bytes into the save cache instead of hitting YouTube a second time for the same video.
+
+### Fixed
+- Track trim could upload the full YouTube file when metadata duration was slightly longer than the probed audio — a tail cut looked like “keep everything.” Save now scales the keep-region onto the real file length.
+
 ## [1.2.5] - 2026-09-05
 
 ### Fixed

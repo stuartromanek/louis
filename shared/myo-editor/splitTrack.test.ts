@@ -514,4 +514,18 @@ describe('applyProbedDurations with source trim', () => {
     assert.ok((next[0]?.trim?.startSeconds ?? 0) > 500)
     assert.ok((next[0]?.trim?.endSeconds ?? 0) < 4000)
   })
+
+  it('keeps an unsplit tail trim when the probe is slightly shorter than metadata', () => {
+    const row = track({
+      id: 'short',
+      youtubeId: 'short',
+      duration: 185,
+      trim: { startSeconds: 0, endSeconds: 184.94 },
+    })
+    const next = applyProbedDurations([row], new Map([['short', 184.8]]))
+    assert.equal(next.length, 1)
+    assert.ok(next[0]?.trim)
+    assert.equal(next[0]?.duration, 184.8)
+    assert.ok((next[0]?.trim?.endSeconds ?? 0) < 184.8 - 0.05)
+  })
 })

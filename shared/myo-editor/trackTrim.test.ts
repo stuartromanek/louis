@@ -99,6 +99,23 @@ describe('effectiveCutRange', () => {
     )
   })
 
+  it('scales a tail trim onto a slightly shorter probed file instead of dropping it', () => {
+    const row = track({
+      duration: 185,
+      trim: { startSeconds: 0, endSeconds: 184.94 },
+    })
+    const clampedToProbe = clampTrim(0, 184.94, 184.8)
+    assert.equal(
+      isFullFileTrim(clampedToProbe.startSeconds, clampedToProbe.endSeconds, 184.8),
+      true,
+    )
+    const cut = effectiveCutRange(row, 184.8)
+    assert.ok(cut)
+    assert.equal(cut.startSeconds, 0)
+    assert.ok(cut.durationSeconds < 184.8 - 0.05)
+    assert.ok(cut.durationSeconds > 180)
+  })
+
   it('does not add source trim on top of a split window', () => {
     const part = track({
       duration: 2100,
