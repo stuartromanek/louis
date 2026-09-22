@@ -3,8 +3,8 @@ import { buildProvenance } from '#shared/myo-editor/parseProvenance'
 import { fetchYotoCardDetail } from '../../../../utils/yoto-card-detail'
 import { createOrUpdateContent } from '../../../../utils/yoto-content'
 import { mergeContentMetadata } from '../../../../utils/yoto-metadata'
-import { getScopeCookie, hasContentManageScope } from '../../../../utils/yoto-auth'
-import { getYotoAccessToken } from '../../../../utils/yoto'
+import { hasContentManageScope } from '../../../../utils/yoto-auth'
+import { getYotoAccessToken, getYotoAuthScope } from '../../../../utils/yoto'
 
 interface PatchIconBody {
   chapterKey?: string
@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'cardId is required' })
   }
 
-  const scope = getScopeCookie(event)
+  const scope = getYotoAuthScope(event)
   if (!hasContentManageScope(scope)) {
     throw createError({
       statusCode: 403,
