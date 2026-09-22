@@ -19,6 +19,7 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ### Fixed
 - Desktop Track Art Apply no longer 403s when `user:content:manage` is only in `yoto-session.json` (cookie scope empty). Icon patch now reads scope the same way as Update ([#24](https://github.com/stuartromanek/louis/issues/24)).
+- Cookie-escalated YouTube downloads no longer force `player_client=android`/`ios` (yt-dlp skips those with cookies and then looks “outdated”). Cookies use the default web client ([#16](https://github.com/stuartromanek/louis/issues/16)).
 - Desktop http(s) links (Report Issues, Settings, How To) open in the system browser instead of inside Louis ([#22](https://github.com/stuartromanek/louis/issues/22)).
 - Update no longer shows raw `ENOSPC` / “no space left on device.” That is the Louis audio disk (Docker/HA `/data/audio` or the desktop disk), not the playlist tracks/time meters ([#23](https://github.com/stuartromanek/louis/issues/23)).
 - Track trim could upload the full YouTube file when metadata duration was slightly longer than the probed audio — a tail cut looked like “keep everything.” Save now scales the keep-region onto the real file length.

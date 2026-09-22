@@ -16,6 +16,7 @@ import {
   formatYtdlpError,
   isHard403,
   playerClientForAttempt,
+  ytdlpPlayerClientExtractorArgs,
   shouldEscalateToCookies,
   shouldRetryYtdlp,
   YTDLP_COOKIE_FOLLOWUP_ATTEMPTS,
@@ -229,9 +230,7 @@ function buildYtdlpArgs(options: {
   if (options.cookiesArgs?.length) {
     args.push(...options.cookiesArgs)
   }
-  if (options.playerClient) {
-    args.push('--extractor-args', `youtube:player_client=${options.playerClient}`)
-  }
+  args.push(...ytdlpPlayerClientExtractorArgs(options.playerClient, Boolean(options.cookiesArgs?.length)))
   args.push('--', options.videoUrl)
   return args
 }
@@ -540,7 +539,7 @@ async function downloadYoutubeAudioUncached(
 
     try {
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        const playerClient = playerClientForAttempt(attempt)
+        const playerClient = useCookies ? null : playerClientForAttempt(attempt)
         const waitMs = backoffMsBeforeAttempt(attempt, previousErrorClass)
         if (waitMs > 0) await sleep(waitMs)
 

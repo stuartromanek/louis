@@ -38,6 +38,18 @@ export function playerClientForAttempt(attemptIndex: number): string | null {
   return YTDLP_PLAYER_CLIENT_SCHEDULE[index] ?? null
 }
 
+/**
+ * android/ios (and our scheduled clients) are skipped when cookies are set.
+ * Omit player_client so yt-dlp uses a cookie-compatible web client.
+ */
+export function ytdlpPlayerClientExtractorArgs(
+  playerClient: string | null,
+  usingCookies = false,
+): string[] {
+  if (usingCookies || !playerClient) return []
+  return ['--extractor-args', `youtube:player_client=${playerClient}`]
+}
+
 export function backoffMsBeforeAttempt(
   attemptIndex: number,
   previousErrorClass?: YtdlpErrorClass,

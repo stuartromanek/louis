@@ -7,6 +7,7 @@ import {
   formatYtdlpError,
   isHard403,
   shouldEscalateToCookies,
+  ytdlpPlayerClientExtractorArgs,
 } from '../../shared/myo-editor/ytdlpErrors.ts'
 import {
   excerptYtdlpOutput,
@@ -247,9 +248,7 @@ export async function runYtdlpJson(options: RunYtdlpJsonOptions): Promise<YtdlpD
       for (let i = 0; i < attempts.length; i++) {
         const attempt = attempts[i]!
         if (attempt.cookies) cookiesTried = true
-        const clientArgs = attempt.playerClient
-          ? ['--extractor-args', `youtube:player_client=${attempt.playerClient}`]
-          : []
+        const clientArgs = ytdlpPlayerClientExtractorArgs(attempt.playerClient, attempt.cookies)
         const args = attempt.cookies
           ? [...cookiesArgs, ...clientArgs, ...baseArgs]
           : [...clientArgs, ...baseArgs]

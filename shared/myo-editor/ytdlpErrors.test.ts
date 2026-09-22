@@ -6,6 +6,7 @@ import {
   formatYtdlpError,
   isHard403,
   playerClientForAttempt,
+  ytdlpPlayerClientExtractorArgs,
   shouldEscalateToCookies,
   shouldRetryYtdlp,
   YTDLP_BOT_CLIENT_SWITCH_MS,
@@ -197,6 +198,17 @@ describe('playerClientForAttempt / backoff', () => {
     assert.equal(backoffMsBeforeAttempt(3, 'bot_signin'), YTDLP_BOT_CLIENT_SWITCH_MS)
     assert.equal(backoffMsBeforeAttempt(1, 'retryable'), 1000)
     assert.equal(backoffMsBeforeAttempt(0, 'bot_signin'), 0)
+  })
+
+  it('omits player_client when cookies are set so android/ios are not skipped', () => {
+    assert.deepEqual(ytdlpPlayerClientExtractorArgs('android', false), [
+      '--extractor-args',
+      'youtube:player_client=android',
+    ])
+    assert.deepEqual(ytdlpPlayerClientExtractorArgs('ios', true), [])
+    assert.deepEqual(ytdlpPlayerClientExtractorArgs('android', true), [])
+    assert.deepEqual(ytdlpPlayerClientExtractorArgs(null, false), [])
+    assert.deepEqual(ytdlpPlayerClientExtractorArgs(null, true), [])
   })
 })
 
