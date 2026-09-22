@@ -1,3 +1,5 @@
+import { HOST_DISK_FULL_MESSAGE, looksLikeHostDiskFull } from '../hostDiskFull.ts'
+
 export type YtdlpErrorClass =
   | 'retryable'
   | 'outdated'
@@ -200,6 +202,10 @@ export function formatYtdlpError(
   const lines = stderr.split('\n').map(line => line.trim()).filter(Boolean)
   const detail = extractYtdlpErrorDetail(stderr)
   const errorClass = classifyYtdlpStderr(stderr)
+
+  if (looksLikeHostDiskFull(stderr) || looksLikeHostDiskFull(detail ?? '')) {
+    return HOST_DISK_FULL_MESSAGE
+  }
 
   if (errorClass === 'outdated') {
     return `YouTube download failed for ${youtubeId}. yt-dlp is likely outdated — Settings → Advanced → Check for updates (Docker/desktop), or native: pip install -U --pre "yt-dlp[default]" / brew upgrade yt-dlp`

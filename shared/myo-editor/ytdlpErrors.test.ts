@@ -286,4 +286,22 @@ describe('formatYtdlpError', () => {
     ].join('\n')
     assert.match(formatYtdlpError(stderr, 'abc'), /no JavaScript runtime/)
   })
+
+  it('maps ENOSPC / Errno 28 to a host-disk message, not playlist capacity', () => {
+    const ytdlp = formatYtdlpError(
+      'ERROR: [youtube] vSYadh2xmcI: unable to write data: [Errno 28] No space left on device',
+      'vSYadh2xmcI',
+    )
+    assert.match(ytdlp, /audio folder/)
+    assert.match(ytdlp, /tracks\/time meters/)
+    assert.doesNotMatch(ytdlp, /vSYadh2xmcI/)
+    assert.doesNotMatch(ytdlp, /Errno 28/)
+
+    const nodeCopy = formatYtdlpError(
+      "ENOSPC: no space left on device, copyfile '/data/audio/jobs/x.m4a'",
+      'raWnI3FfJ90',
+    )
+    assert.match(nodeCopy, /\/data\/audio/)
+    assert.doesNotMatch(nodeCopy, /raWnI3FfJ90/)
+  })
 })

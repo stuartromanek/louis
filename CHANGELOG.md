@@ -19,6 +19,7 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ### Fixed
 - Desktop Track Art Apply no longer 403s when `user:content:manage` is only in `yoto-session.json` (cookie scope empty). Icon patch now reads scope the same way as Update ([#24](https://github.com/stuartromanek/louis/issues/24)).
+- Update no longer shows raw `ENOSPC` / “no space left on device.” That is the Louis audio disk (Docker/HA `/data/audio` or the desktop disk), not the playlist tracks/time meters ([#23](https://github.com/stuartromanek/louis/issues/23)).
 - Track trim could upload the full YouTube file when metadata duration was slightly longer than the probed audio — a tail cut looked like “keep everything.” Save now scales the keep-region onto the real file length.
 - Uploaded playlist covers no longer punch in ~10% on art that is not exactly the cover frame. Min zoom shows the whole image (letterboxed); zoom in still fills the card.
 - Saving playlist artwork no longer opens the Customize drawer.

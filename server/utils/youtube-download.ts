@@ -5,6 +5,10 @@ import { copyFile, mkdir, readdir, readFile, rm, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { promisify } from 'node:util'
 import type { H3Event } from 'h3'
+import {
+  HOST_DISK_FULL_MESSAGE,
+  isHostDiskFullError,
+} from '#shared/hostDiskFull'
 import { YOTO_MYO_MAX_TRACK_BYTES } from '#shared/myo-editor/yotoMyoLimits'
 import {
   backoffMsBeforeAttempt,
@@ -696,7 +700,15 @@ async function downloadYoutubeAudioUncached(
 
         const cachePath = path.join(cacheDir, audioFile)
         await readFile(filePath)
-        await copyFile(filePath, cachePath)
+        try {
+          await copyFile(filePath, cachePath)
+        }
+        catch (err) {
+          if (isHostDiskFullError(err)) {
+            throw httpError(507, HOST_DISK_FULL_MESSAGE)
+          }
+          throw err
+        }
         await runAudioCacheSweep(event)
 
         emitYtdlpAttempt({

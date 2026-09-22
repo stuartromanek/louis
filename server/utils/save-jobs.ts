@@ -26,6 +26,7 @@ import {
   getTrackMediaLimitError,
   withMappedYotoLimitError,
 } from '#shared/myo-editor/yotoMyoLimits'
+import { hostDiskFullMessageIfMatch } from '#shared/hostDiskFull'
 import { downloadYoutubeAudio } from './youtube-download'
 import { hashFileSha256, pollPutAudioTranscode, putAudioForTranscode } from './yoto-media'
 import { loudnormAudioFile } from './ffmpeg-loudnorm'
@@ -215,7 +216,8 @@ export function startSaveJob(
     }
     catch (err: unknown) {
       const e = err as { statusMessage?: string; message?: string }
-      const error = withMappedYotoLimitError(e.statusMessage ?? e.message ?? 'Save failed')
+      const raw = e.statusMessage ?? e.message ?? 'Save failed'
+      const error = withMappedYotoLimitError(hostDiskFullMessageIfMatch(raw) ?? raw)
       updateJob(jobId, {
         status: 'failed',
         error,
@@ -965,8 +967,9 @@ async function runSaveJob(
     const e = err as { statusMessage?: string; message?: string }
     const trackTitle = activeSaveTrackTitle(job)
       ?? firstOverLimitTrackTitle(workingPlaylist, uploadedByIndex)
+    const raw = e.statusMessage ?? e.message ?? 'Save failed'
     const message = withMappedYotoLimitError(
-      e.statusMessage ?? e.message ?? 'Save failed',
+      hostDiskFullMessageIfMatch(raw) ?? raw,
       trackTitle,
     )
 
