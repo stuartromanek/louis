@@ -71,7 +71,7 @@ export const UI_SOUND_REGISTRY: Record<UiSoundEvent, UiSoundRegistryConfig> = {
   loadMoreClick: { sounds: 'button', volume: 0.85 },
   loadMoreComplete: { sounds: 'ringtone_loop', volume: 0.8, oneShot: true },
   authGateShow: { sounds: 'ringtone_loop', volume: 0.8, oneShot: true },
-  splashCue: { sounds: 'louis', volume: 0.9 },
+  splashCue: { sounds: 'louis', volume: 0.45 },
   authConnected: { sounds: 'celebration', volume: 1 },
   toastDismiss: { sounds: uiSoundVariants('swipe'), volume: 0.7 },
   pixelPaint: { sounds: ['scribble-1', 'scribble-2'], volume: 0.4, exclusive: 'pixelStroke' },

@@ -13,6 +13,7 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - **Pipeline journal** — YouTube preview, save, normalize, and remux write JSONL under `$LOUIS_AUDIO_WORK_DIR/logs/pipeline.jsonl` (on by default). `npm run diagnose:pipeline` prints preview-vs-save headlines. `LOUIS_PIPELINE_LOG=0` disables; `LOUIS_PIPELINE_LOG_VERBOSE=1` adds yt-dlp `-v` for a short capture.
 
 ### Changed
+- Splash **Louis!** shout is quieter and plays at most once per local day. The intro still runs every time; `npm run dev` and `?splash=debug` always play the cue so it stays easy to hear while iterating ([#25](https://github.com/stuartromanek/louis/issues/25)).
 - After a successful preview, Update remuxes those bytes into the save cache instead of hitting YouTube a second time for the same video.
 - Playlist covers, cropper, and library cards use Yoto’s default cover frame (638×1011) instead of 5:7, so `imageL` fills the pane. The playlist name stays in a white band inside the same bordered card.
 

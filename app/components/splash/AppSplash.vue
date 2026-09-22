@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import lottie, { type AnimationItem } from 'lottie-web'
+import {
+  SPLASH_CUE_DAY_KEY,
+  shouldPlaySplashCue,
+  splashCueLocalDay,
+} from '#shared/splashCueDay'
 import { resolveUiSoundEvent } from '~/utils/uiSoundRegistry'
 
 /** Tunable: fire splashCue when the playhead reaches this frame (30fps). */
@@ -96,14 +101,51 @@ function togglePause() {
   paused.value = true
 }
 
+/** Dev and `?splash=debug` always shout so the cue is easy to hear while iterating. */
+function splashCueForced(): boolean {
+  return import.meta.dev || props.debug
+}
+
+function readSplashCueDay(): string | null {
+  try {
+    if (typeof localStorage === 'undefined') return null
+    return localStorage.getItem(SPLASH_CUE_DAY_KEY)
+  } catch {
+    return null
+  }
+}
+
+function markSplashCueHeard() {
+  if (splashCueForced()) return
+  try {
+    if (typeof localStorage === 'undefined') return
+    localStorage.setItem(SPLASH_CUE_DAY_KEY, splashCueLocalDay())
+  } catch {
+    // Private mode / quota — will try again next splash.
+  }
+}
+
+function splashCueShouldPlay(): boolean {
+  return shouldPlaySplashCue({
+    force: splashCueForced(),
+    storedDay: readSplashCueDay(),
+  })
+}
+
 /** Play louis.wav via the shared UI sound player at the cue frame. */
 async function fireSplashCue() {
   if (soundFired || finished || leaving.value) return
+  if (!splashCueShouldPlay()) {
+    soundFired = true
+    cuePending = false
+    return
+  }
   const ok = await tryPlayEvent('splashCue')
   if (ok) {
     soundFired = true
     cuePending = false
     audioLocked.value = false
+    markSplashCueHeard()
     return
   }
   // Browser blocked autoplay — retry after the next user gesture.
@@ -204,7 +246,9 @@ function onPointerDown() {
 }
 
 onMounted(() => {
-  preload(resolveUiSoundEvent('splashCue').id)
+  if (splashCueShouldPlay()) {
+    preload(resolveUiSoundEvent('splashCue').id)
+  }
 
   window.addEventListener('keydown', onKeydown)
   window.addEventListener('pointerdown', onPointerDown, { capture: true })
