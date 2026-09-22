@@ -17,6 +17,7 @@ import { BUNDLED_YOTO_CLIENT_ID } from '../shared/bundledYotoClientId.mjs'
 import { pickLouisEnv, setLouisAndNuxtEnv } from '../shared/louis-env.mjs'
 import { ytdlpJsRuntimeSpecForDesktop } from './js-runtime.mjs'
 import { formatDegradedHealthError, formatHealthTimeoutMessage } from './nitro-health.mjs'
+import { attachExternalLinkHandlers } from './open-external.mjs'
 
 const require = createRequire(import.meta.url)
 const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron')
@@ -388,6 +389,11 @@ function createWindow() {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show()
+  })
+
+  attachExternalLinkHandlers(mainWindow.webContents, {
+    appOrigin: BASE_URL,
+    openExternal: (url) => shell.openExternal(url),
   })
 
   return mainWindow
