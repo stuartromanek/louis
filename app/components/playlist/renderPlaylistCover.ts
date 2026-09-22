@@ -1,7 +1,8 @@
 import {
-  coverSourceRect,
+  coverDestRect,
   PLAYLIST_COVER_EXPORT_HEIGHT,
   PLAYLIST_COVER_EXPORT_WIDTH,
+  PLAYLIST_COVER_LETTERBOX,
   PLAYLIST_COVER_UPLOAD_MAX_BYTES,
   type CoverCrop,
 } from '#shared/myo-editor/playlistCoverCrop'
@@ -21,24 +22,26 @@ export async function renderPlaylistCoverPng(
   imageHeight: number,
   crop: CoverCrop,
 ): Promise<Blob> {
-  const rect = coverSourceRect(imageWidth, imageHeight, crop)
+  const dest = coverDestRect(imageWidth, imageHeight, crop)
   const canvas = document.createElement('canvas')
   canvas.width = PLAYLIST_COVER_EXPORT_WIDTH
   canvas.height = PLAYLIST_COVER_EXPORT_HEIGHT
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Could not crop that image.')
+  ctx.fillStyle = PLAYLIST_COVER_LETTERBOX
+  ctx.fillRect(0, 0, PLAYLIST_COVER_EXPORT_WIDTH, PLAYLIST_COVER_EXPORT_HEIGHT)
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'high'
   ctx.drawImage(
     image,
-    rect.x,
-    rect.y,
-    rect.width,
-    rect.height,
     0,
     0,
-    PLAYLIST_COVER_EXPORT_WIDTH,
-    PLAYLIST_COVER_EXPORT_HEIGHT,
+    imageWidth,
+    imageHeight,
+    dest.x,
+    dest.y,
+    dest.width,
+    dest.height,
   )
   const blob = await new Promise<Blob | null>((resolve) => {
     canvas.toBlob(resolve, 'image/png')

@@ -630,8 +630,8 @@
 
 .playlist-artwork-editor__card {
   position: relative;
-  width: min(100%, calc(min(16rem, 34vh) * 5 / 7));
-  aspect-ratio: 5 / 7;
+  width: min(100%, calc(min(16rem, 34vh) * 638 / 1011));
+  aspect-ratio: 638 / 1011;
   margin-inline: auto;
   overflow: hidden;
   background: var(--color-maru-gray-light);
@@ -688,7 +688,7 @@
   outline-offset: -1px;
 }
 
-.playlist-artwork-editor__img--cover {
+.playlist-artwork-editor__img--fill {
   object-fit: cover;
 }
 
@@ -700,6 +700,7 @@
   cursor: grab;
   touch-action: none;
   user-select: none;
+  background: #000;
 }
 
 .playlist-artwork-editor__crop:active {
@@ -886,6 +887,10 @@
 .playlist-artwork-editor__customize:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.playlist-artwork-editor__customize--quiet {
+  pointer-events: none;
 }
 
 .playlist-artwork-editor__pool-reveal {

@@ -14,9 +14,12 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ### Changed
 - After a successful preview, Update remuxes those bytes into the save cache instead of hitting YouTube a second time for the same video.
+- Playlist covers, cropper, and library cards use Yoto’s default cover frame (638×1011) instead of 5:7, so `imageL` fills the pane. The playlist name stays in a white band inside the same bordered card.
 
 ### Fixed
 - Track trim could upload the full YouTube file when metadata duration was slightly longer than the probed audio — a tail cut looked like “keep everything.” Save now scales the keep-region onto the real file length.
+- Uploaded playlist covers no longer punch in ~10% on art that is not exactly the cover frame. Min zoom shows the whole image (letterboxed); zoom in still fills the card.
+- Saving playlist artwork no longer opens the Customize drawer.
 
 ## [1.2.5] - 2026-09-05
 

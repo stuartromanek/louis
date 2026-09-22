@@ -30,11 +30,6 @@ function formatDuration(seconds: number): string {
   return `${totalMinutes} min`
 }
 
-function formatTrackCount(count: number): string {
-  if (!count) return ''
-  return `${count} trk`
-}
-
 const detailLabel = computed(() => {
   if (props.placeholder || !props.card) return ''
   const parts: string[] = []
@@ -107,9 +102,9 @@ const cardMotionStyle = computed(() => {
         v-if="placeholder"
         class="myo-playing-card myo-playing-card--placeholder"
       >
-        <div class="myo-playing-card__face border-maru rounded-maru bg-maru-white overflow-hidden">
+        <div class="myo-playing-card__face border-maru rounded-maru overflow-hidden">
           <div class="myo-playing-card__art library-placeholder__pulse" />
-          <div class="myo-playing-card__footer border-maru-top">
+          <div class="myo-playing-card__label">
             <p class="myo-playing-card__title library-placeholder__bar" />
           </div>
         </div>
@@ -128,42 +123,27 @@ const cardMotionStyle = computed(() => {
         @mouseenter="onHover"
         @click="onSelect"
       >
-      <div class="myo-playing-card__face border-maru rounded-maru bg-maru-white overflow-hidden">
-        <div class="myo-playing-card__art">
-          <img
-            v-if="card.coverUrl"
-            :src="card.coverUrl"
-            :alt="card.title"
-            class="myo-playing-card__cover"
-            loading="lazy"
-          >
-          <div v-else class="myo-playing-card__cover myo-playing-card__cover--empty">
-            <span class="type-caption text-maru-gray">MYO</span>
+        <div class="myo-playing-card__face border-maru rounded-maru overflow-hidden">
+          <div class="myo-playing-card__art">
+            <img
+              v-if="card.coverUrl"
+              :src="card.coverUrl"
+              :alt="card.title"
+              class="myo-playing-card__cover"
+              loading="lazy"
+            >
+            <div v-else class="myo-playing-card__cover myo-playing-card__cover--empty">
+              <span class="type-caption text-maru-gray">MYO</span>
+            </div>
           </div>
 
-          <p
-            v-if="card.duration || card.trackCount"
-            class="myo-playing-card__duration type-meta"
-          >
-            <template v-if="card.duration">{{ formatDuration(card.duration) }}</template>
-            <template v-if="card.duration && card.trackCount"> · </template>
-            <template v-if="card.trackCount">{{ formatTrackCount(card.trackCount) }}</template>
-          </p>
+          <div class="myo-playing-card__label">
+            <p class="myo-playing-card__title type-title-sm font-maru-medium text-maru-black truncate">
+              {{ card.title }}
+            </p>
+          </div>
         </div>
-
-        <div class="myo-playing-card__footer border-maru-top">
-          <p class="myo-playing-card__title type-title font-maru-medium text-maru-black line-clamp-2">
-            {{ card.title }}
-          </p>
-          <p
-            v-if="card.author"
-            class="type-meta-sm text-maru-gray truncate mt-0.5"
-          >
-            {{ card.author }}
-          </p>
-        </div>
-      </div>
-    </button>
+      </button>
     </div>
   </li>
 </template>
@@ -171,15 +151,20 @@ const cardMotionStyle = computed(() => {
 <style scoped>
 .myo-playing-card-slot {
   position: relative;
+  display: flex;
   flex: 0 0 auto;
   height: 90%;
-  min-height: 7.65rem;
+  width: auto;
+  min-height: 9.25rem;
   overflow: visible;
   transition: z-index 0ms;
 }
 
 .myo-playing-card-slot__motion {
+  display: flex;
+  flex-direction: column;
   height: 100%;
+  width: auto;
   transform: rotate(var(--card-rotate, 0deg));
   transform-origin: center 88%;
   animation: myo-card-wobble var(--wobble-duration, 3.5s) ease-in-out infinite;
@@ -231,12 +216,14 @@ const cardMotionStyle = computed(() => {
   position: relative;
   display: block;
   height: 100%;
+  width: max-content;
+  min-width: 0;
   padding: 0;
   border: 0;
   background: transparent;
   cursor: pointer;
   transform: scale(0.91);
-  transform-origin: center center;
+  transform-origin: center 88%;
   transition: transform 220ms cubic-bezier(0.2, 0, 0, 1);
 }
 
@@ -263,12 +250,13 @@ const cardMotionStyle = computed(() => {
 }
 
 .myo-playing-card__face {
-  height: 100%;
-  width: auto;
-  aspect-ratio: 5 / 7;
   display: grid;
-  grid-template-rows: 1fr auto;
+  grid-template-rows: minmax(0, 1fr) 1.55rem;
+  grid-template-columns: min-content;
+  height: 100%;
+  width: max-content;
   box-sizing: border-box;
+  background: var(--color-maru-white);
   box-shadow: 2px 3px 0 var(--color-maru-black);
   transition:
     border-color 220ms cubic-bezier(0.2, 0, 0, 1),
@@ -288,22 +276,28 @@ const cardMotionStyle = computed(() => {
     inset 0 0 0 3px var(--color-maru-magenta-lighter);
 }
 
-.myo-playing-card--selected .myo-playing-card__footer {
+.myo-playing-card--selected .myo-playing-card__label {
   background: var(--color-maru-magenta-lighter);
 }
 
 .myo-playing-card__art {
   position: relative;
+  justify-self: start;
+  min-width: 0;
   min-height: 0;
+  height: 100%;
+  aspect-ratio: 638 / 1011;
+  width: auto;
   overflow: hidden;
   background: var(--color-maru-gray-light);
 }
 
 .myo-playing-card__cover {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  min-height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
 }
 
@@ -311,24 +305,30 @@ const cardMotionStyle = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 5rem;
 }
 
-.myo-playing-card__duration {
-  position: absolute;
-  top: 0.25rem;
-  right: 0.25rem;
-  padding: 0.125rem 0.25rem;
-  border: 2px solid var(--color-maru-black);
-  border-radius: calc(var(--radius-maru) - 2px);
-  background: var(--color-maru-yellow-light);
-  color: var(--color-maru-black);
-  line-height: 1;
-}
-
-.myo-playing-card__footer {
-  padding: 0.5rem 0.5rem 0.625rem;
+.myo-playing-card__label {
+  width: 0;
+  min-width: 100%;
+  height: 100%;
+  padding: 0 0.35rem;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--color-maru-white);
+  border-top: 2px solid var(--color-maru-black);
+}
+
+.myo-playing-card__title {
+  flex: 1 1 0;
+  min-width: 0;
+  width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-wrap: nowrap;
+  text-align: center;
 }
 
 .myo-playing-card--loading .myo-playing-card__face {

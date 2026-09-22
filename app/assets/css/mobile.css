@@ -673,13 +673,17 @@
 .mobile-library-tile__art-wrap {
   position: relative;
   width: 100%;
+  aspect-ratio: 638 / 1011;
+  overflow: hidden;
+  background: var(--color-maru-gray-light);
 }
 
 .mobile-library-tile__art {
-  aspect-ratio: 3 / 4;
+  position: absolute;
+  inset: 0;
   width: 100%;
-  object-fit: cover;
-  background: var(--color-maru-gray-light);
+  height: 100%;
+  object-fit: contain;
   display: block;
 }
 
@@ -885,8 +889,8 @@
   position: relative;
   z-index: 1;
   width: min(42%, 9.5rem);
-  aspect-ratio: 3 / 4;
-  object-fit: cover;
+  aspect-ratio: 638 / 1011;
+  object-fit: contain;
   border: 3px solid var(--color-maru-black);
   border-radius: calc(var(--radius-maru) - 4px);
   background: var(--color-maru-black);
@@ -1485,13 +1489,17 @@
 .mobile-add-drawer__card-art-wrap {
   position: relative;
   width: 100%;
+  aspect-ratio: 638 / 1011;
+  overflow: hidden;
+  background: var(--color-maru-gray-light);
 }
 
 .mobile-add-drawer__card-art {
-  aspect-ratio: 3 / 4;
+  position: absolute;
+  inset: 0;
   width: 100%;
-  object-fit: cover;
-  background: var(--color-maru-gray-light);
+  height: 100%;
+  object-fit: contain;
   display: block;
 }
 

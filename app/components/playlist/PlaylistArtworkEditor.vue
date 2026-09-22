@@ -18,10 +18,13 @@ import {
 } from '#shared/myo-editor/playlistArtwork'
 import {
   clampCoverCrop,
+  coverDestRect,
   coverImageStyle,
-  coverSourceRect,
-  panFromSourceOrigin,
+  panFromDestOrigin,
   PLAYLIST_COVER_ACCEPT,
+  PLAYLIST_COVER_EXPORT_HEIGHT,
+  PLAYLIST_COVER_EXPORT_WIDTH,
+  PLAYLIST_COVER_LETTERBOX,
   playlistCoverFileError,
   type CoverCrop,
 } from '#shared/myo-editor/playlistCoverCrop'
@@ -85,6 +88,18 @@ const locked = computed(() => props.busy || props.disabled)
 const excludedStyles = ref(new Set<PlaylistArtworkStyle>())
 const excludedBackgrounds = ref(new Set<PlaylistArtworkBackground>())
 const poolOpen = ref(false)
+/** Blocks Customize from eating the Save click after crop UI hides. */
+const poolClicksQuiet = ref(false)
+let poolQuietTimer = 0
+
+function quietPoolClicks(ms = 400) {
+  poolClicksQuiet.value = true
+  window.clearTimeout(poolQuietTimer)
+  poolQuietTimer = window.setTimeout(() => {
+    poolClicksQuiet.value = false
+    poolQuietTimer = 0
+  }, ms)
+}
 
 const enabledStyles = computed(() =>
   PLAYLIST_ARTWORK_STYLES.filter(style => !excludedStyles.value.has(style)),
@@ -148,6 +163,7 @@ function commitHistory(next: { items: PlaylistArtworkHistoryItem[]; index: numbe
 }
 
 function endCrop() {
+  const wasCropping = Boolean(cropUrl.value)
   if (cropUrl.value) URL.revokeObjectURL(cropUrl.value)
   cropUrl.value = null
   cropWidth.value = 0
@@ -158,6 +174,7 @@ function endCrop() {
   cropBusy.value = false
   pointers.clear()
   lastPan = null
+  if (wasCropping) quietPoolClicks()
 }
 
 function resetHistory() {
@@ -209,6 +226,8 @@ watch(() => props.coverUrl, (url) => {
 onUnmounted(() => {
   revokeDroppedUploads([])
   endCrop()
+  window.clearTimeout(poolQuietTimer)
+  poolQuietTimer = 0
 })
 
 async function snapshotCrop(): Promise<{ url: string; blob: Blob } | null> {
@@ -325,6 +344,7 @@ function onForward() {
 }
 
 function onSave() {
+  quietPoolClicks()
   void (async () => {
     if (cropping.value) {
       try {
@@ -432,13 +452,13 @@ function onCropPointerMove(event: PointerEvent) {
   const dx = (event.clientX - lastPan.x) / bounds.width
   const dy = (event.clientY - lastPan.y) / bounds.height
   lastPan = { x: event.clientX, y: event.clientY }
-  const rect = coverSourceRect(cropWidth.value, cropHeight.value, cropState())
-  applyCrop(panFromSourceOrigin(
+  const dest = coverDestRect(cropWidth.value, cropHeight.value, cropState())
+  applyCrop(panFromDestOrigin(
     cropWidth.value,
     cropHeight.value,
     cropZoom.value,
-    rect.x - dx * rect.width,
-    rect.y - dy * rect.height,
+    dest.x + dx * PLAYLIST_COVER_EXPORT_WIDTH,
+    dest.y + dy * PLAYLIST_COVER_EXPORT_HEIGHT,
   ))
 }
 
@@ -473,6 +493,7 @@ function onPreviewImgRef(el: Element | null) {
 }
 
 function openPool() {
+  if (poolClicksQuiet.value) return
   if (locked.value || poolOpen.value || cropping.value) {
     playEvent('disabled')
     return
@@ -546,6 +567,7 @@ defineExpose({
         v-if="cropping && cropUrl && cropStyle"
         ref="cropStageRef"
         class="playlist-artwork-editor__crop"
+        :style="{ backgroundColor: PLAYLIST_COVER_LETTERBOX }"
         @pointerdown="onCropPointerDown"
         @pointermove="onCropPointerMove"
         @pointerup="onCropPointerUp"
@@ -571,7 +593,7 @@ defineExpose({
           :src="previewUrl"
           alt=""
           class="playlist-artwork-editor__img"
-          :class="{ 'playlist-artwork-editor__img--cover': current?.kind !== 'generated' }"
+          :class="{ 'playlist-artwork-editor__img--fill': current?.kind === 'generated' }"
           :ref="onPreviewImgRef"
           @load="onPreviewLoad"
         >
@@ -656,6 +678,7 @@ defineExpose({
       v-if="!poolOpen && !cropping"
       type="button"
       class="playlist-artwork-editor__customize type-button-secondary font-maru-bold"
+      :class="{ 'playlist-artwork-editor__customize--quiet': poolClicksQuiet }"
       :disabled="locked"
       @click="openPool"
     >

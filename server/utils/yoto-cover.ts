@@ -46,6 +46,7 @@ export async function uploadYotoCover(
   file: Buffer,
   filename = 'cover.png',
 ): Promise<YotoCoverUploadResult> {
+  // coverType=default + autoconvert → Yoto serves ~638×1011 (see playlistCoverCrop export size).
   const query = new URLSearchParams({
     autoconvert: 'true',
     coverType: 'default',

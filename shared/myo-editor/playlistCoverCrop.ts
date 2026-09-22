@@ -1,10 +1,16 @@
-/** Yoto playlist cards are 5×7. Export large enough for imageL. */
-export const PLAYLIST_COVER_ASPECT_WIDTH = 5
-export const PLAYLIST_COVER_ASPECT_HEIGHT = 7
-export const PLAYLIST_COVER_EXPORT_WIDTH = 640
-export const PLAYLIST_COVER_EXPORT_HEIGHT = 896
+/**
+ * Yoto `coverType=default` (autoconvert) serves 638×1011, not 5:7.
+ * Crop, export, and library cards share this frame so `imageL` fills the pane.
+ */
+export const PLAYLIST_COVER_EXPORT_WIDTH = 638
+export const PLAYLIST_COVER_EXPORT_HEIGHT = 1011
+export const PLAYLIST_COVER_ASPECT_WIDTH = PLAYLIST_COVER_EXPORT_WIDTH
+export const PLAYLIST_COVER_ASPECT_HEIGHT = PLAYLIST_COVER_EXPORT_HEIGHT
+/** Zoom 1 = object-fit contain (full image visible). */
 export const PLAYLIST_COVER_ZOOM_MIN = 1
 export const PLAYLIST_COVER_ZOOM_MAX = 4
+/** Letterbox behind contain; must match the crop stage. */
+export const PLAYLIST_COVER_LETTERBOX = '#000000'
 
 export const PLAYLIST_COVER_ACCEPT
   = 'image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif'
@@ -25,12 +31,12 @@ export const PLAYLIST_COVER_UPLOAD_MAX_BYTES = 1_500_000
 
 export type CoverCrop = {
   zoom: number
-  /** -1..1, 0 is centered. */
+  /** -1..1, 0 is centered. Unused until dest overflows the frame. */
   panX: number
   panY: number
 }
 
-export type CoverSourceRect = {
+export type CoverDestRect = {
   x: number
   y: number
   width: number
@@ -72,54 +78,88 @@ export function clampCoverCrop(crop: CoverCrop): CoverCrop {
   }
 }
 
-/** Smallest 5:7 window that still covers the image (object-fit: cover at zoom 1). */
-export function minCoverCropSize(imageWidth: number, imageHeight: number): { width: number; height: number } {
-  const frame = playlistCoverAspect()
-  const image = imageWidth / imageHeight
-  if (image > frame) {
-    return { width: imageHeight * frame, height: imageHeight }
+export function coverFitScale(
+  imageWidth: number,
+  imageHeight: number,
+  frameWidth: number = PLAYLIST_COVER_EXPORT_WIDTH,
+  frameHeight: number = PLAYLIST_COVER_EXPORT_HEIGHT,
+): { contain: number, cover: number } {
+  if (!(imageWidth > 0) || !(imageHeight > 0) || !(frameWidth > 0) || !(frameHeight > 0)) {
+    return { contain: 1, cover: 1 }
   }
-  return { width: imageWidth, height: imageWidth / frame }
+  return {
+    contain: Math.min(frameWidth / imageWidth, frameHeight / imageHeight),
+    cover: Math.max(frameWidth / imageWidth, frameHeight / imageHeight),
+  }
 }
 
-export function coverSourceRect(
+/** Zoom at which the image fills the Yoto cover frame (object-fit: cover). */
+export function coverFitZoom(
+  imageWidth: number,
+  imageHeight: number,
+  frameWidth: number = PLAYLIST_COVER_EXPORT_WIDTH,
+  frameHeight: number = PLAYLIST_COVER_EXPORT_HEIGHT,
+): number {
+  const { contain, cover } = coverFitScale(imageWidth, imageHeight, frameWidth, frameHeight)
+  if (!(contain > 0)) return 1
+  return cover / contain
+}
+
+function destSize(
+  imageWidth: number,
+  imageHeight: number,
+  zoom: number,
+  frameWidth: number,
+  frameHeight: number,
+): { width: number, height: number } {
+  const { contain } = coverFitScale(imageWidth, imageHeight, frameWidth, frameHeight)
+  const z = clamp(zoom, PLAYLIST_COVER_ZOOM_MIN, PLAYLIST_COVER_ZOOM_MAX)
+  return {
+    width: imageWidth * contain * z,
+    height: imageHeight * contain * z,
+  }
+}
+
+function axisOrigin(slack: number, pan: number): number {
+  if (slack >= 0) return slack / 2
+  return slack / 2 + pan * (slack / 2)
+}
+
+/** Image placement in the Yoto cover frame. Zoom 1 is contain; canvas clips when dest overflows. */
+export function coverDestRect(
   imageWidth: number,
   imageHeight: number,
   crop: CoverCrop,
-): CoverSourceRect {
-  const zoom = clamp(crop.zoom, PLAYLIST_COVER_ZOOM_MIN, PLAYLIST_COVER_ZOOM_MAX)
-  const min = minCoverCropSize(imageWidth, imageHeight)
-  const width = min.width / zoom
-  const height = min.height / zoom
-  const maxX = Math.max(0, imageWidth - width)
-  const maxY = Math.max(0, imageHeight - height)
-  const panX = clamp(crop.panX, -1, 1)
-  const panY = clamp(crop.panY, -1, 1)
+  frameWidth: number = PLAYLIST_COVER_EXPORT_WIDTH,
+  frameHeight: number = PLAYLIST_COVER_EXPORT_HEIGHT,
+): CoverDestRect {
+  const next = clampCoverCrop(crop)
+  const { width, height } = destSize(imageWidth, imageHeight, next.zoom, frameWidth, frameHeight)
   return {
-    x: maxX / 2 + panX * (maxX / 2),
-    y: maxY / 2 + panY * (maxY / 2),
+    x: axisOrigin(frameWidth - width, next.panX),
+    y: axisOrigin(frameHeight - height, next.panY),
     width,
     height,
   }
 }
 
-export function panFromSourceOrigin(
+export function panFromDestOrigin(
   imageWidth: number,
   imageHeight: number,
   zoom: number,
-  x: number,
-  y: number,
+  destX: number,
+  destY: number,
+  frameWidth: number = PLAYLIST_COVER_EXPORT_WIDTH,
+  frameHeight: number = PLAYLIST_COVER_EXPORT_HEIGHT,
 ): CoverCrop {
-  const min = minCoverCropSize(imageWidth, imageHeight)
   const z = clamp(zoom, PLAYLIST_COVER_ZOOM_MIN, PLAYLIST_COVER_ZOOM_MAX)
-  const width = min.width / z
-  const height = min.height / z
-  const maxX = Math.max(0, imageWidth - width)
-  const maxY = Math.max(0, imageHeight - height)
+  const { width, height } = destSize(imageWidth, imageHeight, z, frameWidth, frameHeight)
+  const slackX = frameWidth - width
+  const slackY = frameHeight - height
   return clampCoverCrop({
     zoom: z,
-    panX: maxX <= 0 ? 0 : ((x - maxX / 2) / (maxX / 2)),
-    panY: maxY <= 0 ? 0 : ((y - maxY / 2) / (maxY / 2)),
+    panX: slackX >= 0 ? 0 : (destX - slackX / 2) / (slackX / 2),
+    panY: slackY >= 0 ? 0 : (destY - slackY / 2) / (slackY / 2),
   })
 }
 
@@ -129,11 +169,11 @@ export function coverImageStyle(imageWidth: number, imageHeight: number, crop: C
   left: string
   top: string
 } {
-  const rect = coverSourceRect(imageWidth, imageHeight, crop)
+  const dest = coverDestRect(imageWidth, imageHeight, crop)
   return {
-    width: `${(imageWidth / rect.width) * 100}%`,
-    height: `${(imageHeight / rect.height) * 100}%`,
-    left: `${(-rect.x / rect.width) * 100}%`,
-    top: `${(-rect.y / rect.height) * 100}%`,
+    width: `${(dest.width / PLAYLIST_COVER_EXPORT_WIDTH) * 100}%`,
+    height: `${(dest.height / PLAYLIST_COVER_EXPORT_HEIGHT) * 100}%`,
+    left: `${(dest.x / PLAYLIST_COVER_EXPORT_WIDTH) * 100}%`,
+    top: `${(dest.y / PLAYLIST_COVER_EXPORT_HEIGHT) * 100}%`,
   }
 }
