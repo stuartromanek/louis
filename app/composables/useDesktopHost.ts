@@ -4,6 +4,7 @@ import {
   YOUTUBE_SAFE_SEARCH_DEFAULT,
   type YoutubeSafeSearch,
 } from '#shared/youtubeSafeSearch'
+import type { FeedbackRuntimeInfo } from '#shared/feedbackUrl'
 
 export type LouisDesktopConfig = {
   yotoClientId: string
@@ -17,6 +18,7 @@ export type LouisDesktopConfig = {
 
 type LouisDesktopBridge = {
   isDesktop: true
+  runtimeInfo?: FeedbackRuntimeInfo
   getConfig: () => Promise<Partial<LouisDesktopConfig>>
   setConfig: (config: Partial<LouisDesktopConfig>) => Promise<Partial<LouisDesktopConfig>>
   pickCookiesFile: () => Promise<string | null>

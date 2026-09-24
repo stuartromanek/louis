@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3'
 import {
+  clearYotoAuthCookies,
   decideYotoAccess,
   getAccessTokenCookie,
   getRefreshTokenCookie,
@@ -54,18 +55,18 @@ export function isYotoConfigured(event: H3Event): boolean {
 
 /** True when we can still obtain an API access token (refresh or non-expired access). */
 export function isYotoConnected(event: H3Event): boolean {
-  if (getRefreshTokenCookie(event)) return true
-  if (getAccessTokenCookie(event)) return true
   const session = readYotoDesktopSession()
-  if (!session) return false
-  if (session.refreshToken) return true
-  if (!session.accessToken) return false
-  if (session.accessExpiresAt && Date.now() > session.accessExpiresAt) return false
-  return true
+  if (session) {
+    if (session.refreshToken) return true
+    if (!session.accessToken) return false
+    return !(session.accessExpiresAt && Date.now() > session.accessExpiresAt)
+  }
+  return Boolean(getRefreshTokenCookie(event) || getAccessTokenCookie(event))
 }
 
 export function getYotoAuthScope(event: H3Event): string | undefined {
-  return getScopeCookie(event) || readYotoDesktopSession()?.scope || undefined
+  const sessionScope = readYotoDesktopSession()?.scope?.trim()
+  return sessionScope || getScopeCookie(event) || undefined
 }
 
 export async function getYotoAccessToken(event: H3Event): Promise<string> {
@@ -73,9 +74,11 @@ export async function getYotoAccessToken(event: H3Event): Promise<string> {
   const session = readYotoDesktopSession()
   const decision = decideYotoAccess({
     cookieAccess: getAccessTokenCookie(event) || '',
+    cookieRefresh: getRefreshTokenCookie(event) || '',
     sessionAccess: session?.accessToken || '',
+    sessionRefresh: session?.refreshToken || '',
     sessionExpired: Boolean(session?.accessExpiresAt && Date.now() > session.accessExpiresAt),
-    refreshToken: getRefreshTokenCookie(event) || session?.refreshToken || '',
+    preferSession: Boolean(session),
   })
 
   if (decision.action === 'use') return decision.accessToken
@@ -90,6 +93,7 @@ export async function getYotoAccessToken(event: H3Event): Promise<string> {
       const e = err as { statusCode?: number }
       if (e.statusCode === 401) {
         clearYotoDesktopSession()
+        clearYotoAuthCookies(event)
         throw createError({
           statusCode: 401,
           statusMessage: 'Yoto session expired. Please reconnect.',
@@ -101,6 +105,7 @@ export async function getYotoAccessToken(event: H3Event): Promise<string> {
 
   if (decision.action === 'expired') {
     clearYotoDesktopSession()
+    clearYotoAuthCookies(event)
     throw createError({
       statusCode: 401,
       statusMessage: 'Yoto session expired. Please reconnect.',

@@ -12,6 +12,7 @@ if (!yoto) {
 const { playEvent } = useUiSound()
 const { openPreferences } = usePreferencesShell()
 const { isDesktop } = useDesktopHost()
+const feedbackUrl = useFeedbackUrl()
 const {
   showInstallItem,
   canPrompt,
@@ -114,7 +115,7 @@ function onRetry() {
 
       <a
         class="status-bar__action"
-        href="https://docs.google.com/forms/d/e/1FAIpQLSccwkdCpYaJjODtpxSrtBIaye045nobwudH1L0VX8S6NzFtjA/viewform?usp=publish-editor"
+        :href="feedbackUrl"
         target="_blank"
         rel="noopener noreferrer"
       >

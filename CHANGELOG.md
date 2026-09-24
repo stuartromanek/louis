@@ -16,8 +16,10 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - Splash **Louis!** shout is quieter and plays at most once per local day. The intro still runs every time; `npm run dev` and `?splash=debug` always play the cue so it stays easy to hear while iterating ([#25](https://github.com/stuartromanek/louis/issues/25)).
 - After a successful preview, Update remuxes those bytes into the save cache instead of hitting YouTube a second time for the same video.
 - Playlist covers, cropper, and library cards use Yoto’s default cover frame (638×1011) instead of 5:7, so `imageL` fills the pane. The playlist name stays in a white band inside the same bordered card.
+- Report Issues links prefill the running Louis version; desktop builds also include Electron, platform, and architecture without device identifiers.
 
 ### Fixed
+- Open playlists refresh from Yoto when explicitly refreshed or when Louis regains focus, becomes visible, or comes back online. Unsaved and in-progress edits remain protected, and desktop file-backed OAuth sessions no longer get shadowed by stale Electron cookies ([#29](https://github.com/stuartromanek/louis/issues/29)).
 - Desktop Track Art Apply no longer 403s when `user:content:manage` is only in `yoto-session.json` (cookie scope empty). Icon patch now reads scope the same way as Update ([#24](https://github.com/stuartromanek/louis/issues/24)).
 - Cookie-escalated YouTube downloads no longer force `player_client=android`/`ios` (yt-dlp skips those with cookies and then looks “outdated”). Cookies use the default web client ([#16](https://github.com/stuartromanek/louis/issues/16)).
 - Desktop http(s) links (Report Issues, Settings, How To) open in the system browser instead of inside Louis ([#22](https://github.com/stuartromanek/louis/issues/22)).

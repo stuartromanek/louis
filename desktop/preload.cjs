@@ -13,6 +13,11 @@ const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('louisDesktop', {
   isDesktop: true,
+  runtimeInfo: {
+    electronVersion: process.versions.electron || '',
+    platform: process.platform,
+    arch: process.arch,
+  },
   getConfig: () => ipcRenderer.invoke('louis:get-config'),
   setConfig: (/** @type {LouisDesktopConfig} */ config) =>
     ipcRenderer.invoke('louis:set-config', config),

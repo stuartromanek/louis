@@ -29,6 +29,7 @@ const {
   promptInstall,
 } = usePwaInstall()
 const { showInstallHelp } = useToast()
+const feedbackUrl = useFeedbackUrl()
 
 const { connected, status, refresh, disconnect, hasWriteScope, connect } = yoto
 
@@ -37,8 +38,6 @@ const menuOpen = ref(false)
 const signOutArmed = ref(false)
 const signOutShaking = ref(false)
 let signOutShakeTimer: ReturnType<typeof setTimeout> | null = null
-
-const FEEDBACK_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSccwkdCpYaJjODtpxSrtBIaye045nobwudH1L0VX8S6NzFtjA/viewform?usp=publish-editor'
 
 const needsReconnect = computed(
   () => connected.value && !hasWriteScope.value,
@@ -310,7 +309,7 @@ onBeforeUnmount(() => {
         <a
           class="mobile-overflow-menu__item mobile-overflow-menu__item--feedback"
           role="menuitem"
-          :href="FEEDBACK_URL"
+          :href="feedbackUrl"
           target="_blank"
           rel="noopener noreferrer"
           @click="onFeedback"

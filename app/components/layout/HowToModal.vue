@@ -8,6 +8,7 @@ import AppFlyout from '~/components/layout/AppFlyout.vue'
 const open = defineModel<boolean>('open', { default: false })
 
 const { playEvent } = useUiSound()
+const feedbackUrl = useFeedbackUrl()
 
 const headingId = 'howto-heading'
 
@@ -138,7 +139,7 @@ function onClose() {
             Stuck or found a bug? Use
             <a
               class="howto-section__link"
-              href="https://docs.google.com/forms/d/e/1FAIpQLSccwkdCpYaJjODtpxSrtBIaye045nobwudH1L0VX8S6NzFtjA/viewform?usp=publish-editor"
+              :href="feedbackUrl"
               target="_blank"
               rel="noopener noreferrer"
             >Report Issues</a>

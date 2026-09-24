@@ -59,6 +59,7 @@ import {
   shouldAbandonClientPoll,
 } from '#shared/myo-editor/savePoll'
 import type { PlaylistArtworkSpec } from '#shared/myo-editor/playlistArtwork'
+import { canRefreshSelectedPlaylist } from '#shared/myo-editor/playlistSync'
 
 export type UpdatePromptKind = 'capacity' | 'normalize'
 export type UpdatePromptSurface = 'footer' | 'dialog'
@@ -143,6 +144,7 @@ export interface MyoEditorContext {
   updatePromptCardCount: Ref<number>
   isCardSaving: (cardId: string) => boolean
   isKnownPodcast: (cardId: string) => boolean
+  refreshSelectedCard: () => Promise<boolean>
   selectCard: (card: YotoMyoCard) => Promise<void>
   startNewPlaylist: () => boolean
   queuePendingCreateTracks: (tracks: PlaylistTrack[]) => void
@@ -589,6 +591,37 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     })()
   }
 
+  async function refreshSelectedCard(): Promise<boolean> {
+    const cardId = selectedCardId.value
+    if (!cardId || !canRefreshSelectedPlaylist({
+      selectedCardId: cardId,
+      isNewPlaylist: isNewPlaylist.value,
+      loading: loading.value,
+      isDirty: isDirty.value,
+      isSaving: isCardSaving(cardId),
+    })) {
+      return false
+    }
+
+    loading.value = true
+    const previousPlaylist = clonePlaylist(playlist.value)
+    try {
+      await reloadCardFromApi(cardId, undefined, previousPlaylist)
+      if (selectedCardId.value === cardId) errorMessage.value = ''
+      return selectedCardId.value === cardId
+    }
+    catch (err: unknown) {
+      if (selectedCardId.value === cardId) {
+        const e = err as { statusMessage?: string; message?: string }
+        errorMessage.value = e.statusMessage ?? e.message ?? 'Failed to refresh card'
+      }
+      return false
+    }
+    finally {
+      loading.value = false
+    }
+  }
+
   async function finalizeSaveSuccess(saveKey: string, titleFallback?: string) {
     const existing = getSaveState(saveKey)
     const createdCardId = existing?.cardId?.trim()
@@ -864,10 +897,11 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
 
     cancelPlaylistManage()
 
-    if (selectedCardId.value === card.cardId && !errorMessage.value && !isNewPlaylist.value) {
+    if (selectedCardId.value === card.cardId && !isNewPlaylist.value) {
       if (!libraryCoverUrl.value && card.coverUrl?.trim()) {
         libraryCoverUrl.value = card.coverUrl.trim()
       }
+      await refreshSelectedCard()
       return
     }
 
@@ -1837,6 +1871,7 @@ export function useMyoEditor(options: UseMyoEditorOptions = {}) {
     pendingUpdateTitle,
     isCardSaving,
     isKnownPodcast,
+    refreshSelectedCard,
     selectCard,
     startNewPlaylist,
     queuePendingCreateTracks,

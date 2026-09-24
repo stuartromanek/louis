@@ -182,6 +182,10 @@ const editor = useMyoEditor({
 })
 provide(MYO_EDITOR_KEY, editor)
 
+watch(yoto.cardsRefreshRevision, () => {
+  void editor.refreshSelectedCard()
+})
+
 const mobileChrome = useMobileEditorChrome()
 provide(MOBILE_EDITOR_CHROME_KEY, mobileChrome)
 

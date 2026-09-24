@@ -155,22 +155,33 @@ export type YotoAccessDecision =
   | { action: 'expired' }
   | { action: 'disconnected' }
 
-/** Prefer a still-valid access token. Refresh only when it is gone or past desktop expiry. */
+/** Keep desktop file credentials together; otherwise prefer a live cookie access token. */
 export function decideYotoAccess(input: {
   cookieAccess: string
+  cookieRefresh: string
   sessionAccess: string
+  sessionRefresh: string
   sessionExpired: boolean
-  refreshToken: string
+  preferSession: boolean
 }): YotoAccessDecision {
+  const sessionAccess = input.sessionAccess.trim()
+  const sessionRefresh = input.sessionRefresh.trim()
+  if (input.preferSession && (sessionAccess || sessionRefresh)) {
+    if (sessionAccess && !input.sessionExpired) {
+      return { action: 'use', accessToken: sessionAccess }
+    }
+    if (sessionRefresh) return { action: 'refresh', refreshToken: sessionRefresh }
+    return { action: 'expired' }
+  }
+
   const cookieAccess = input.cookieAccess.trim()
   if (cookieAccess) return { action: 'use', accessToken: cookieAccess }
 
-  const sessionAccess = input.sessionAccess.trim()
   if (sessionAccess && !input.sessionExpired) {
     return { action: 'use', accessToken: sessionAccess }
   }
 
-  const refreshToken = input.refreshToken.trim()
+  const refreshToken = input.cookieRefresh.trim() || sessionRefresh
   if (refreshToken) return { action: 'refresh', refreshToken }
 
   if (sessionAccess && input.sessionExpired) return { action: 'expired' }

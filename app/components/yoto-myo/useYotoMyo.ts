@@ -1,4 +1,5 @@
 import type { YotoAuthStatus, YotoContentMineResponse, YotoMyoCard, YotoMyoStatus, YotoOAuthInterrupt } from './types'
+import { shouldRefreshYotoOnResume } from '#shared/myo-editor/playlistSync'
 
 function extractErrorMessage(err: unknown): string {
   const fetchErr = err as {
@@ -28,6 +29,9 @@ export function useYotoMyo() {
   const hasWriteScope = ref(false)
   const connectingExternal = ref(false)
   const oauthInterrupt = ref<YotoOAuthInterrupt | null>(null)
+  const cardsRefreshRevision = ref(0)
+  let lastSuccessfulFetchAt = 0
+  let cardsFetchInFlight: Promise<boolean> | null = null
 
   const router = useRouter()
   const route = useRoute()
@@ -45,38 +49,55 @@ export function useYotoMyo() {
   consumeOAuthInterrupt()
   watch(() => route.query.yoto, consumeOAuthInterrupt)
 
-  async function fetchCards(options?: { quiet?: boolean }) {
+  async function fetchCards(options?: { quiet?: boolean }): Promise<boolean> {
+    if (cardsFetchInFlight) return cardsFetchInFlight
+
     const quiet = Boolean(options?.quiet)
-    if (!quiet) cardsLoading.value = true
-    errorMessage.value = ''
+    const pending = (async () => {
+      if (!quiet) cardsLoading.value = true
+      errorMessage.value = ''
 
-    try {
-      const data = await $fetch<YotoContentMineResponse>('/api/yoto/content/mine')
-      const incoming = data.cards
-      const remembered = cards.value.filter(
-        card => createdCardIds.has(card.cardId) && !incoming.some(item => item.cardId === card.cardId),
-      )
-      cards.value = [...remembered, ...incoming]
-      for (const card of incoming) createdCardIds.delete(card.cardId)
-      status.value = 'idle'
-    }
-    catch (err: unknown) {
-      const fetchErr = err as { statusCode?: number }
-      errorMessage.value = extractErrorMessage(err)
-
-      if (fetchErr.statusCode === 401) {
-        connected.value = false
-        status.value = 'disconnected'
-        cards.value = []
-        createdCardIds.clear()
-        return
+      try {
+        const data = await $fetch<YotoContentMineResponse>('/api/yoto/content/mine')
+        const incoming = data.cards
+        const remembered = cards.value.filter(
+          card => createdCardIds.has(card.cardId) && !incoming.some(item => item.cardId === card.cardId),
+        )
+        cards.value = [...remembered, ...incoming]
+        for (const card of incoming) createdCardIds.delete(card.cardId)
+        lastSuccessfulFetchAt = Date.now()
+        cardsRefreshRevision.value++
+        status.value = 'idle'
+        return true
       }
+      catch (err: unknown) {
+        const fetchErr = err as { statusCode?: number }
+        errorMessage.value = extractErrorMessage(err)
 
-      status.value = 'error'
-      if (!quiet) cards.value = []
+        if (fetchErr.statusCode === 401) {
+          connected.value = false
+          status.value = 'disconnected'
+          cards.value = []
+          createdCardIds.clear()
+          return false
+        }
+
+        if (quiet) return false
+        status.value = 'error'
+        cards.value = []
+        return false
+      }
+      finally {
+        if (!quiet) cardsLoading.value = false
+      }
+    })()
+
+    cardsFetchInFlight = pending
+    try {
+      return await pending
     }
     finally {
-      if (!quiet) cardsLoading.value = false
+      if (cardsFetchInFlight === pending) cardsFetchInFlight = null
     }
   }
 
@@ -255,12 +276,35 @@ export function useYotoMyo() {
     existing.updatedAt = new Date().toISOString()
   }
 
+  function refreshOnResume() {
+    if (!shouldRefreshYotoOnResume({
+      connected: connected.value,
+      lastSuccessfulFetchAt,
+      now: Date.now(),
+    })) return
+    void refresh({ quiet: true })
+  }
+
+  function refreshOnVisibility() {
+    if (document.visibilityState === 'visible') refreshOnResume()
+  }
+
   onMounted(() => {
-    checkStatus()
+    void checkStatus()
+    window.addEventListener('focus', refreshOnResume)
+    window.addEventListener('online', refreshOnResume)
+    document.addEventListener('visibilitychange', refreshOnVisibility)
+  })
+
+  onBeforeUnmount(() => {
+    window.removeEventListener('focus', refreshOnResume)
+    window.removeEventListener('online', refreshOnResume)
+    document.removeEventListener('visibilitychange', refreshOnVisibility)
   })
 
   return {
     cards,
+    cardsRefreshRevision,
     status,
     cardsLoading,
     errorMessage,
