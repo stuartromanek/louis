@@ -74,8 +74,10 @@
     />
     <AppSplash
       v-if="shouldShowSplash"
+      :key="splashDebug ? 'debug' : 'intro'"
       :debug="splashDebug"
       @done="markSplashSeen"
+      @exit-debug="clearSplashDebugQuery"
     />
     <Teleport to="body">
       <DesktopSetupScreen
@@ -283,6 +285,13 @@ async function clearYotoConnectedQuery() {
   if (route.query.yoto !== 'connected') return
   const nextQuery = { ...route.query }
   delete nextQuery.yoto
+  await router.replace({ query: nextQuery })
+}
+
+async function clearSplashDebugQuery() {
+  if (route.query.splash !== 'debug') return
+  const nextQuery = { ...route.query }
+  delete nextQuery.splash
   await router.replace({ query: nextQuery })
 }
 

@@ -2,6 +2,18 @@
 import { YOTO_MYO_KEY } from '~/components/yoto-myo/keys'
 import { useUserPreferences } from '~/composables/useUserPreferences'
 import { useDesktopHost } from '~/composables/useDesktopHost'
+import {
+  normalizeAppUpdateSimulationMode,
+  type AppUpdateSimulationMode,
+} from '#shared/appUpdate'
+
+const APP_UPDATE_SIMULATION_MODES = [
+  'available',
+  'current',
+  'checking',
+  'error',
+  'unsupported',
+] as const satisfies readonly AppUpdateSimulationMode[]
 
 const route = useRoute()
 const yoto = inject(YOTO_MYO_KEY, null)
@@ -52,6 +64,28 @@ const desktopSetupHref = computed(() => hrefWithQuery({
   desktopPrefs: '1',
   desktopSetup: '1',
 }))
+
+const splashDebugActive = computed(() => {
+  const value = route.query.splash
+  const raw = Array.isArray(value) ? value[0] : value
+  return raw === 'debug'
+})
+
+const splashDebugHref = computed(() => hrefWithQuery({
+  splash: splashDebugActive.value ? undefined : 'debug',
+}))
+
+const appUpdateSimulation = computed(() =>
+  normalizeAppUpdateSimulationMode(route.query.appUpdate),
+)
+
+function appUpdateSimulationHref(mode: AppUpdateSimulationMode) {
+  const active = appUpdateSimulation.value === mode
+  return hrefWithQuery({
+    appUpdate: active ? undefined : mode,
+    ...(active ? {} : { desktopPrefs: '1' }),
+  })
+}
 
 type HealthChecks = {
   audioCache?: {
@@ -135,6 +169,12 @@ function onRefreshCards() {
         {{ testOverflowToastActive ? 'Disable' : 'Enable' }} ?testOverflowToast
       </NuxtLink>
       <NuxtLink
+        :to="splashDebugHref"
+        class="dev-tools-strip__text font-maru-mono text-maru-black underline"
+      >
+        {{ splashDebugActive ? 'Disable' : 'Enable' }} ?splash=debug
+      </NuxtLink>
+      <NuxtLink
         :to="desktopPrefsHref"
         class="dev-tools-strip__text font-maru-mono text-maru-black underline"
       >
@@ -145,6 +185,14 @@ function onRefreshCards() {
         class="dev-tools-strip__text font-maru-mono text-maru-black underline"
       >
         Enable ?desktopSetup=1
+      </NuxtLink>
+      <NuxtLink
+        v-for="mode in APP_UPDATE_SIMULATION_MODES"
+        :key="mode"
+        :to="appUpdateSimulationHref(mode)"
+        class="dev-tools-strip__text font-maru-mono text-maru-black underline"
+      >
+        {{ appUpdateSimulation === mode ? 'Disable' : 'Enable' }} ?appUpdate={{ mode }}
       </NuxtLink>
       <button
         type="button"

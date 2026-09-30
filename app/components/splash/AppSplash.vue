@@ -24,6 +24,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   done: []
+  exitDebug: []
 }>()
 
 const { tryPlayEvent, unlockAudio, preload, stopAll } = useUiSound()
@@ -350,6 +351,14 @@ onUnmounted(() => {
           @click.stop="togglePause"
         >
           {{ paused ? 'paused' : 'playing' }}
+        </button>
+        ·
+        <button
+          type="button"
+          class="app-splash__debug-toggle"
+          @click.stop="emit('exitDebug')"
+        >
+          exit
         </button>
         ·
         <template v-if="audioLocked">click once to unlock audio</template>

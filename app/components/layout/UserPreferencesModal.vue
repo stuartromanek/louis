@@ -4,6 +4,7 @@ import { useDesktopHost } from '~/composables/useDesktopHost'
 import { usePreferencesShell } from '~/composables/usePreferencesShell'
 import DesktopApiKeysFields from '~/components/desktop/DesktopApiKeysFields.vue'
 import ToolsUpdateSection from '~/components/layout/ToolsUpdateSection.vue'
+import DesktopAppUpdateSection from '~/components/layout/DesktopAppUpdateSection.vue'
 import AppFlyout from '~/components/layout/AppFlyout.vue'
 import {
   YOUTUBE_SAFE_SEARCH_DEFAULT,
@@ -307,6 +308,11 @@ watch(shellOpen, (isOpen) => {
                       Comma-separated. These will create buttons on the search panel. Leave empty for defaults.
                     </p>
                   </div>
+
+                  <DesktopAppUpdateSection
+                    v-if="isDesktop"
+                    :disabled="!formInteractive || credentialsSaving"
+                  />
                 </div>
 
                 <div

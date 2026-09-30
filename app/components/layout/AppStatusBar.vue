@@ -12,13 +12,18 @@ if (!yoto) {
 const { playEvent } = useUiSound()
 const { openPreferences } = usePreferencesShell()
 const { isDesktop } = useDesktopHost()
+const {
+  status: appUpdateStatus,
+  updateAvailable,
+  openUpdate,
+} = useDesktopAppUpdate()
 const feedbackUrl = useFeedbackUrl()
 const {
   showInstallItem,
   canPrompt,
   promptInstall,
 } = usePwaInstall()
-const { showInstallHelp } = useToast()
+const { showError, showInstallHelp } = useToast()
 
 const { connected, status, refresh, disconnect, hasWriteScope, connect, errorMessage } = yoto
 
@@ -80,6 +85,16 @@ function onRetry() {
   playEvent('buttonClick')
   refresh()
 }
+
+async function onOpenUpdate() {
+  playEvent('buttonPrimary')
+  try {
+    await openUpdate()
+  }
+  catch {
+    showError('Could not open the Louis download page.')
+  }
+}
 </script>
 
 <template>
@@ -128,6 +143,15 @@ function onRetry() {
         @click="onOpenPreferences"
       >
         Settings
+      </button>
+
+      <button
+        v-if="updateAvailable"
+        type="button"
+        class="status-bar__action status-bar__action--emphasis"
+        @click="onOpenUpdate"
+      >
+        Update v{{ appUpdateStatus?.latestVersion }}
       </button>
 
       <button

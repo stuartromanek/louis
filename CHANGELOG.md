@@ -11,6 +11,7 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ### Added
 - **Pipeline journal** — YouTube preview, save, normalize, and remux write JSONL under `$LOUIS_AUDIO_WORK_DIR/logs/pipeline.jsonl` (on by default). `npm run diagnose:pipeline` prints preview-vs-save headlines. `LOUIS_PIPELINE_LOG=0` disables; `LOUIS_PIPELINE_LOG_VERBOSE=1` adds yt-dlp `-v` for a short capture.
+- Packaged macOS and Windows apps check the latest stable GitHub Release at startup. When a newer Louis version is available, the status bar and Settings offer Download, which opens the matching DMG or NSIS installer in the system browser; installation remains manual while desktop releases are unsigned.
 
 ### Changed
 - Splash **Louis!** shout is quieter and plays at most once per local day. The intro still runs every time; `npm run dev` and `?splash=debug` always play the cue so it stays easy to hear while iterating ([#25](https://github.com/stuartromanek/louis/issues/25)).

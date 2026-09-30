@@ -28,7 +28,12 @@ const {
   canPrompt,
   promptInstall,
 } = usePwaInstall()
-const { showInstallHelp } = useToast()
+const { showError, showInstallHelp } = useToast()
+const {
+  status: appUpdateStatus,
+  updateAvailable,
+  openUpdate,
+} = useDesktopAppUpdate()
 const feedbackUrl = useFeedbackUrl()
 
 const { connected, status, refresh, disconnect, hasWriteScope, connect } = yoto
@@ -175,6 +180,17 @@ function onRetry() {
 function onFeedback() {
   playEvent('buttonClick')
   menuOpen.value = false
+}
+
+async function onOpenAppUpdate() {
+  playEvent('buttonPrimary')
+  menuOpen.value = false
+  try {
+    await openUpdate()
+  }
+  catch {
+    showError('Could not open the Louis download page.')
+  }
 }
 
 function toggleMenu() {
@@ -333,6 +349,22 @@ onBeforeUnmount(() => {
             class="mobile-overflow-menu__item-emoji"
           />
           <span class="mobile-overflow-menu__item-label">Settings</span>
+        </button>
+        <button
+          v-if="updateAvailable"
+          type="button"
+          class="mobile-overflow-menu__item"
+          role="menuitem"
+          @click="onOpenAppUpdate"
+        >
+          <MaruEmoji
+            name="FlyingSaucer"
+            size="md"
+            class="mobile-overflow-menu__item-emoji"
+          />
+          <span class="mobile-overflow-menu__item-label">
+            Download Louis v{{ appUpdateStatus?.latestVersion }}
+          </span>
         </button>
         <button
           v-if="showInstallItem"

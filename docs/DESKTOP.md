@@ -97,6 +97,16 @@ Unsigned builds: open via system “Open anyway” / “More info → Run anyway
 **Settings has no Desktop API keys section**  
 That section appears in the desktop app (**Settings → Advanced**). In local `npm run dev`, open `http://localhost:4000/?desktopPrefs=1` to preview Advanced prefs (and `?desktopPrefs=1&desktopSetup=1` for the first-run setup screen). Mock saves use sessionStorage. Self-host / Docker still use `.env` with `LOUIS_*` keys (legacy `NUXT_*` still works). The Electron host sets `LOUIS_PUBLIC_DESKTOP=1` when spawning Nitro.
 
+To preview the app-update UI without Electron or a GitHub request, combine `?desktopPrefs=1` with one of:
+
+- `&appUpdate=available`
+- `&appUpdate=current`
+- `&appUpdate=checking`
+- `&appUpdate=error`
+- `&appUpdate=unsupported`
+
+The available-state Download action opens the Louis Releases page; it never downloads a fake installer.
+
 **Still logged into Yoto after clearing the client ID**  
 Sign-in uses browser cookies for `127.0.0.1:4010`. Clearing Settings does not clear those cookies. Disconnect in the app or clear site data for that origin if you need a full reset.
 

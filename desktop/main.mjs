@@ -18,6 +18,7 @@ import { pickLouisEnv, setLouisAndNuxtEnv } from '../shared/louis-env.mjs'
 import { ytdlpJsRuntimeSpecForDesktop } from './js-runtime.mjs'
 import { formatDegradedHealthError, formatHealthTimeoutMessage } from './nitro-health.mjs'
 import { attachExternalLinkHandlers } from './open-external.mjs'
+import { appUpdateOpenUrl, createAppUpdateController } from './app-update.mjs'
 
 const require = createRequire(import.meta.url)
 const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron')
@@ -57,6 +58,17 @@ let nitroExitNotified = false
 let restartingNitro = false
 
 const configStore = createConfigStore(fs, path, louisUserData)
+const appUpdateController = createAppUpdateController({
+  packaged: app.isPackaged,
+  currentVersion: app.getVersion(),
+  platform: process.platform,
+  arch: process.arch,
+  fetchImpl: fetch,
+  onStatus: (status) => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    mainWindow.webContents.send('louis:app-update-status', status)
+  },
+})
 
 function resolveAppRoot() {
   // Packaged: .output is shipped via extraResources → resources/.output
@@ -421,6 +433,7 @@ async function showLoadingThenApp() {
   const needsSetup = desktopConfigNeedsSetup(effectiveConfigForSetupCheck())
   const url = needsSetup ? `${BASE_URL}/?desktopSetup=1` : BASE_URL
   await win.loadURL(url)
+  void appUpdateController.check()
 }
 
 function registerIpc() {
@@ -431,6 +444,11 @@ function registerIpc() {
     bundledYotoClientId: BUNDLED_YOTO_CLIENT_ID,
   }))
   ipcMain.handle('louis:get-redirect-uri', () => DESKTOP_REDIRECT_URI)
+  ipcMain.handle('louis:get-app-update-status', () => appUpdateController.getStatus())
+  ipcMain.handle('louis:open-app-update', async (_event, target) => {
+    const url = appUpdateOpenUrl(appUpdateController.getStatus(), target)
+    await shell.openExternal(url)
+  })
 
   ipcMain.handle('louis:open-external', async (_event, url) => {
     const raw = String(url || '').trim()

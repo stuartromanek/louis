@@ -13,9 +13,9 @@ function writeSeen() {
   sessionStorage.setItem(SPLASH_SEEN_KEY, '1')
 }
 
-function readSplashDebug(): boolean {
-  if (typeof window === 'undefined') return false
-  return new URLSearchParams(window.location.search).get('splash') === 'debug'
+function queryIsSplashDebug(value: unknown): boolean {
+  const raw = Array.isArray(value) ? value[0] : value
+  return raw === 'debug'
 }
 
 function setSplashPendingClass(on: boolean) {
@@ -24,6 +24,7 @@ function setSplashPendingClass(on: boolean) {
 }
 
 export function useAppSplash() {
+  const route = useRoute()
   /** True only after client has read sessionStorage (avoids SSR mismatch). */
   const splashBootstrapped = ref(false)
   const shouldShowSplash = ref(false)
@@ -35,16 +36,30 @@ export function useAppSplash() {
     () => !splashBootstrapped.value || shouldShowSplash.value,
   )
 
-  onMounted(() => {
-    splashDebug.value = readSplashDebug()
+  function applyInitialSplash() {
+    splashDebug.value = queryIsSplashDebug(route.query.splash)
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     shouldShowSplash.value =
       FORCE_SPLASH_EVERY_REFRESH
       || splashDebug.value
       || (!reduced && !readSeen())
+  }
+
+  onMounted(() => {
+    applyInitialSplash()
     splashBootstrapped.value = true
     setSplashPendingClass(splashHoldsGate.value)
   })
+
+  watch(
+    () => route.query.splash,
+    () => {
+      if (!splashBootstrapped.value) return
+      const debug = queryIsSplashDebug(route.query.splash)
+      splashDebug.value = debug
+      shouldShowSplash.value = debug
+    },
+  )
 
   watch(splashHoldsGate, (holds) => {
     setSplashPendingClass(holds)

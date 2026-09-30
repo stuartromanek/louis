@@ -28,6 +28,14 @@ npm run desktop:build        # mac + win in one go (awkward cross-OS)
 
 Signing: [DESKTOP_SIGNING.md](DESKTOP_SIGNING.md). CI currently ships **unsigned** installers until signing secrets + config overrides are wired.
 
+### Desktop update checks
+
+Packaged macOS and Windows builds check the latest stable GitHub Release after startup. **Settings → General** offers Download when a newer version is available. The check matches the current platform and architecture to the artifact names above, then opens that installer in the system browser.
+
+This is deliberately a check-and-download flow: Louis does not download, replace, or restart itself while installers are unsigned. True automatic updates require signed/notarized artifacts plus updater metadata (for example `latest-mac.yml`, `latest.yml`, blockmaps, and a macOS ZIP target).
+
+Keep installer filenames in this document, `electron-builder.yml`, the release workflow, and `desktop/app-update.mjs` synchronized. If a release is missing the matching asset, Louis links to the Release page instead of offering an unsafe or incorrect download.
+
 ## Day to day
 
 1. Land changes on `main` through PRs as usual.

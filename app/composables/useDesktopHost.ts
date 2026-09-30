@@ -5,6 +5,7 @@ import {
   type YoutubeSafeSearch,
 } from '#shared/youtubeSafeSearch'
 import type { FeedbackRuntimeInfo } from '#shared/feedbackUrl'
+import type { AppUpdateStatus } from '#shared/appUpdate'
 
 export type LouisDesktopConfig = {
   yotoClientId: string
@@ -23,6 +24,9 @@ type LouisDesktopBridge = {
   setConfig: (config: Partial<LouisDesktopConfig>) => Promise<Partial<LouisDesktopConfig>>
   pickCookiesFile: () => Promise<string | null>
   getRedirectUri: () => Promise<string>
+  getAppUpdateStatus: () => Promise<AppUpdateStatus>
+  openAppUpdate: (target: 'installer' | 'release') => Promise<void>
+  onAppUpdateStatus: (callback: (status: AppUpdateStatus) => void) => () => void
   openExternal: (url: string) => Promise<void>
   focusMainWindow: () => Promise<boolean>
   restartNitro?: () => Promise<void>
