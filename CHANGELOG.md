@@ -9,6 +9,8 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-30
+
 ### Added
 - **Pipeline journal** — YouTube preview, save, normalize, and remux write JSONL under `$LOUIS_AUDIO_WORK_DIR/logs/pipeline.jsonl` (on by default). `npm run diagnose:pipeline` prints preview-vs-save headlines. `LOUIS_PIPELINE_LOG=0` disables; `LOUIS_PIPELINE_LOG_VERBOSE=1` adds yt-dlp `-v` for a short capture.
 - Packaged macOS and Windows apps check the latest stable GitHub Release at startup. When a newer Louis version is available, the status bar and Settings offer Download, which opens the matching DMG or NSIS installer in the system browser; installation remains manual while desktop releases are unsigned.
@@ -192,7 +194,8 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - Marketing page (`/marketing`) and `public/marketing/` assets (Louis/Yoto art lives under `public/images/`).
 - Experimental muted `<video>` splash cue path (`louis.mp4`); splash audio uses the shared UI sound player only.
 
-[Unreleased]: https://github.com/stuartromanek/louis/compare/v1.2.5...main
+[Unreleased]: https://github.com/stuartromanek/louis/compare/v1.3.0...main
+[1.3.0]: https://github.com/stuartromanek/louis/compare/v1.2.5...v1.3.0
 [1.2.5]: https://github.com/stuartromanek/louis/compare/v1.2.4...v1.2.5
 [1.2.4]: https://github.com/stuartromanek/louis/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/stuartromanek/louis/compare/v1.2.2...v1.2.3
