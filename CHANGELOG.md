@@ -22,6 +22,7 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - Report Issues links prefill the running Louis version; desktop builds also include Electron, platform, and architecture without device identifiers.
 
 ### Fixed
+- Desktop Windows builds fetch FFmpeg from `autobuild-2026-09-30-00-16`. The previous autobuild’s Windows zip had been removed, so the 1.3.0 installer job 404’d.
 - Open playlists refresh from Yoto when explicitly refreshed or when Louis regains focus, becomes visible, or comes back online. Unsaved and in-progress edits remain protected, and desktop file-backed OAuth sessions no longer get shadowed by stale Electron cookies ([#29](https://github.com/stuartromanek/louis/issues/29)).
 - Desktop Track Art Apply no longer 403s when `user:content:manage` is only in `yoto-session.json` (cookie scope empty). Icon patch now reads scope the same way as Update ([#24](https://github.com/stuartromanek/louis/issues/24)).
 - Cookie-escalated YouTube downloads no longer force `player_client=android`/`ios` (yt-dlp skips those with cookies and then looks “outdated”). Cookies use the default web client ([#16](https://github.com/stuartromanek/louis/issues/16)).
