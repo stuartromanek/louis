@@ -7,6 +7,9 @@ services:
       args:
         # Change on rebuild to pull latest yt-dlp nightly (CI sets this automatically).
         YTDLP_CACHE_BUST: ${YTDLP_CACHE_BUST:-}
+    # Bridge networking keeps this file working with Coolify and Docker Desktop.
+    # On a Linux NAS/homelab, prefer deploy/portainer/docker-compose.yml, which
+    # uses host networking so yt-dlp can reach YouTube over IPv6 (see docs/HOSTING.md).
     ports:
       - "4000:4000"
     environment:

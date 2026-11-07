@@ -64,6 +64,16 @@ Artifacts: [`deploy/portainer/`](../deploy/portainer/)
 
 Stack file used: [`deploy/portainer/docker-compose.yml`](../deploy/portainer/docker-compose.yml) (image-only, no local build).
 
+### Why the stack uses host networking
+
+On Docker's default bridge network the container has no IPv6, so every YouTube request leaves through your home's shared IPv4 address. YouTube flags shared NAT IPv4 addresses far more often than per-device IPv6 ones, which shows up as *"YouTube blocked this download"* (`bot_signin` in the pipeline log) while the same network works fine from a laptop. Host networking (`network_mode: host`) lets yt-dlp use the host's IPv6 address.
+
+- Louis listens directly on the host at port **4000** (`LOUIS_PORT` to change). There is no `ports:` mapping.
+- An IPv6-enabled bridge network with a private (`fd…`) subnet is **not** an equivalent fix: glibc prefers IPv4 over private-source IPv6, so yt-dlp still goes out over IPv4.
+- `pull_policy: always` makes every redeploy fetch the current image, so yt-dlp in the image doesn't go stale.
+- Check which address the container uses: in the container console, run `node -e 'fetch("https://api64.ipify.org").then(r=>r.text()).then(console.log)'`. An IPv6 address means it's working.
+- If your host has no IPv6 at all, host networking won't help with blocks. Add a `cookies.txt` in Settings → Advanced instead.
+
 ---
 
 ## Coolify

@@ -1,12 +1,24 @@
 services:
   louis:
     image: stuartromanek/louis:latest
-    ports:
-      - "4000:4000"
+    # Always fetch the newest image on deploy/redeploy. Without this, Portainer
+    # reuses whatever `latest` is cached on the host, which can be weeks old
+    # (and carries an equally old yt-dlp).
+    pull_policy: always
+    # Host networking: yt-dlp leaves through the host's own network stack, so it
+    # uses the host's IPv6 address when one exists. On Docker's default bridge
+    # the container is IPv4-only and every request goes out through the
+    # household's shared NAT IPv4, which YouTube flags far more readily
+    # ("Sign in to confirm you're not a bot"). A ULA-addressed IPv6 bridge does
+    # not reliably fix this: glibc ranks IPv4 above ULA-sourced IPv6, so yt-dlp
+    # would still pick IPv4.
+    # With host networking `ports:` does not apply; Louis listens directly on
+    # LOUIS_PORT (default 4000) on the host. Change it if 4000 is taken.
+    network_mode: host
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0
-      PORT: 4000
+      PORT: ${LOUIS_PORT:-4000}
       LOUIS_AUDIO_WORK_DIR: /data/audio
       LOUIS_COOKIE_SECURE: ${LOUIS_COOKIE_SECURE:-false}
       LOUIS_YOTO_CLIENT_ID: ${LOUIS_YOTO_CLIENT_ID:-}
@@ -14,10 +26,11 @@ services:
       LOUIS_YOTO_REDIRECT_URI: ${LOUIS_YOTO_REDIRECT_URI:-}
       LOUIS_YOTO_CLIENT_SECRET: ${LOUIS_YOTO_CLIENT_SECRET:-}
     volumes:
+      # Audio cache, pipeline logs, and managed yt-dlp updates survive redeploys.
       - louis-audio:/data/audio
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:${LOUIS_PORT:-4000}/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3

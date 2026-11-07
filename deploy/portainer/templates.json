@@ -3,7 +3,7 @@
     "type": 3,
     "title": "Louis",
     "description": "Yoto MYO client — YouTube search and playlist editor",
-    "note": "Register your Yoto redirect URI on yoto.dev before connecting. Open Louis at your host IP or hostname (not localhost from other devices). Single instance only.",
+    "note": "Register your Yoto redirect URI on yoto.dev before connecting. Open Louis at your host IP or hostname (not localhost from other devices). Uses host networking so YouTube downloads go out over the host's IPv6 when available; Louis listens on port 4000 of the host unless you change Port. Single instance only.",
     "categories": ["Media"],
     "platform": "linux",
     "logo": "https://raw.githubusercontent.com/stuartromanek/louis/main/public/favicons/android-chrome-192x192.png",
@@ -21,6 +21,12 @@
         "name": "LOUIS_YOUTUBE_API_KEY",
         "label": "YouTube API key (optional)",
         "description": "Recommended for faster search and content filtering"
+      },
+      {
+        "name": "LOUIS_PORT",
+        "label": "Port",
+        "description": "Host port Louis listens on (host networking). Change only if 4000 is already in use",
+        "default": "4000"
       },
       {
         "name": "LOUIS_COOKIE_SECURE",
