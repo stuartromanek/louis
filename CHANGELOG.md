@@ -13,6 +13,9 @@ How we cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 - Portainer stack uses host networking so yt-dlp reaches YouTube over the host's IPv6. On Docker's default bridge the container was IPv4-only and went out through the household's shared NAT address, which YouTube blocked with "Sign in to confirm you're not a bot" even when the same network worked from a laptop. Louis now listens directly on host port 4000 (`LOUIS_PORT` to change). See [docs/HOSTING.md](docs/HOSTING.md#why-the-stack-uses-host-networking).
 - Portainer stack sets `pull_policy: always`, so redeploys fetch the current image instead of reusing a stale cached `latest` with an old yt-dlp.
 
+### Fixed
+- Track Art editor on phones no longer runs off the side of the screen when the track title is long. The title now truncates with an ellipsis instead of widening the whole dialog.
+
 ## [1.3.0] - 2026-09-30
 
 ### Added

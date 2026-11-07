@@ -183,6 +183,8 @@
     padding: max(0.35rem, env(safe-area-inset-top)) max(0.35rem, env(safe-area-inset-right))
       max(0.35rem, env(safe-area-inset-bottom)) max(0.35rem, env(safe-area-inset-left));
     align-items: stretch;
+    /* Auto column would grow to a long nowrap title and push the panel off-screen */
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .app-flyout--full .app-flyout__panel {
